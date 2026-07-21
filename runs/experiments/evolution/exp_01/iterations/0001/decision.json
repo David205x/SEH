@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "decision": "reject",
+  "iteration_id": "iteration_20260720T074834233000Z_06c11dd6",
+  "candidate_digest": "69ba17401df4b2062e375ed51049d8ae69dae685cf647e179208c98f5eb3698e",
+  "compiler_summary": "Compile a rule-based post_tool Hook that precomputes entities/numeric-quantity patterns from core.question, detects partial search coverage, and appends a one-shot assistant message prompting a follow-up search for the missing entity or quantity",
+  "reason": "Candidate failed deterministic validation",
+  "metrics": {}
+}

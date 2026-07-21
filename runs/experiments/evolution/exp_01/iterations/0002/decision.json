@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "decision": "reject",
+  "iteration_id": "iteration_20260720T080412681517Z_077ba759",
+  "candidate_digest": "2682cc5b12e4fd741bb8fad77ef9bb86a7b539426934309b0dee5282782964ac",
+  "compiler_summary": "Create a new mutable extension with one Hook that injects the multi-hop decomposition instruction into stage.model_input at every post_prompt invocation. Since SimplePromptBuilder.build() reconstructs fresh ModelInput each step from [template, question, conversation_messages], a one-shot injection would be lost by step 2. Injecting at every post_prompt achieves the coordinator intent of 'persists for the entire episode' while respecting the fixed prompt lifecycle in this harness.",
+  "reason": "Candidate failed deterministic validation",
+  "metrics": {}
+}

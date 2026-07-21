@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Harness Translation Test</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-brand">
+        <p class="eyebrow">SEARCH HARNESS</p>
+        <h1>Translation Test</h1>
+      </div>
+      <nav class="app-navbar" aria-label="Visualizer sections">
+        <a class="navbar-item" href="/">Traces</a>
+        <a class="navbar-item" href="/evaluation.html">Evaluations</a>
+        <a class="navbar-item" href="/harness.html">Harness</a>
+        <a class="navbar-item" href="/critic.html">Critic</a>
+        <a class="navbar-item" href="/compiler.html">Compiler</a>
+      </nav>
+      <div class="header-tools"></div>
+    </header>
+    <main class="translation-test-main">
+      <div class="translation-test-grid">
+        <section class="translation-test-case">
+          <h2>Static normal text</h2>
+          <div class="translation-test-content">The agent reviews repeated failures and decides whether another tool call is needed.</div>
+        </section>
+        <section class="translation-test-case">
+          <h2>Static preformatted text</h2>
+          <pre class="translation-test-content translation-test-code">The agent reviews repeated failures and decides whether another tool call is needed.</pre>
+        </section>
+        <section class="translation-test-case">
+          <h2>Dynamic normal text</h2>
+          <div class="translation-test-content" id="dynamic-normal"></div>
+        </section>
+        <section class="translation-test-case">
+          <h2>Dynamic preformatted text</h2>
+          <pre class="translation-test-content translation-test-code" id="dynamic-pre"></pre>
+        </section>
+      </div>
+    </main>
+    <script src="/translation-test.js"></script>
+  </body>
+</html>

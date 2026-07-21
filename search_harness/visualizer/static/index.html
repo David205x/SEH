@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Harness Trace Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-brand">
+        <p class="eyebrow">SEARCH HARNESS</p>
+        <h1>Trace Viewer</h1>
+      </div>
+      <nav class="app-navbar" aria-label="Visualizer sections">
+        <a class="navbar-item active" href="/" aria-current="page">Traces</a>
+        <a class="navbar-item" href="/evaluation.html">Evaluations</a>
+        <a class="navbar-item" href="/experiment.html">Experiments</a>
+        <a class="navbar-item" href="/harness.html">Harness</a>
+        <a class="navbar-item" href="/critic.html">Critic</a>
+        <a class="navbar-item" href="/compiler.html">Compiler</a>
+      </nav>
+      <div class="header-tools">
+        <details class="role-menu">
+          <summary title="Choose which roles are expanded">Expand roles</summary>
+          <div class="role-options">
+            <label><input type="checkbox" data-role="system" checked />System</label>
+            <label><input type="checkbox" data-role="user" checked />User</label>
+            <label><input type="checkbox" data-role="assistant" checked />Assistant</label>
+            <label><input type="checkbox" data-role="native-thinking" checked />Native thinking</label>
+            <label><input type="checkbox" data-role="inband-thinking" checked />In-band thinking</label>
+            <label><input type="checkbox" data-role="tool" checked />Tool</label>
+            <label><input type="checkbox" data-role="hook" checked />Hook</label>
+            <label><input type="checkbox" data-role="context" checked />Context</label>
+            <label><input type="checkbox" data-role="error" checked />Error</label>
+          </div>
+        </details>
+        <button class="toolbar-button" id="reload-files" type="button">Reload</button>
+      </div>
+    </header>
+    <main class="workspace">
+      <aside class="sidebar file-sidebar" aria-label="Trace files">
+        <div class="panel-heading">
+          <h2>Trace files</h2>
+          <span class="count" id="file-count">0</span>
+        </div>
+        <div class="file-list" id="file-list"></div>
+      </aside>
+
+      <section class="conversation-panel" aria-label="Selected trajectory">
+        <div class="panel-heading conversation-heading">
+          <div>
+            <h2 id="conversation-title">Select a trace file</h2>
+            <p id="conversation-subtitle">JSON and JSONL files are read from the configured traces directory.</p>
+          </div>
+        </div>
+        <div class="conversation" id="conversation">
+          <div class="empty-state">Choose a file from the left to inspect its trajectory.</div>
+        </div>
+      </section>
+
+      <aside class="sidebar detail-sidebar" aria-label="Trajectory details">
+        <section class="trace-section">
+          <div class="panel-heading">
+            <h2>Trajectories</h2>
+            <span class="count" id="trace-count">0</span>
+          </div>
+          <div class="trace-list" id="trace-list"></div>
+        </section>
+        <section class="info-section">
+          <div class="panel-heading"><h2>Current trace</h2></div>
+          <dl class="trace-info" id="trace-info"></dl>
+        </section>
+      </aside>
+    </main>
+    <template id="message-template">
+      <article class="message">
+        <button class="message-meta" type="button"></button>
+        <div class="message-content"></div>
+      </article>
+    </template>
+    <script src="/timeline.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+2026-07-20 19:09:53,622 INFO Starting evolution run | run_dir=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03, experience_examples=50, latest_version=harness_v0001
+2026-07-20 19:09:53,644 INFO [Iteration 1/5] Using parent harness_v0001
+2026-07-20 19:09:53,644 INFO [Iteration 1/5] Evaluating incumbent harness_v0001
+2026-07-20 19:19:40,893 INFO [Iteration 1/5] Incumbent evaluation completed | elapsed=587.3s, accuracy=0.7450, report=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\incumbent_report
+2026-07-20 19:19:40,894 INFO [Iteration 1/5] Running failure-analysis Critic
+2026-07-20 19:21:30,518 INFO [Iteration 1/5] Failure-analysis Critic completed | elapsed=109.6s, problem_directions=2, evidence_requests=2, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\failure_critic.json
+2026-07-20 19:21:30,519 INFO [Iteration 1/5] Validating Critic problem direction with Intervention
+2026-07-20 19:27:57,502 INFO [Iteration 1/5] Coordinator intervention completed | elapsed=387.0s, verdict=inconclusive, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\intervention\coordinator\20260720T112130823101Z\coordinator.json
+2026-07-20 19:27:57,502 INFO [Iteration 1/5] Continuing inconclusive intervention (pass 1)
+2026-07-20 19:28:58,998 INFO [Iteration 1/5] Coordinator continuation 1 completed | elapsed=61.5s, verdict=inconclusive, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\intervention_continuation_01\coordinator\20260720T112757923384Z\coordinator.json
+2026-07-20 19:28:58,998 INFO [Iteration 1/5] Continuing inconclusive intervention (pass 2)
+2026-07-20 19:31:58,629 INFO [Iteration 1/5] Coordinator continuation 2 completed | elapsed=179.6s, verdict=supported, selected_trial=trial_006, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\intervention_continuation_02\coordinator\20260720T112859312183Z\coordinator.json
+2026-07-20 19:31:58,630 INFO [Iteration 1/5] Running Compiler
+2026-07-20 19:34:32,334 INFO Evolution run failed | error=ValueError: Compiler final answer is not valid JSON: Expecting value
+2026-07-20 19:52:47,800 INFO Resuming evolution run | run_dir=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03, experience_examples=50, latest_version=harness_v0001
+2026-07-20 19:52:47,814 INFO [Iteration 1/5] Using parent harness_v0001
+2026-07-20 19:52:47,814 INFO [Iteration 1/5] Reusing stored incumbent evaluation
+2026-07-20 19:52:47,815 INFO [Iteration 1/5] Reusing failure-analysis Critic result
+2026-07-20 19:52:47,815 INFO [Iteration 1/5] Reusing Coordinator intervention evidence
+2026-07-20 19:52:47,816 INFO [Iteration 1/5] Reusing Coordinator continuation 1
+2026-07-20 19:52:47,817 INFO [Iteration 1/5] Reusing Coordinator continuation 2
+2026-07-20 19:52:47,817 INFO [Iteration 1/5] Running Compiler
+2026-07-20 20:01:32,338 INFO [Iteration 1/5] Compiler candidate prepared | elapsed=524.5s, candidate=iteration_20260720T115833017375Z_72626bdb, validation=passed, changed_files=3, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\compiler.json
+2026-07-20 20:01:32,339 INFO [Iteration 1/5] Evaluating candidate
+2026-07-20 20:11:22,048 INFO [Iteration 1/5] Candidate evaluation completed | elapsed=589.8s, accuracy=0.0000, report=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\candidate_report
+2026-07-20 20:11:22,049 INFO [Iteration 1/5] Running candidate-review Critic
+2026-07-20 20:11:46,674 INFO [Iteration 1/5] Candidate review completed | elapsed=24.6s, decision=reject, accuracy_delta=-0.7450, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0001\candidate_review.json
+2026-07-20 20:11:46,953 INFO [Iteration 1/5] Rejected candidate | reason=100% runner-error failure rate (150/150 rollouts) caused by a new extension that uses harness API patterns incompatible with the runtime. The incumbent achieves 83.3% accuracy on the same set. No rollouts completed, so no behavioral or cost comparison is possible. The candidate provides zero evidence of any benefit and produces total execution collapse.
+2026-07-20 20:11:46,962 INFO [Iteration 2/5] Using parent harness_v0001
+2026-07-20 20:11:46,963 INFO [Iteration 2/5] Reusing stored incumbent evaluation
+2026-07-20 20:11:46,964 INFO [Iteration 2/5] Running failure-analysis Critic
+2026-07-20 20:13:21,571 INFO [Iteration 2/5] Failure-analysis Critic completed | elapsed=94.6s, problem_directions=2, evidence_requests=1, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0002\failure_critic.json
+2026-07-20 20:13:21,572 INFO [Iteration 2/5] Validating Critic problem direction with Intervention
+2026-07-20 20:22:35,124 INFO [Iteration 2/5] Coordinator intervention completed | elapsed=553.6s, verdict=inconclusive, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0002\intervention\coordinator\20260720T121321893371Z\coordinator.json
+2026-07-20 20:22:35,125 INFO [Iteration 2/5] Continuing inconclusive intervention (pass 1)
+2026-07-20 20:33:20,758 INFO [Iteration 2/5] Coordinator continuation 1 completed | elapsed=645.7s, verdict=inconclusive, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0002\intervention_continuation_01\coordinator\20260720T122235490319Z\coordinator.json
+2026-07-20 20:33:20,759 INFO [Iteration 2/5] Continuing inconclusive intervention (pass 2)
+2026-07-20 20:41:28,133 INFO [Iteration 2/5] Coordinator continuation 2 completed | elapsed=487.4s, verdict=inconclusive, selected_trial=trial_011, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03\iterations\0002\intervention_continuation_02\coordinator\20260720T123321151222Z\coordinator.json
+2026-07-20 20:41:28,139 INFO Evolution run completed | status=no_supported_strategy, iterations=1, accepted=0, latest_version=harness_v0001, reason=Coordinator did not validate a strategy for the Critic direction: inconclusive
+2026-07-21 00:04:21,163 INFO Resuming evolution run | run_dir=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_03, experience_examples=50, latest_version=harness_v0001
+2026-07-21 00:04:21,178 INFO Evolution run already completed | status=no_supported_strategy, iterations=1, accepted=0, latest_version=harness_v0001, reason=Coordinator did not validate a strategy for the Critic direction: inconclusive

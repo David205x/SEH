@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Harness Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-brand">
+        <p class="eyebrow">SEARCH HARNESS</p>
+        <h1>Harness Viewer</h1>
+      </div>
+      <nav class="app-navbar" aria-label="Visualizer sections">
+        <a class="navbar-item" href="/">Traces</a>
+        <a class="navbar-item" href="/evaluation.html">Evaluations</a>
+        <a class="navbar-item" href="/experiment.html">Experiments</a>
+        <a class="navbar-item active" href="/harness.html" aria-current="page">Harness</a>
+        <a class="navbar-item" href="/critic.html">Critic</a>
+        <a class="navbar-item" href="/compiler.html">Compiler</a>
+      </nav>
+      <div class="header-tools">
+        <button class="toolbar-button" id="reload-evolution" type="button">Reload</button>
+      </div>
+    </header>
+    <main class="workspace evolution-workspace">
+      <aside class="sidebar file-sidebar">
+        <div class="panel-heading">
+          <h2>Iterations</h2>
+          <span class="count" id="iteration-count">0</span>
+        </div>
+        <div class="iteration-list" id="iteration-list"></div>
+      </aside>
+      <section class="evolution-main">
+        <div class="panel-heading conversation-heading">
+          <div>
+            <h2 id="iteration-title">Select an iteration</h2>
+            <p id="iteration-subtitle">Patch, validation and decision events appear here.</p>
+          </div>
+          <div class="view-switch" role="tablist" aria-label="Harness view">
+            <button class="view-switch-button selected" data-view="evolution" type="button">Evolution</button>
+            <button class="view-switch-button" data-view="topology" type="button">Topology</button>
+          </div>
+        </div>
+        <div class="evolution-timeline" id="evolution-timeline"></div>
+      </section>
+      <aside class="sidebar detail-sidebar evolution-sidebar">
+        <section class="version-section">
+          <div class="panel-heading">
+            <h2>Accepted versions</h2>
+            <span class="count" id="version-count">0</span>
+          </div>
+          <div class="version-list" id="version-list"></div>
+        </section>
+        <section class="evolution-info-section">
+          <div class="panel-heading"><h2>Details</h2></div>
+          <pre class="evolution-detail" id="evolution-detail"></pre>
+        </section>
+      </aside>
+    </main>
+    <template id="evolution-event-template">
+      <article class="evolution-event">
+        <button class="evolution-event-heading" type="button">
+          <span class="event-sequence"></span>
+          <span class="event-name"></span>
+          <span class="event-time"></span>
+        </button>
+        <pre class="evolution-event-content"></pre>
+      </article>
+    </template>
+    <script src="/harness.js"></script>
+  </body>
+</html>

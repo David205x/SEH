@@ -1,0 +1,10 @@
+# Local credentials and generated Python artifacts
+__pycache__/
+*.py[cod]
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+demo/
+harness_checkpoints/
+research/

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "decision": "reject",
+  "iteration_id": "iteration_20260720T115833017375Z_72626bdb",
+  "candidate_digest": "ccd72b1392d58c69b0f2f6b611ad41183e3d21d05002cd0ae23f266ccd10f5c6",
+  "compiler_summary": "Replace the rejected search_completeness extension with a corrected implementation that removes the invalid persistent_state keyword argument and uses an instance variable for the 3-deferral guardrail, while preserving all validated intervention semantics.",
+  "reason": "100% runner-error failure rate (150/150 rollouts) caused by a new extension that uses harness API patterns incompatible with the runtime. The incumbent achieves 83.3% accuracy on the same set. No rollouts completed, so no behavioral or cost comparison is possible. The candidate provides zero evidence of any benefit and produces total execution collapse.",
+  "metrics": {
+    "answers": {
+      "scored_count": 150,
+      "correct_count": 0,
+      "accuracy": 0.0,
+      "static_pass_count": 0,
+      "teacher_judged_count": 0,
+      "unresolved_count": 0,
+      "example_count": 50,
+      "stable_correct_count": 0,
+      "stable_failure_count": 50,
+      "unstable_count": 0,
+      "unresolved_example_count": 0,
+      "stable_correct_rate": 0.0,
+      "stable_failure_rate": 1.0,
+      "unstable_rate": 0.0,
+      "majority_correct_rate": 0.0,
+      "pass_at_n": 0.0,
+      "mean_example_success_rate": 0.0,
+      "mean_answer_consistency": null
+    },
+    "execution": {
+      "record_count": 150,
+      "completed_rate": 0.0,
+      "status_counts": {
+        "runner_error": 150
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": null,
+      "mean_model_calls": 0,
+      "mean_tool_calls": 0,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "actor_input_tokens": null,
+      "actor_output_tokens": null,
+      "actor_total_tokens": null,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 0.0
+    }
+  },
+  "validation": {
+    "passed": true,
+    "parent_version": "harness_v0001",
+    "revision": 3,
+    "candidate_digest": "ccd72b1392d58c69b0f2f6b611ad41183e3d21d05002cd0ae23f266ccd10f5c6",
+    "added_paths": [
+      "extensions/search_completeness/plugin.py",
+      "extensions/search_completeness/templates/judge_missing.md"
+    ],
+    "modified_paths": [
+      "harness.json"
+    ],
+    "removed_paths": [],
+    "errors": []
+  },
+  "review": {
+    "decision": "reject",
+    "reason": "100% runner-error failure rate (150/150 rollouts) caused by a new extension that uses harness API patterns incompatible with the runtime. The incumbent achieves 83.3% accuracy on the same set. No rollouts completed, so no behavioral or cost comparison is possible. The candidate provides zero evidence of any benefit and produces total execution collapse."
+  },
+  "metric_delta": {
+    "answers": {
+      "accuracy": -0.7449664429530202,
+      "correct_count": -111,
+      "example_count": 0,
+      "majority_correct_rate": -0.76,
+      "mean_example_success_rate": -0.74,
+      "pass_at_n": -0.86,
+      "scored_count": 1,
+      "stable_correct_count": -30,
+      "stable_correct_rate": -0.6,
+      "stable_failure_count": 44,
+      "stable_failure_rate": 0.88,
+      "static_pass_count": -70,
+      "teacher_judged_count": -79,
+      "unresolved_count": -1,
+      "unresolved_example_count": -1,
+      "unstable_count": -13,
+      "unstable_rate": -0.26
+    },
+    "execution": {
+      "completed_rate": -1.0,
+      "mean_duplicate_queries": 0,
+      "mean_model_calls": -2.1266666666666665,
+      "mean_tool_calls": -1.1133333333333333,
+      "record_count": 0,
+      "retriever_error_rate": 0.0
+    },
+    "tokens": {
+      "coverage_rate": -1.0
+    }
+  }
+}

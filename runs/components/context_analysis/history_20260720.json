@@ -1,0 +1,898 @@
+{
+  "schema_version": 1,
+  "files": 22,
+  "model_calls": 444,
+  "calls_without_usage": 0,
+  "coverage_rate": 1.0,
+  "overall": {
+    "calls": 444,
+    "prompt_tokens": {
+      "mean": 919.77,
+      "p50": 1120,
+      "p90": 2025,
+      "p95": 2240,
+      "p99": 3158,
+      "max": 4058
+    },
+    "completion_tokens": {
+      "mean": 502.79,
+      "p50": 354,
+      "p90": 1003,
+      "p95": 1278,
+      "p99": 1772,
+      "max": 4096
+    },
+    "total_tokens": {
+      "mean": 1422.56,
+      "p50": 1420,
+      "p90": 2574,
+      "p95": 3016,
+      "p99": 4435,
+      "max": 5460
+    }
+  },
+  "by_event_type": {
+    "model_output": {
+      "calls": 444,
+      "prompt_tokens": {
+        "mean": 919.77,
+        "p50": 1120,
+        "p90": 2025,
+        "p95": 2240,
+        "p99": 3158,
+        "max": 4058
+      },
+      "completion_tokens": {
+        "mean": 502.79,
+        "p50": 354,
+        "p90": 1003,
+        "p95": 1278,
+        "p99": 1772,
+        "max": 4096
+      },
+      "total_tokens": {
+        "mean": 1422.56,
+        "p50": 1420,
+        "p90": 2574,
+        "p95": 3016,
+        "p99": 4435,
+        "max": 5460
+      }
+    }
+  },
+  "by_step": {
+    "1": {
+      "calls": 197,
+      "prompt_tokens": {
+        "mean": 270.24,
+        "p50": 183,
+        "p90": 248,
+        "p95": 1174,
+        "p99": 1238,
+        "max": 2410
+      },
+      "completion_tokens": {
+        "mean": 428.34,
+        "p50": 334,
+        "p90": 826,
+        "p95": 1015,
+        "p99": 1372,
+        "max": 2037
+      },
+      "total_tokens": {
+        "mean": 698.57,
+        "p50": 548,
+        "p90": 1315,
+        "p95": 1469,
+        "p99": 2226,
+        "max": 3016
+      }
+    },
+    "2": {
+      "calls": 195,
+      "prompt_tokens": {
+        "mean": 1248.98,
+        "p50": 1236,
+        "p90": 1373,
+        "p95": 1456,
+        "p99": 2233,
+        "max": 3459
+      },
+      "completion_tokens": {
+        "mean": 556.63,
+        "p50": 360,
+        "p90": 1209,
+        "p95": 1521,
+        "p99": 4096,
+        "max": 4096
+      },
+      "total_tokens": {
+        "mean": 1805.61,
+        "p50": 1622,
+        "p90": 2561,
+        "p95": 2841,
+        "p99": 5206,
+        "max": 5460
+      }
+    },
+    "3": {
+      "calls": 46,
+      "prompt_tokens": {
+        "mean": 2061.72,
+        "p50": 2172,
+        "p90": 2970,
+        "p95": 3016,
+        "p99": 4000,
+        "max": 4000
+      },
+      "completion_tokens": {
+        "mean": 583.2,
+        "p50": 416,
+        "p90": 1186,
+        "p95": 1278,
+        "p99": 1586,
+        "max": 1586
+      },
+      "total_tokens": {
+        "mean": 2644.91,
+        "p50": 2557,
+        "p90": 3359,
+        "p95": 4191,
+        "p99": 4936,
+        "max": 4936
+      }
+    },
+    "4": {
+      "calls": 5,
+      "prompt_tokens": {
+        "mean": 2718.6,
+        "p50": 3077,
+        "p90": 4058,
+        "p95": 4058,
+        "p99": 4058,
+        "max": 4058
+      },
+      "completion_tokens": {
+        "mean": 643.0,
+        "p50": 377,
+        "p90": 1495,
+        "p95": 1495,
+        "p99": 1495,
+        "max": 1495
+      },
+      "total_tokens": {
+        "mean": 3361.6,
+        "p50": 3584,
+        "p90": 4572,
+        "p95": 4572,
+        "p99": 4572,
+        "max": 4572
+      }
+    },
+    "5": {
+      "calls": 1,
+      "prompt_tokens": {
+        "mean": 3158.0,
+        "p50": 3158,
+        "p90": 3158,
+        "p95": 3158,
+        "p99": 3158,
+        "max": 3158
+      },
+      "completion_tokens": {
+        "mean": 273.0,
+        "p50": 273,
+        "p90": 273,
+        "p95": 273,
+        "p99": 273,
+        "max": 273
+      },
+      "total_tokens": {
+        "mean": 3431.0,
+        "p50": 3431,
+        "p90": 3431,
+        "p95": 3431,
+        "p99": 3431,
+        "max": 3431
+      }
+    }
+  },
+  "by_file": {
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\actor\\candidate_84f16d34_100\\rollout.jsonl": {
+      "calls": 221,
+      "prompt_tokens": {
+        "mean": 817.36,
+        "p50": 1054,
+        "p90": 1373,
+        "p95": 2172,
+        "p99": 2346,
+        "max": 2377
+      },
+      "completion_tokens": {
+        "mean": 521.35,
+        "p50": 361,
+        "p90": 1119,
+        "p95": 1369,
+        "p99": 1772,
+        "max": 4096
+      },
+      "total_tokens": {
+        "mean": 1338.71,
+        "p50": 1452,
+        "p90": 2491,
+        "p95": 2761,
+        "p99": 3280,
+        "max": 5460
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T053038544856Z\\intervention.json": {
+      "calls": 1,
+      "prompt_tokens": {
+        "mean": 1213.0,
+        "p50": 1213,
+        "p90": 1213,
+        "p95": 1213,
+        "p99": 1213,
+        "max": 1213
+      },
+      "completion_tokens": {
+        "mean": 147.0,
+        "p50": 147,
+        "p90": 147,
+        "p95": 147,
+        "p99": 147,
+        "max": 147
+      },
+      "total_tokens": {
+        "mean": 1360.0,
+        "p50": 1360,
+        "p90": 1360,
+        "p95": 1360,
+        "p99": 1360,
+        "max": 1360
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T082306221945Z\\intervention.json": {
+      "calls": 3,
+      "prompt_tokens": {
+        "mean": 390.33,
+        "p50": 318,
+        "p90": 600,
+        "p95": 600,
+        "p99": 600,
+        "max": 600
+      },
+      "completion_tokens": {
+        "mean": 346.33,
+        "p50": 399,
+        "p90": 444,
+        "p95": 444,
+        "p99": 444,
+        "max": 444
+      },
+      "total_tokens": {
+        "mean": 736.67,
+        "p50": 762,
+        "p90": 796,
+        "p95": 796,
+        "p99": 796,
+        "max": 796
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T090639487150Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1715.0,
+        "p50": 1197,
+        "p90": 2233,
+        "p95": 2233,
+        "p99": 2233,
+        "max": 2233
+      },
+      "completion_tokens": {
+        "mean": 316.0,
+        "p50": 235,
+        "p90": 397,
+        "p95": 397,
+        "p99": 397,
+        "max": 397
+      },
+      "total_tokens": {
+        "mean": 2031.0,
+        "p50": 1432,
+        "p90": 2630,
+        "p95": 2630,
+        "p99": 2630,
+        "max": 2630
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T093654532640Z\\intervention.json": {
+      "calls": 4,
+      "prompt_tokens": {
+        "mean": 2453.75,
+        "p50": 2215,
+        "p90": 3277,
+        "p95": 3277,
+        "p99": 3277,
+        "max": 3277
+      },
+      "completion_tokens": {
+        "mean": 482.25,
+        "p50": 490,
+        "p90": 607,
+        "p95": 607,
+        "p99": 607,
+        "max": 607
+      },
+      "total_tokens": {
+        "mean": 2936.0,
+        "p50": 2740,
+        "p90": 3751,
+        "p95": 3751,
+        "p99": 3751,
+        "max": 3751
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T150958947979Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1623.0,
+        "p50": 1171,
+        "p90": 2075,
+        "p95": 2075,
+        "p99": 2075,
+        "max": 2075
+      },
+      "completion_tokens": {
+        "mean": 327.0,
+        "p50": 262,
+        "p90": 392,
+        "p95": 392,
+        "p99": 392,
+        "max": 392
+      },
+      "total_tokens": {
+        "mean": 1950.0,
+        "p50": 1433,
+        "p90": 2467,
+        "p95": 2467,
+        "p99": 2467,
+        "max": 2467
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T151058820762Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1315.0,
+        "p50": 1184,
+        "p90": 1446,
+        "p95": 1446,
+        "p99": 1446,
+        "max": 1446
+      },
+      "completion_tokens": {
+        "mean": 334.0,
+        "p50": 285,
+        "p90": 383,
+        "p95": 383,
+        "p99": 383,
+        "max": 383
+      },
+      "total_tokens": {
+        "mean": 1649.0,
+        "p50": 1469,
+        "p90": 1829,
+        "p95": 1829,
+        "p99": 1829,
+        "max": 1829
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T151208473212Z\\intervention.json": {
+      "calls": 3,
+      "prompt_tokens": {
+        "mean": 1678.67,
+        "p50": 1436,
+        "p90": 2426,
+        "p95": 2426,
+        "p99": 2426,
+        "max": 2426
+      },
+      "completion_tokens": {
+        "mean": 272.33,
+        "p50": 281,
+        "p90": 313,
+        "p95": 313,
+        "p99": 313,
+        "max": 313
+      },
+      "total_tokens": {
+        "mean": 1951.0,
+        "p50": 1717,
+        "p90": 2649,
+        "p95": 2649,
+        "p99": 2649,
+        "max": 2649
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T160539278795Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1611.5,
+        "p50": 1209,
+        "p90": 2014,
+        "p95": 2014,
+        "p99": 2014,
+        "max": 2014
+      },
+      "completion_tokens": {
+        "mean": 404.0,
+        "p50": 360,
+        "p90": 448,
+        "p95": 448,
+        "p99": 448,
+        "max": 448
+      },
+      "total_tokens": {
+        "mean": 2015.5,
+        "p50": 1657,
+        "p90": 2374,
+        "p95": 2374,
+        "p99": 2374,
+        "max": 2374
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T160622980220Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1288.0,
+        "p50": 1204,
+        "p90": 1372,
+        "p95": 1372,
+        "p99": 1372,
+        "max": 1372
+      },
+      "completion_tokens": {
+        "mean": 389.0,
+        "p50": 309,
+        "p90": 469,
+        "p95": 469,
+        "p99": 469,
+        "max": 469
+      },
+      "total_tokens": {
+        "mean": 1677.0,
+        "p50": 1673,
+        "p90": 1681,
+        "p95": 1681,
+        "p99": 1681,
+        "max": 1681
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T161302637418Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1618.0,
+        "p50": 1166,
+        "p90": 2070,
+        "p95": 2070,
+        "p99": 2070,
+        "max": 2070
+      },
+      "completion_tokens": {
+        "mean": 275.5,
+        "p50": 262,
+        "p90": 289,
+        "p95": 289,
+        "p99": 289,
+        "max": 289
+      },
+      "total_tokens": {
+        "mean": 1893.5,
+        "p50": 1428,
+        "p90": 2359,
+        "p95": 2359,
+        "p99": 2359,
+        "max": 2359
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T161345833085Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1072.5,
+        "p50": 930,
+        "p90": 1215,
+        "p95": 1215,
+        "p99": 1215,
+        "max": 1215
+      },
+      "completion_tokens": {
+        "mean": 174.0,
+        "p50": 157,
+        "p90": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "total_tokens": {
+        "mean": 1246.5,
+        "p50": 1087,
+        "p90": 1406,
+        "p95": 1406,
+        "p99": 1406,
+        "max": 1406
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T161435934815Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1672.0,
+        "p50": 1136,
+        "p90": 2208,
+        "p95": 2208,
+        "p99": 2208,
+        "max": 2208
+      },
+      "completion_tokens": {
+        "mean": 320.0,
+        "p50": 286,
+        "p90": 354,
+        "p95": 354,
+        "p99": 354,
+        "max": 354
+      },
+      "total_tokens": {
+        "mean": 1992.0,
+        "p50": 1422,
+        "p90": 2562,
+        "p95": 2562,
+        "p99": 2562,
+        "max": 2562
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\candidate_rollouts.jsonl": {
+      "calls": 1,
+      "prompt_tokens": {
+        "mean": 248.0,
+        "p50": 248,
+        "p90": 248,
+        "p95": 248,
+        "p99": 248,
+        "max": 248
+      },
+      "completion_tokens": {
+        "mean": 368.0,
+        "p50": 368,
+        "p90": 368,
+        "p95": 368,
+        "p99": 368,
+        "max": 368
+      },
+      "total_tokens": {
+        "mean": 616.0,
+        "p50": 616,
+        "p90": 616,
+        "p95": 616,
+        "p99": 616,
+        "max": 616
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\incumbent_rollouts.jsonl": {
+      "calls": 46,
+      "prompt_tokens": {
+        "mean": 861.96,
+        "p50": 1072,
+        "p90": 2025,
+        "p95": 2129,
+        "p99": 2325,
+        "max": 2325
+      },
+      "completion_tokens": {
+        "mean": 472.57,
+        "p50": 357,
+        "p90": 962,
+        "p95": 1033,
+        "p99": 1129,
+        "max": 1129
+      },
+      "total_tokens": {
+        "mean": 1334.52,
+        "p50": 1368,
+        "p90": 2353,
+        "p95": 2561,
+        "p99": 3271,
+        "max": 3271
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172007431750Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 1238.0,
+        "p50": 1108,
+        "p90": 1368,
+        "p95": 1368,
+        "p99": 1368,
+        "max": 1368
+      },
+      "completion_tokens": {
+        "mean": 348.0,
+        "p50": 286,
+        "p90": 410,
+        "p95": 410,
+        "p99": 410,
+        "max": 410
+      },
+      "total_tokens": {
+        "mean": 1586.0,
+        "p50": 1394,
+        "p90": 1778,
+        "p95": 1778,
+        "p99": 1778,
+        "max": 1778
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172114042815Z\\intervention.json": {
+      "calls": 3,
+      "prompt_tokens": {
+        "mean": 2444.0,
+        "p50": 2151,
+        "p90": 4000,
+        "p95": 4000,
+        "p99": 4000,
+        "max": 4000
+      },
+      "completion_tokens": {
+        "mean": 572.0,
+        "p50": 454,
+        "p90": 936,
+        "p95": 936,
+        "p99": 936,
+        "max": 936
+      },
+      "total_tokens": {
+        "mean": 3016.0,
+        "p50": 2477,
+        "p90": 4936,
+        "p95": 4936,
+        "p99": 4936,
+        "max": 4936
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172202519169Z\\intervention.json": {
+      "calls": 2,
+      "prompt_tokens": {
+        "mean": 2934.5,
+        "p50": 2410,
+        "p90": 3459,
+        "p95": 3459,
+        "p99": 3459,
+        "max": 3459
+      },
+      "completion_tokens": {
+        "mean": 537.5,
+        "p50": 469,
+        "p90": 606,
+        "p95": 606,
+        "p99": 606,
+        "max": 606
+      },
+      "total_tokens": {
+        "mean": 3472.0,
+        "p50": 3016,
+        "p90": 3928,
+        "p95": 3928,
+        "p99": 3928,
+        "max": 3928
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172244690186Z\\intervention.json": {
+      "calls": 3,
+      "prompt_tokens": {
+        "mean": 1750.67,
+        "p50": 1511,
+        "p90": 2503,
+        "p95": 2503,
+        "p99": 2503,
+        "max": 2503
+      },
+      "completion_tokens": {
+        "mean": 253.0,
+        "p50": 257,
+        "p90": 297,
+        "p95": 297,
+        "p99": 297,
+        "max": 297
+      },
+      "total_tokens": {
+        "mean": 2003.67,
+        "p50": 1716,
+        "p90": 2800,
+        "p95": 2800,
+        "p99": 2800,
+        "max": 2800
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0001\\candidate_rollouts.jsonl": {
+      "calls": 44,
+      "prompt_tokens": {
+        "mean": 757.89,
+        "p50": 1043,
+        "p90": 1247,
+        "p95": 1464,
+        "p99": 2127,
+        "max": 2127
+      },
+      "completion_tokens": {
+        "mean": 549.93,
+        "p50": 305,
+        "p90": 1097,
+        "p95": 1180,
+        "p99": 4096,
+        "max": 4096
+      },
+      "total_tokens": {
+        "mean": 1307.82,
+        "p50": 1294,
+        "p90": 2405,
+        "p95": 2639,
+        "p99": 5206,
+        "max": 5206
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0001\\incumbent_rollouts.jsonl": {
+      "calls": 49,
+      "prompt_tokens": {
+        "mean": 1000.86,
+        "p50": 1119,
+        "p90": 2176,
+        "p95": 2970,
+        "p99": 3158,
+        "max": 3158
+      },
+      "completion_tokens": {
+        "mean": 492.1,
+        "p50": 388,
+        "p90": 1003,
+        "p95": 1216,
+        "p99": 1495,
+        "max": 1495
+      },
+      "total_tokens": {
+        "mean": 1492.96,
+        "p50": 1398,
+        "p90": 3132,
+        "p95": 3271,
+        "p99": 4572,
+        "max": 4572
+      }
+    },
+    "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0002\\incumbent_rollouts.jsonl": {
+      "calls": 46,
+      "prompt_tokens": {
+        "mean": 944.78,
+        "p50": 1110,
+        "p90": 2097,
+        "p95": 3005,
+        "p99": 4058,
+        "max": 4058
+      },
+      "completion_tokens": {
+        "mean": 529.28,
+        "p50": 322,
+        "p90": 1186,
+        "p95": 1422,
+        "p99": 2257,
+        "max": 2257
+      },
+      "total_tokens": {
+        "mean": 1474.07,
+        "p50": 1373,
+        "p90": 2979,
+        "p95": 4191,
+        "p99": 4435,
+        "max": 4435
+      }
+    }
+  },
+  "largest_calls": [
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\components\\actor\\candidate_84f16d34_100\\rollout.jsonl",
+      "example_id": "5a7a52745542996c55b2dd4f",
+      "question": "Who was born first, Francis Nethersole or Elizabeth Stuart?",
+      "step": 2,
+      "event_type": "model_output",
+      "prompt_tokens": 1364,
+      "completion_tokens": 4096,
+      "total_tokens": 5460
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0001\\candidate_rollouts.jsonl",
+      "example_id": "5a8b63755542997f31a41cfe",
+      "question": "750 7th Avenue and 101 Park Avenue, are located in which city?",
+      "step": 2,
+      "event_type": "model_output",
+      "prompt_tokens": 1110,
+      "completion_tokens": 4096,
+      "total_tokens": 5206
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172114042815Z\\intervention.json",
+      "example_id": "5a7272eb5542997f827839d7",
+      "question": "How old is the female main protagonist of Catching Fire?",
+      "step": 3,
+      "event_type": "model_output",
+      "prompt_tokens": 4000,
+      "completion_tokens": 936,
+      "total_tokens": 4936
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0001\\incumbent_rollouts.jsonl",
+      "example_id": "5ae0d91e55429924de1b7198",
+      "question": "The 1988 American comedy film, The Great Outdoors, starred a four-time Academy Award nominee, who received a star on the Hollywood Walk of Fame in what year?",
+      "step": 4,
+      "event_type": "model_output",
+      "prompt_tokens": 3077,
+      "completion_tokens": 1495,
+      "total_tokens": 4572
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0002\\incumbent_rollouts.jsonl",
+      "example_id": "5ae0d91e55429924de1b7198",
+      "question": "The 1988 American comedy film, The Great Outdoors, starred a four-time Academy Award nominee, who received a star on the Hollywood Walk of Fame in what year?",
+      "step": 4,
+      "event_type": "model_output",
+      "prompt_tokens": 4058,
+      "completion_tokens": 377,
+      "total_tokens": 4435
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0002\\incumbent_rollouts.jsonl",
+      "example_id": "5a8fa73e5542992414482b22",
+      "question": "Which publishing company has published Bizarre and a sister publication devoted to the anomalous phenomena popularised by Charles Fort?",
+      "step": 3,
+      "event_type": "model_output",
+      "prompt_tokens": 3016,
+      "completion_tokens": 1278,
+      "total_tokens": 4294
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\run_001\\iterations\\0002\\incumbent_rollouts.jsonl",
+      "example_id": "5ae0d91e55429924de1b7198",
+      "question": "The 1988 American comedy film, The Great Outdoors, starred a four-time Academy Award nominee, who received a star on the Hollywood Walk of Fame in what year?",
+      "step": 3,
+      "event_type": "model_output",
+      "prompt_tokens": 3005,
+      "completion_tokens": 1186,
+      "total_tokens": 4191
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\intervention\\trials\\20260719T172202519169Z\\intervention.json",
+      "example_id": "5a904e725542995651fb5118",
+      "question": "An edited version of \"Just the Two of Us\" reached number two on the \"Billboard\" Hot 100 behind a song written and composed by Donna Weiss and Jackie DeShannon which spend how many weeks at No. 1 on the \"Billboard\" hot 100?",
+      "step": 2,
+      "event_type": "model_output",
+      "prompt_tokens": 3459,
+      "completion_tokens": 469,
+      "total_tokens": 3928
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T093654532640Z\\intervention.json",
+      "example_id": "5a822d4655429926c1cdae45",
+      "question": "What actor in the film D.C. Cab also had a role in the TV series Barney Miller?",
+      "step": 3,
+      "event_type": "model_output",
+      "prompt_tokens": 3144,
+      "completion_tokens": 607,
+      "total_tokens": 3751
+    },
+    {
+      "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\components\\intervention\\20260719T093654532640Z\\intervention.json",
+      "example_id": "5a822d4655429926c1cdae45",
+      "question": "What actor in the film D.C. Cab also had a role in the TV series Barney Miller?",
+      "step": 4,
+      "event_type": "model_output",
+      "prompt_tokens": 3277,
+      "completion_tokens": 307,
+      "total_tokens": 3584
+    }
+  ]
+}

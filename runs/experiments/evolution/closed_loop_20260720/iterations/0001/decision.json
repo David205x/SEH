@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "decision": "reject",
+  "iteration_id": "iteration_20260719T172315205306Z_2591cc6c",
+  "candidate_digest": "d36a96d76dbb3be701f209efae343844759d2324097b4defd4d3cb3f63fc30ed",
+  "compiler_summary": "Replace the static result_summary_prompt Hook with a model-driven Hook that uses the student model to judge each tool result and conditionally appends a targeted entity+attribute query instruction.",
+  "reason": "The candidate introduces a critical runtime bug: the result_summary_prompt Hook's _handle_post_tool method crashes with KeyError on stage.model_input in 19/20 cases because this state key is not guaranteed to be available during the POST_TOOL phase. This causes a catastrophic accuracy regression from 80% (16/20) to 0% (0/20). The single completed run also regressed in behavior (model answered without searching). No improvements exist to offset this regression, and the lower token cost is entirely an artifact of early crashes.",
+  "metrics": {
+    "answers": {
+      "scored_count": 20,
+      "correct_count": 0,
+      "accuracy": 0.0,
+      "static_pass_count": 0,
+      "teacher_judged_count": 1,
+      "unresolved_count": 0
+    },
+    "execution": {
+      "record_count": 20,
+      "completed_rate": 0.05,
+      "status_counts": {
+        "runner_error": 19,
+        "completed": 1
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 1,
+      "mean_model_calls": 0.05,
+      "mean_tool_calls": 0,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": 248,
+      "output_tokens": 368,
+      "total_tokens": 616,
+      "actor_input_tokens": 248,
+      "actor_output_tokens": 368,
+      "actor_total_tokens": 616,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 0.05
+    }
+  },
+  "review": {
+    "decision": "reject",
+    "reason": "The candidate introduces a critical runtime bug: the result_summary_prompt Hook's _handle_post_tool method crashes with KeyError on stage.model_input in 19/20 cases because this state key is not guaranteed to be available during the POST_TOOL phase. This causes a catastrophic accuracy regression from 80% (16/20) to 0% (0/20). The single completed run also regressed in behavior (model answered without searching). No improvements exist to offset this regression, and the lower token cost is entirely an artifact of early crashes."
+  },
+  "metric_delta": {
+    "answers": {
+      "accuracy": -0.8,
+      "correct_count": -16,
+      "scored_count": 0,
+      "static_pass_count": -12,
+      "teacher_judged_count": -7,
+      "unresolved_count": 0
+    },
+    "execution": {
+      "completed_rate": -0.95,
+      "mean_duplicate_queries": 0,
+      "mean_model_calls": -2.25,
+      "mean_steps": -1.2999999999999998,
+      "mean_tool_calls": -1.3,
+      "record_count": 0,
+      "retriever_error_rate": 0.0,
+      "status_counts": {
+        "completed": -19
+      }
+    },
+    "tokens": {
+      "actor_input_tokens": -39402,
+      "actor_output_tokens": -21370,
+      "actor_total_tokens": -60772,
+      "coverage_rate": -0.95,
+      "input_tokens": -39402,
+      "output_tokens": -21370,
+      "total_tokens": -60772
+    }
+  }
+}

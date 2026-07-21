@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "harness_id": "delegation_question_replace_system",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "simple_search",
+    "entrypoint": "prompts/simple_search/plugin.py:build",
+    "config": {},
+    "evolution_policy": "fixed"
+  },
+  "extensions": [
+    {
+      "instance_id": "lifecycle_audit",
+      "entrypoint": "extensions/lifecycle_audit/plugin.py:build",
+      "enabled": false,
+      "config": {},
+      "evolution_policy": "mutable"
+    },
+    {
+      "instance_id": "result_summary_prompt",
+      "entrypoint": "extensions/result_summary_prompt/plugin.py:build",
+      "enabled": true,
+      "config": {},
+      "evolution_policy": "mutable"
+    },
+    {
+      "instance_id": "tool_delegation",
+      "entrypoint": "extensions/tool_delegation/plugin.py:build",
+      "enabled": true,
+      "config": {
+        "tool_name": "search",
+        "arguments": {
+          "topk": 5
+        },
+        "request_message": "Retrieve evidence for the original user question before resuming.",
+        "query_strategy": "question",
+        "injection_mode": "replace_system",
+        "subtask_system_prompt_file": "extensions/tool_delegation/templates/subtask_system.md"
+      },
+      "evolution_policy": "mutable"
+    }
+  ]
+}

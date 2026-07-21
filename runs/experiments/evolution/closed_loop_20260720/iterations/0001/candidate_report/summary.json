@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\iterations\\0001\\candidate_rollouts.jsonl",
+  "created_at": "2026-07-19T17:35:43.511038+00:00",
+  "provenance": {
+    "schema_version": 1,
+    "dataset": {
+      "path": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\closed_loop_20260720\\experience_set.jsonl",
+      "digest": "e761ea4512e761fc8a0eb5fe78c557efcfafc048f9fd735cc812c872a1d8342d",
+      "selection": {
+        "limit": 20,
+        "order": "fixed"
+      }
+    },
+    "model": {
+      "role": "student",
+      "provider": "openai_compatible",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_id": "qwen3:8b",
+      "max_tokens": 4096,
+      "timeout": 120.0,
+      "temperature": 0.1,
+      "seed": null,
+      "ollama_think": false
+    },
+    "harness": {
+      "source_type": "pending_iteration",
+      "checkpoint_store": "D:\\_Project\\Agent\\search_harness\\harness_checkpoints\\search_actor",
+      "checkpoint_store_id": "search_actor",
+      "parent_version": "harness_v0001",
+      "iteration_id": "iteration_20260719T172315205306Z_2591cc6c",
+      "candidate_digest": "d36a96d76dbb3be701f209efae343844759d2324097b4defd4d3cb3f63fc30ed",
+      "revision": 3
+    }
+  },
+  "metrics": {
+    "answers": {
+      "scored_count": 20,
+      "correct_count": 0,
+      "accuracy": 0.0,
+      "static_pass_count": 0,
+      "teacher_judged_count": 1,
+      "unresolved_count": 0
+    },
+    "execution": {
+      "record_count": 20,
+      "completed_rate": 0.05,
+      "status_counts": {
+        "runner_error": 19,
+        "completed": 1
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 1,
+      "mean_model_calls": 0.05,
+      "mean_tool_calls": 0,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": 248,
+      "output_tokens": 368,
+      "total_tokens": 616,
+      "actor_input_tokens": 248,
+      "actor_output_tokens": 368,
+      "actor_total_tokens": 616,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 0.05
+    }
+  }
+}

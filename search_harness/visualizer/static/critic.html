@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Harness Critic Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-brand">
+        <p class="eyebrow">SEARCH HARNESS</p>
+        <h1>Critic Viewer</h1>
+      </div>
+      <nav class="app-navbar" aria-label="Visualizer sections">
+        <a class="navbar-item" href="/">Traces</a>
+        <a class="navbar-item" href="/evaluation.html">Evaluations</a>
+        <a class="navbar-item" href="/experiment.html">Experiments</a>
+        <a class="navbar-item" href="/harness.html">Harness</a>
+        <a class="navbar-item active" href="/critic.html" aria-current="page">Critic</a>
+        <a class="navbar-item" href="/compiler.html">Compiler</a>
+      </nav>
+      <div class="header-tools">
+        <details class="role-menu">
+          <summary title="Choose which timeline blocks are expanded">Expand roles</summary>
+          <div class="role-options">
+            <label><input type="checkbox" data-role="context" />Input</label>
+            <label><input type="checkbox" data-role="assistant" checked />Assistant</label>
+            <label><input type="checkbox" data-role="native-thinking" checked />Native thinking</label>
+            <label><input type="checkbox" data-role="inband-thinking" checked />In-band thinking</label>
+            <label><input type="checkbox" data-role="tool" checked />Tool</label>
+            <label><input type="checkbox" data-role="hook" checked />Hook</label>
+            <label><input type="checkbox" data-role="error" checked />Error</label>
+          </div>
+        </details>
+        <button class="toolbar-button" id="reload-logs" type="button">Reload</button>
+      </div>
+    </header>
+    <main class="workspace critic-workspace">
+      <aside class="sidebar file-sidebar" aria-label="Critic logs">
+        <div class="panel-heading"><h2>Critic logs</h2><span class="count" id="log-count">0</span></div>
+        <div class="file-list" id="log-list"></div>
+      </aside>
+      <section class="critic-main" aria-label="Critic execution">
+        <div class="panel-heading conversation-heading">
+          <div>
+            <h2 id="log-title">Select a Critic log</h2>
+            <p id="log-subtitle">Choose a logged Adapter run to inspect its result and execution.</p>
+          </div>
+        </div>
+        <section class="critic-result-section">
+          <div class="panel-heading"><h2>Critic result</h2></div>
+          <div class="critic-result critic-result-text" id="critic-result"></div>
+        </section>
+        <section class="critic-conversation-section">
+          <div class="panel-heading"><h2>Execution timeline</h2></div>
+          <div class="conversation" id="conversation"></div>
+        </section>
+      </section>
+      <aside class="sidebar detail-sidebar critic-sidebar" aria-label="Critic log details">
+        <section class="trace-section critic-turn-section">
+          <div class="panel-heading"><h2>Steps</h2><span class="count" id="step-count">0</span></div>
+          <div class="trace-list" id="step-list"></div>
+        </section>
+        <section class="info-section">
+          <div class="panel-heading"><h2>Run details</h2></div>
+          <dl class="trace-info" id="log-info"></dl>
+        </section>
+      </aside>
+    </main>
+    <template id="message-template">
+      <article class="message">
+        <button class="message-meta" type="button"></button>
+        <div class="message-content"></div>
+      </article>
+    </template>
+    <script src="/timeline.js"></script>
+    <script src="/critic.js"></script>
+  </body>
+</html>

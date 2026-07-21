@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "harness_id": "baseline_search",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "simple_search",
+    "entrypoint": "prompts/simple_search/plugin.py:build",
+    "config": {},
+    "evolution_policy": "fixed"
+  },
+  "extensions": [
+  ]
+}

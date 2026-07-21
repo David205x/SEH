@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "runs\\components\\actor\\candidate_84f16d34_100\\rollout.jsonl",
+  "created_at": "2026-07-15T16:06:09.732215+00:00",
+  "metrics": {
+    "answers": {
+      "scored_count": 100,
+      "correct_count": 64,
+      "accuracy": 0.64,
+      "static_pass_count": 31,
+      "teacher_judged_count": 69,
+      "unresolved_count": 0
+    },
+    "execution": {
+      "record_count": 100,
+      "completed_rate": 1.0,
+      "status_counts": {
+        "completed": 100
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 2.21,
+      "mean_model_calls": 2.21,
+      "mean_tool_calls": 1.19,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": 180637,
+      "output_tokens": 115219,
+      "total_tokens": 295856,
+      "actor_input_tokens": 180637,
+      "actor_output_tokens": 115219,
+      "actor_total_tokens": 295856,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 1.0
+    }
+  }
+}

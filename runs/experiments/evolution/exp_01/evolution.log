@@ -1,0 +1,28 @@
+2026-07-20 15:39:40,787 INFO Starting evolution run | run_dir=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01, experience_examples=50, latest_version=harness_v0001
+2026-07-20 15:39:40,803 INFO [Iteration 1/3] Using parent harness_v0001
+2026-07-20 15:39:40,804 INFO [Iteration 1/3] Evaluating incumbent harness_v0001
+2026-07-20 15:43:22,379 INFO [Iteration 1/3] Incumbent evaluation completed | elapsed=221.6s, accuracy=0.7200, report=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0001\incumbent_report
+2026-07-20 15:43:22,380 INFO [Iteration 1/3] Running failure-analysis Critic
+2026-07-20 15:43:57,396 INFO [Iteration 1/3] Failure-analysis Critic completed | elapsed=35.0s, problem_directions=2, evidence_requests=0, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0001\failure_critic.json
+2026-07-20 15:43:57,397 INFO [Iteration 1/3] Validating Critic problem direction with Intervention
+2026-07-20 15:48:33,678 INFO [Iteration 1/3] Coordinator intervention completed | elapsed=276.3s, verdict=supported, selected_trial=trial_003, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0001\intervention\coordinator\20260720T074833622728Z\coordinator.json
+2026-07-20 15:48:33,678 INFO [Iteration 1/3] Running Compiler
+2026-07-20 15:52:04,117 INFO [Iteration 1/3] Compiler candidate prepared | elapsed=210.4s, candidate=iteration_20260720T074834233000Z_06c11dd6, validation=failed, changed_files=2, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0001\compiler.json
+2026-07-20 15:52:04,364 INFO [Iteration 1/3] Rejected candidate | reason=Candidate failed deterministic validation
+2026-07-20 15:52:04,370 INFO [Iteration 2/3] Using parent harness_v0001
+2026-07-20 15:52:04,371 INFO [Iteration 2/3] Evaluating incumbent harness_v0001
+2026-07-20 15:54:46,824 INFO [Iteration 2/3] Incumbent evaluation completed | elapsed=162.5s, accuracy=0.7000, report=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0002\incumbent_report
+2026-07-20 15:54:46,825 INFO [Iteration 2/3] Running failure-analysis Critic
+2026-07-20 15:55:52,151 INFO [Iteration 2/3] Failure-analysis Critic completed | elapsed=65.3s, problem_directions=3, evidence_requests=0, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0002\failure_critic.json
+2026-07-20 15:55:52,152 INFO [Iteration 2/3] Validating Critic problem direction with Intervention
+2026-07-20 16:04:12,145 INFO [Iteration 2/3] Coordinator intervention completed | elapsed=500.0s, verdict=supported, selected_trial=trial_005, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0002\intervention\coordinator\20260720T080412047009Z\coordinator.json
+2026-07-20 16:04:12,146 INFO [Iteration 2/3] Running Compiler
+2026-07-20 16:08:59,718 INFO [Iteration 2/3] Compiler candidate prepared | elapsed=287.6s, candidate=iteration_20260720T080412681517Z_077ba759, validation=failed, changed_files=2, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0002\compiler.json
+2026-07-20 16:08:59,970 INFO [Iteration 2/3] Rejected candidate | reason=Candidate failed deterministic validation
+2026-07-20 16:08:59,975 INFO [Iteration 3/3] Using parent harness_v0001
+2026-07-20 16:08:59,976 INFO [Iteration 3/3] Evaluating incumbent harness_v0001
+2026-07-20 16:12:06,539 INFO [Iteration 3/3] Incumbent evaluation completed | elapsed=186.6s, accuracy=0.6939, report=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0003\incumbent_report
+2026-07-20 16:12:06,540 INFO [Iteration 3/3] Running failure-analysis Critic
+2026-07-20 16:13:37,352 INFO [Iteration 3/3] Failure-analysis Critic completed | elapsed=90.8s, problem_directions=3, evidence_requests=0, log=D:\_Project\Agent\search_harness\runs\experiments\evolution\exp_01\iterations\0003\failure_critic.json
+2026-07-20 16:13:37,353 INFO [Iteration 3/3] Validating Critic problem direction with Intervention
+2026-07-20 16:17:17,241 INFO Evolution run failed | error=ValueError: Coordinator final answer is not valid JSON: Unterminated string starting at

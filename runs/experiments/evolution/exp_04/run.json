@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "checkpoint_store": "D:\\_Project\\Agent\\search_harness\\harness_checkpoints\\search_actor",
+  "checkpoint_store_id": "search_actor",
+  "initial_version": "harness_v0001",
+  "config": {
+    "max_iterations": 5,
+    "experience_limit": 50,
+    "failure_memory_limit": 5,
+    "compiler_revision_limit": 2,
+    "intervention_continuation_limit": 2
+  },
+  "experience_set": {
+    "path": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_04\\experience_set.jsonl",
+    "count": 50,
+    "digest": "37dbaf8543b73c231020845c9a3fdf83e8dee724cfa4cf150def54d939f6cfbf"
+  },
+  "metadata": {
+    "dataset": {
+      "path": "D:\\_Project\\Agent\\corpus_filter\\output\\train\\supported.jsonl",
+      "format": "filtered_hotpot_jsonl",
+      "filter_status": null
+    },
+    "backend": {
+      "env_file": "D:\\_Project\\Agent\\search_harness\\.env",
+      "critic_plugins_root": "D:\\_Project\\Agent\\search_harness\\harness_templates\\adapter\\critic\\baseline\\plugins",
+      "compiler_plugins_root": "D:\\_Project\\Agent\\search_harness\\harness_templates\\adapter\\compiler\\baseline\\plugins",
+      "intervention_coordinator_plugins_root": "D:\\_Project\\Agent\\search_harness\\harness_templates\\adapter\\intervention_coordinator\\baseline\\plugins",
+      "actor_model_role": "student",
+      "adapter_model_role": "teacher",
+      "actor_max_steps": 20,
+      "critic_max_steps": 25,
+      "critic_protocol_repair_limit": 2,
+      "compiler_max_steps": 25,
+      "compiler_validation_repair_limit": 4,
+      "compiler_smoke_examples": 1,
+      "intervention_max_steps": 35,
+      "intervention_max_trials": 5,
+      "rollout_workers": 6,
+      "rollouts_per_example": 3,
+      "judge_workers": 8,
+      "teacher_judge": true,
+      "show_progress": true
+    }
+  }
+}

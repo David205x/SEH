@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_03\\iterations\\0001\\candidate_rollouts.jsonl",
+  "created_at": "2026-07-20T12:11:22.030191+00:00",
+  "provenance": {
+    "schema_version": 1,
+    "dataset": {
+      "path": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_03\\experience_set.jsonl",
+      "digest": "37dbaf8543b73c231020845c9a3fdf83e8dee724cfa4cf150def54d939f6cfbf",
+      "selection": {
+        "limit": 50,
+        "order": "fixed"
+      }
+    },
+    "model": {
+      "role": "student",
+      "provider": "openai_compatible",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_id": "qwen3:8b",
+      "max_tokens": 4096,
+      "timeout": 120.0,
+      "temperature": 0.65,
+      "seed": 42,
+      "ollama_think": false
+    },
+    "harness": {
+      "source_type": "pending_iteration",
+      "checkpoint_store": "D:\\_Project\\Agent\\search_harness\\harness_checkpoints\\search_actor",
+      "checkpoint_store_id": "search_actor",
+      "parent_version": "harness_v0001",
+      "iteration_id": "iteration_20260720T115833017375Z_72626bdb",
+      "candidate_digest": "ccd72b1392d58c69b0f2f6b611ad41183e3d21d05002cd0ae23f266ccd10f5c6",
+      "revision": 3
+    },
+    "execution": {
+      "rollout_workers": 6,
+      "rollouts_per_example": 3,
+      "seed_strategy": "base_plus_replicate_index"
+    }
+  },
+  "evaluation_config": {
+    "teacher_judge": true,
+    "judge_workers": 8
+  },
+  "metrics": {
+    "answers": {
+      "scored_count": 150,
+      "correct_count": 0,
+      "accuracy": 0.0,
+      "static_pass_count": 0,
+      "teacher_judged_count": 0,
+      "unresolved_count": 0,
+      "example_count": 50,
+      "stable_correct_count": 0,
+      "stable_failure_count": 50,
+      "unstable_count": 0,
+      "unresolved_example_count": 0,
+      "stable_correct_rate": 0.0,
+      "stable_failure_rate": 1.0,
+      "unstable_rate": 0.0,
+      "majority_correct_rate": 0.0,
+      "pass_at_n": 0.0,
+      "mean_example_success_rate": 0.0,
+      "mean_answer_consistency": null
+    },
+    "execution": {
+      "record_count": 150,
+      "completed_rate": 0.0,
+      "status_counts": {
+        "runner_error": 150
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": null,
+      "mean_model_calls": 0,
+      "mean_tool_calls": 0,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "actor_input_tokens": null,
+      "actor_output_tokens": null,
+      "actor_total_tokens": null,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 0.0
+    }
+  }
+}

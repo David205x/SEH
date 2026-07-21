@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "harness_id": "decomposed_context_student",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "simple_search",
+    "entrypoint": "prompts/simple_search/plugin.py:build",
+    "config": {},
+    "evolution_policy": "fixed"
+  },
+  "extensions": [
+    {
+      "instance_id": "lifecycle_audit",
+      "entrypoint": "extensions/lifecycle_audit/plugin.py:build",
+      "enabled": false,
+      "config": {},
+      "evolution_policy": "mutable"
+    },
+    {
+      "instance_id": "result_summary_prompt",
+      "entrypoint": "extensions/result_summary_prompt/plugin.py:build",
+      "enabled": true,
+      "config": {},
+      "evolution_policy": "mutable"
+    },
+    {
+      "instance_id": "tool_delegation",
+      "entrypoint": "extensions/tool_delegation/plugin.py:build",
+      "enabled": false,
+      "config": {
+        "tool_name": "search",
+        "arguments": {
+          "query": "delegated evidence query",
+          "topk": 5
+        },
+        "request_message": "Retrieve one explicitly requested evidence item before resuming."
+      },
+      "evolution_policy": "mutable"
+    },
+    {
+      "instance_id": "decomposed_context_controller",
+      "entrypoint": "extensions/decomposed_context_controller/plugin.py:build",
+      "enabled": true,
+      "config": {
+        "planner_prompt_file": "extensions/decomposed_context_controller/templates/planner.md",
+        "subtask_system_prompt_file": "extensions/decomposed_context_controller/templates/subtask_system.md",
+        "synthesis_system_prompt_file": "extensions/decomposed_context_controller/templates/synthesis_system.md",
+        "max_subtasks": 2,
+        "topk": 5,
+        "max_evidence_chars": 4000
+      },
+      "evolution_policy": "mutable"
+    }
+  ]
+}

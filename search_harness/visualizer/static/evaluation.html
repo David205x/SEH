@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Harness Evaluation Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-brand">
+        <p class="eyebrow">SEARCH HARNESS</p>
+        <h1>Evaluation Viewer</h1>
+      </div>
+      <nav class="app-navbar" aria-label="Visualizer sections">
+        <a class="navbar-item" href="/">Traces</a>
+        <a class="navbar-item active" href="/evaluation.html" aria-current="page">Evaluations</a>
+        <a class="navbar-item" href="/experiment.html">Experiments</a>
+        <a class="navbar-item" href="/harness.html">Harness</a>
+        <a class="navbar-item" href="/critic.html">Critic</a>
+        <a class="navbar-item" href="/compiler.html">Compiler</a>
+      </nav>
+      <div class="header-tools">
+        <button class="toolbar-button" id="reload-reports" type="button">Reload</button>
+      </div>
+    </header>
+    <main class="workspace">
+      <aside class="sidebar file-sidebar">
+        <div class="panel-heading"><h2>Reports</h2><span class="count" id="report-count">0</span></div>
+        <div class="file-list" id="report-list"></div>
+      </aside>
+      <section class="evaluation-main">
+        <div class="panel-heading conversation-heading">
+          <div><h2 id="report-title">Select a report</h2><p id="report-subtitle">Choose an evaluated rollout report.</p></div>
+        </div>
+        <section class="evaluation-section detail-section">
+          <div class="panel-heading"><h2>Selected item</h2></div>
+          <pre class="evaluation-detail" id="evaluation-detail"></pre>
+        </section>
+      </section>
+      <aside class="sidebar detail-sidebar evaluation-sidebar">
+        <section class="metrics-section">
+          <div class="panel-heading"><h2>Metrics</h2></div>
+          <pre class="report-metrics" id="report-metrics"></pre>
+        </section>
+        <section class="trace-section evaluation-item-section">
+          <div class="panel-heading"><h2>Items</h2><span class="count" id="item-count">0</span></div>
+          <div class="evaluation-item-list" id="evaluation-item-list"></div>
+        </section>
+      </aside>
+    </main>
+    <script src="/evaluation.js"></script>
+  </body>
+</html>
