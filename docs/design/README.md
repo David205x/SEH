@@ -20,6 +20,7 @@
 12. [外部自进化 Harness 静态代码调研](external-self-evolving-harness-static-analysis.md)
 13. [Hook 工具委托与提示注入实验](tool-delegation-injection-experiment.md)
 14. [分解上下文 Controller Hook 实验](decomposed-context-controller-experiment.md)
+15. [Self-Harness 与 Search Harness 对照分析](self-harness-comparison.md)
 
 ## 文档职责
 
@@ -37,6 +38,7 @@
 - `external-self-evolving-harness-static-analysis.md` 汇总外部自进化 Harness 的固定源码快照、代码级机制与可迁移建议。
 - `tool-delegation-injection-experiment.md` 记录动态委托 query、提示注入位置和 Hook 小模型的真实 rollout 对照实验。
 - `decomposed-context-controller-experiment.md` 记录带 Hook 模型、状态机和每步上下文重设的分解检索 controller 实现与实验。
+- `self-harness-comparison.md` 对照 Self-Harness 论文、公开实现和本项目当前架构，记录可迁移的控制原则、协议设计与研究差异。
 
 ## 文档维护原则
 

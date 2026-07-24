@@ -105,6 +105,12 @@ Adapter Harness 服务于离线适配阶段的外部强模型，负责：
 
 Adapter Harness 只参与离线适配，不进入最终部署系统。
 
+### 当前实现视图
+
+![Search Harness 当前 Evolution 思路流程](images/search-harness-concept-flow.svg)
+
+![Search Harness 数据流与可见性边界](images/search-harness-data-flow.svg)
+
 ### 整体流程
 
 ```mermaid

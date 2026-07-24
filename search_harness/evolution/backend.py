@@ -16,7 +16,7 @@ from search_harness.adapter.compiler.runtime import (
     build_compiler_loop,
     parse_compiler_result,
 )
-from search_harness.adapter.critic import CriticContext, parse_critic_result
+from search_harness.adapter.critic import CriticContext, parse_critic_result, CriticResult
 from search_harness.adapter.critic.evidence import (
     validate_accepted_rollouts,
     validate_iteration_rollouts,
@@ -51,7 +51,7 @@ from .types import (
     CandidateArtifact,
     CriticArtifact,
     EvaluationArtifact,
-    InterventionArtifact,
+    InterventionArtifact, EvolutionBackend,
 )
 
 
@@ -109,7 +109,7 @@ class LocalEvolutionBackendConfig:
             raise ValueError("compiler_smoke_examples must be positive")
 
 
-class LocalEvolutionBackend:
+class LocalEvolutionBackend(EvolutionBackend):
     """复用项目现有运行时完成 Evolution Runner 的外部操作。"""
 
     def __init__(

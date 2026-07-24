@@ -5,8 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c1f24d9-7503-428e-9c1b-6f73cb750c0e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/runs/experiments/evolution/exp_04/events.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/runs/experiments/evolution/exp_04/events.jsonl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runs/experiments/evolution/exp_04/evolution.log" beforeDir="false" afterPath="$PROJECT_DIR$/runs/experiments/evolution/exp_04/evolution.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/design/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/design/governance.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/governance.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/design/overview.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/overview.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/design/roadmap.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/roadmap.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/artifact-layout.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/compiler-agent.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/critic-agent.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/current-codebase.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/evaluation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/evolution_runner.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/harness-plugins.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/intervention-worker.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/python_style.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/manual/version-store.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/backend.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/backend.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -129,7 +145,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="search_harness.evolution" />
-      <option name="PARAMETERS" value="run --run-dir runs\experiments\evolution\exp_04 --checkpoint-store harness_checkpoints\search_actor --limit 50 --max-iterations 5 --rollout-workers 6 --judge-workers 8 --rollouts-per-example 3 --actor-model-role student --adapter-model-role teacher --intervention-max-trials 5 --intervention-max-steps 35 --critic-max-steps 25 --compiler-max-steps 25 --log-level INFO" />
+      <option name="PARAMETERS" value="run --run-dir runs\experiments\evolution\exp_05 --checkpoint-store harness_checkpoints\search_actor --limit 50 --max-iterations 5 --rollout-workers 6 --judge-workers 8 --rollouts-per-example 3 --actor-model-role student --adapter-model-role teacher --intervention-max-trials 5 --intervention-max-steps 35 --critic-max-steps 25 --compiler-max-steps 25 --log-level INFO" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="true" />
@@ -313,6 +329,7 @@
       <workItem from="1783697344186" duration="574000" />
       <workItem from="1783841885013" duration="53311000" />
       <workItem from="1784276191540" duration="34133000" />
+      <workItem from="1784603873827" duration="22477000" />
     </task>
     <servers />
   </component>
@@ -332,12 +349,13 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/search_harness$adapter.coverage" NAME="critic Coverage Results" MODIFIED="1784098648372" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/search_harness$trajectory_viewer.coverage" NAME="trajectory_viewer Coverage Results" MODIFIED="1782985375397" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/search_harness$demo_main.coverage" NAME="demo_main Coverage Results" MODIFIED="1783428210477" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/search_harness$0_init_store.coverage" NAME="0_init_store Coverage Results" MODIFIED="1784529622152" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
+    <SUITE FILE_PATH="coverage/search_harness$demo_main.coverage" NAME="demo_main Coverage Results" MODIFIED="1783428210477" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
+    <SUITE FILE_PATH="coverage/search_harness$trajectory_viewer.coverage" NAME="trajectory_viewer Coverage Results" MODIFIED="1782985375397" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/search_harness$evolution.coverage" NAME="1_evolution_start Coverage Results" MODIFIED="1784565736273" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$search_harness_runners_run_dataset.coverage" NAME="runners.run_dataset_tea Coverage Results" MODIFIED="1783918155027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$compiler.coverage" NAME="compiler Coverage Results" MODIFIED="1784100115472" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/search_harness$1_evolution_start.coverage" NAME="1_evolution_start Coverage Results" MODIFIED="1784605333179" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$main.coverage" NAME="main Coverage Results" MODIFIED="1782986381766" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/search_harness$inspect_dataset.coverage" NAME="inspect_dataset Coverage Results" MODIFIED="1783681188082" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/search_harness/runners" />
     <SUITE FILE_PATH="coverage/search_harness$visualizer.coverage" NAME="visualizer Coverage Results" MODIFIED="1784393063306" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
