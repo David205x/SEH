@@ -11,6 +11,7 @@ from search_harness.adapter.intervention import (
     InterventionRuntimeConfig,
     RunInterventionWorkerTool,
 )
+from search_harness.adapter.intervention.runtime import _phase_effects
 from search_harness.core import HookPhase, ModelInput
 
 from .test_prefix import _write_rollout
@@ -135,13 +136,16 @@ class InterventionRuntimeTest(TestCase):
         self.assertEqual(artifact["comparison"]["exact_match_delta"], 1)
         self.assertEqual(artifact["branch_run"]["answer"], "J. R. R. Tolkien")
         self.assertEqual(len(artifact["intervention_changes"]), 1)
-        self.assertEqual(persisted["worker_summary"], artifact["worker_summary"])
+        self.assertNotIn("worker_summary", persisted)
+        self.assertNotIn("worker_summary", artifact)
         inspected = teacher.inputs[1].messages[-1].content
         self.assertIn('"event_type": "hook_applied"', inspected)
-        worker_system_prompt = teacher.inputs[0].messages[0].content
-        self.assertIn("system_instruction", worker_system_prompt)
-        self.assertNotIn("messages_json", worker_system_prompt)
-        self.assertNotIn("value_json", worker_system_prompt)
+        worker_activation_prompt = teacher.inputs[0].messages[-1].content
+        self.assertIn("system_instruction", worker_activation_prompt)
+        self.assertNotIn("messages_json", worker_activation_prompt)
+        self.assertNotIn("value_json", worker_activation_prompt)
+        self.assertNotIn("defer_final_answer", worker_activation_prompt)
+        self.assertNotIn("accept_final_answer", worker_activation_prompt)
 
     def test_worker_can_defer_pre_final_through_specific_action_tool(self) -> None:
         """验证 Worker 无需嵌套 JSON 即可修改 final_decision。"""
@@ -195,6 +199,200 @@ class InterventionRuntimeTest(TestCase):
         ]
         self.assertEqual(len(tool_errors), 1)
 
+    def test_same_worker_transcript_controls_multiple_hook_phases(self) -> None:
+        """验证同一 Worker 会话在一个分支内连续处理 post_tool 与 pre_final。"""
+
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rollout_file = root / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            plugins_root = _make_plugins(root)
+            student = SequenceModel(
+                outputs=[
+                    "<final_answer>Shakespeare</final_answer>",
+                    "<final_answer>J. R. R. Tolkien</final_answer>",
+                ]
+            )
+            teacher = SequenceModel(
+                outputs=[
+                    '<tool_call>{"name":"append_context_message","arguments":'
+                    '{"role":"user","content":"Track the still unsupported '
+                    'relation before finalizing.","persistence":'
+                    '"next_generation"}}</tool_call>',
+                    '<tool_call>{"name":"defer_final_answer","arguments":'
+                    '{"feedback":"Resolve the evidence gap before answering.",'
+                    '"reason":"The first candidate is not fully supported."}}'
+                    "</tool_call>",
+                    "<final_answer>The two-phase intervention caused a "
+                    "supported revision.</final_answer>",
+                ]
+            )
+            runner = _runner(root, plugins_root, student, teacher)
+
+            artifact = runner.run(
+                rollout_file=rollout_file,
+                example_id="example-1",
+                replicate_id="r000",
+                fork_step=1,
+                fork_phase=HookPhase.POST_TOOL,
+                intent="Test one causal post-tool to pre-final plan.",
+                hook_guidance={
+                    HookPhase.POST_TOOL: (
+                        "Mark the visible relation that still lacks support."
+                    ),
+                    HookPhase.PRE_FINAL: (
+                        "Defer a candidate while that relation is unsupported."
+                    ),
+                },
+                activation_budgets={
+                    HookPhase.POST_TOOL: 1,
+                    HookPhase.PRE_FINAL: 1,
+                },
+            )
+
+        self.assertEqual(
+            artifact["activation_counts"],
+            {HookPhase.POST_TOOL: 1, HookPhase.PRE_FINAL: 1},
+        )
+        self.assertEqual(
+            [
+                change["phase"]
+                for change in artifact["intervention_changes"]
+            ],
+            [HookPhase.POST_TOOL, HookPhase.PRE_FINAL],
+        )
+        activations = [
+            event
+            for event in artifact["worker_trace"]
+            if event["event_type"] == "worker_activation"
+        ]
+        self.assertEqual(
+            [event["phase"] for event in activations],
+            [HookPhase.POST_TOOL, HookPhase.PRE_FINAL],
+        )
+        second_activation_input = "\n".join(
+            message.content for message in teacher.inputs[1].messages
+        )
+        self.assertIn("phase=post_tool", second_activation_input)
+        self.assertIn("phase=pre_final", second_activation_input)
+        self.assertNotIn(
+            "defer_final_answer",
+            teacher.inputs[0].messages[-1].content,
+        )
+        self.assertIn(
+            "defer_final_answer",
+            teacher.inputs[1].messages[-1].content,
+        )
+        self.assertEqual(
+            artifact["branch_run"]["answer"],
+            "J. R. R. Tolkien",
+        )
+        self.assertEqual(
+            [
+                {
+                    "phase": effect["phase"],
+                    "anchor_found": effect["anchor_found"],
+                    "next_model_decision": effect["next_model_decision"],
+                    "tool_calls_before_next_final": (
+                        effect["tool_calls_before_next_final"]
+                    ),
+                }
+                for effect in artifact["phase_effects"]
+            ],
+            [
+                {
+                    "phase": HookPhase.POST_TOOL,
+                    "anchor_found": True,
+                    "next_model_decision": {
+                        "step": 1,
+                        "kind": "final_answer",
+                        "tool_name": None,
+                    },
+                    "tool_calls_before_next_final": 0,
+                },
+                {
+                    "phase": HookPhase.PRE_FINAL,
+                    "anchor_found": True,
+                    "next_model_decision": {
+                        "step": 2,
+                        "kind": "final_answer",
+                        "tool_name": None,
+                    },
+                    "tool_calls_before_next_final": 0,
+                },
+            ],
+        )
+
+    def test_phase_effects_align_repeated_phase_activations_by_step(self) -> None:
+        """验证同一 phase 多次激活时分别归因到各自后续决策。"""
+
+        changes = [
+            {
+                "scope": "branch",
+                "phase": HookPhase.POST_TOOL,
+                "step": 1,
+                "phase_activation": 1,
+                "action": {"kind": "append_context_message"},
+            },
+            {
+                "scope": "branch",
+                "phase": HookPhase.POST_TOOL,
+                "step": 2,
+                "phase_activation": 2,
+                "action": {"kind": "append_context_message"},
+            },
+        ]
+        trace = [
+            _hook_event(index=1, step=1, phase=HookPhase.POST_TOOL),
+            _parsed_event(index=2, step=2, kind="tool_call", tool="search"),
+            {
+                "index": 3,
+                "step": 2,
+                "event_type": "tool_call",
+                "payload": {"name": "search", "arguments": {}},
+            },
+            _hook_event(index=4, step=2, phase=HookPhase.POST_TOOL),
+            _parsed_event(index=5, step=3, kind="final_answer"),
+            {
+                "index": 6,
+                "step": 3,
+                "event_type": "final_answer",
+                "payload": {"answer": "done"},
+            },
+        ]
+
+        effects = _phase_effects(changes, trace)
+
+        self.assertEqual(
+            [effect["next_model_decision"]["kind"] for effect in effects],
+            ["tool_call", "final_answer"],
+        )
+        self.assertEqual(
+            [effect["tool_calls_before_next_final"] for effect in effects],
+            [1, 0],
+        )
+        self.assertTrue(all(effect["anchor_found"] for effect in effects))
+
+    def test_phase_effects_do_not_guess_when_hook_anchor_is_missing(self) -> None:
+        """验证缺失 Hook 锚点时不会把轨迹开头误归因为 phase 效果。"""
+
+        effects = _phase_effects(
+            [
+                {
+                    "scope": "branch",
+                    "phase": HookPhase.PRE_FINAL,
+                    "step": 9,
+                    "phase_activation": 1,
+                    "action": {"kind": "replace_stage_value"},
+                }
+            ],
+            [_parsed_event(index=1, step=1, kind="tool_call", tool="search")],
+        )
+
+        self.assertFalse(effects[0]["anchor_found"])
+        self.assertIsNone(effects[0]["next_model_decision"])
+        self.assertEqual(effects[0]["tool_calls_before_next_final"], 0)
+
     def test_exposes_coordinator_facing_tool_schema(self) -> None:
         """验证 Worker runtime 仍可独立封装为 Coordinator 可调用的 DefinedTool。"""
 
@@ -239,6 +437,37 @@ def _runner(
         student_model=student,
         teacher_model=teacher,
     )
+
+
+def _hook_event(*, index: int, step: int, phase: str) -> dict[str, object]:
+    return {
+        "index": index,
+        "step": step,
+        "event_type": "hook_applied",
+        "payload": {
+            "phase": phase,
+            "hook_id": "intervention_worker_bridge",
+            "changes": [],
+        },
+    }
+
+
+def _parsed_event(
+    *,
+    index: int,
+    step: int,
+    kind: str,
+    tool: str | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {"kind": kind}
+    if tool is not None:
+        payload["tool_call"] = {"name": tool, "arguments": {}}
+    return {
+        "index": index,
+        "step": step,
+        "event_type": "parsed_output",
+        "payload": payload,
+    }
 
 
 def _make_plugins(root: Path) -> Path:

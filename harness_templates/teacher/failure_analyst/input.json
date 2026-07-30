@@ -1,0 +1,10 @@
+{
+  "input": {
+    "analysis_focus": null
+  },
+  "resources":  {
+    "report_dir":  "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_05\\iterations\\0001\\incumbent_report",
+    "rollout_file":  "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_05\\iterations\\0001\\incumbent_rollouts.jsonl",
+    "actor_plugins_root":  "D:\\_Project\\Agent\\search_harness\\harness_templates\\actor\\baseline\\plugins"
+  }
+}

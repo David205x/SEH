@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "harness_id": "search_o1_hook_showcase",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "agentic_search",
+    "entrypoint": "prompts/agentic_search/plugin.py:build",
+    "config": {},
+    "evolution_policy": "fixed"
+  },
+  "extensions": [
+    {
+      "instance_id": "lifecycle_monitor",
+      "entrypoint": "extensions/lifecycle_monitor/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "search_query_editor",
+      "entrypoint": "extensions/search_query_editor/plugin.py:build",
+      "config": {
+        "max_topk": 5
+      },
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "result_guidance",
+      "entrypoint": "extensions/result_guidance/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ]
+}

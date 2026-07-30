@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_hypothesis_researcher_v3",
+  "role": {
+    "id": "hypothesis_researcher",
+    "version": 1
+  },
+  "output_contract": {
+    "id": "intervention_hypothesis",
+    "version": 3
+  },
+  "tools": [
+    {
+      "instance_id": "get_actor_trajectory",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_actor_trajectory"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_intervention_capabilities",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_intervention_capabilities"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "list_trial_evidence",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "list_trial_evidence"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_trial_evidence",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_trial_evidence"},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "hypothesis_researcher",
+    "entrypoint": "prompts/hypothesis_researcher/plugin.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    },
+    "evolution_policy": "fixed"
+  }
+}

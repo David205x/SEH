@@ -176,10 +176,38 @@ class InterventionHookBridge(BaseHook):
         worker: InterventionWorker,
         intervention_context: InterventionContext,
         hook_guidance: dict[str, str],
+        activation_budgets: dict[str, int] | None = None,
+        initial_activation_counts: dict[str, int] | None = None,
     ) -> None:
         self._worker = worker
         self._intervention_context = intervention_context
         self._guidance = dict(hook_guidance)
+        self._activation_budgets = (
+            dict(activation_budgets)
+            if activation_budgets is not None
+            else {phase: 1 for phase in self._guidance}
+        )
+        self._activation_counts = {
+            phase: 0 for phase in self._guidance
+        }
+        self._activation_counts.update(initial_activation_counts or {})
+        if set(self._activation_budgets) != set(self._guidance):
+            raise ValueError(
+                "Intervention activation budgets must match guidance phases"
+            )
+        if set(self._activation_counts) != set(self._guidance):
+            raise ValueError(
+                "Intervention activation counts must match guidance phases"
+            )
+        if any(value < 1 for value in self._activation_budgets.values()):
+            raise ValueError(
+                "Intervention activation budgets must be positive"
+            )
+        if any(
+            count < 0 or count > self._activation_budgets[phase]
+            for phase, count in self._activation_counts.items()
+        ):
+            raise ValueError("invalid initial Intervention activation count")
         writable = {
             f"stage.{key}"
             for phase in self._guidance
@@ -199,11 +227,19 @@ class InterventionHookBridge(BaseHook):
         guidance = self._guidance.get(context.phase)
         if guidance is None:
             return
+        activation_count = self._activation_counts[context.phase]
+        activation_budget = self._activation_budgets[context.phase]
+        if activation_count >= activation_budget:
+            return
+        phase_activation = activation_count + 1
+        self._activation_counts[context.phase] = phase_activation
         snapshot = self._snapshot(context)
         action = self._worker.activate(
             phase=context.phase,
             guidance=guidance,
             snapshot=snapshot,
+            phase_activation=phase_activation,
+            max_activations=activation_budget,
         )
         self._intervention_context.apply_live(context, action)
         self._intervention_context.changes.append(
@@ -211,9 +247,17 @@ class InterventionHookBridge(BaseHook):
                 "scope": "branch",
                 "phase": context.phase,
                 "step": snapshot["current_step"],
+                "phase_activation": phase_activation,
+                "max_activations": activation_budget,
                 "action": action.to_dict(),
             }
         )
+
+    @property
+    def activation_counts(self) -> dict[str, int]:
+        """Return phase-local activation counts for trial auditing."""
+
+        return dict(self._activation_counts)
 
     def _snapshot(self, context: HookContext) -> dict[str, Any]:
         stage = {}
@@ -260,12 +304,30 @@ def initial_worker_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
         },
         "current_phase": prefix.selector.phase,
         "current_step": prefix.selector.step,
-        "current_core": prefix.source_run.get("state"),
+        "current_core": _boundary_core_snapshot(prefix),
         "current_trace": list(prefix.retained_trace),
         "active_stage": {
             key: _jsonable(value) for key, value in prefix.stage_values.items()
         },
         "prior_intervention_changes": [],
+    }
+
+
+def _boundary_core_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
+    """Project core state without exposing events after the selected boundary."""
+
+    source_state = prefix.source_run.get("state")
+    source_state = source_state if isinstance(source_state, dict) else {}
+    return {
+        "question": (
+            prefix.example.get("question")
+            or prefix.source_run.get("question")
+        ),
+        "max_steps": source_state.get("max_steps"),
+        "step": prefix.selector.step,
+        "status": "running",
+        "final_answer": None,
+        "error": None,
     }
 
 

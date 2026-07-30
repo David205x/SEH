@@ -9,6 +9,8 @@ from typing import Any, Literal, Protocol
 from search_harness.adapter.critic import CriticResult
 from search_harness.adapter.intervention import InterventionCoordinatorResult
 
+from .research import IterationProduct
+
 
 RunStatus = Literal[
     "completed",
@@ -67,6 +69,7 @@ class EvolutionOutcome:
     accepted_iterations: int
     latest_version: str
     reason: str
+    iteration_products: tuple[IterationProduct, ...] = ()
 
 
 class EvolutionBackend(Protocol):

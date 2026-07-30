@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 720" font-family="'Noto Sans CJK SC', 'Microsoft YaHei', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/></marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#16a34a"/></marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/></marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/></marker>
+  </defs>
+
+  <rect width="1120" height="720" rx="8" fill="#fafbfc"/>
+  <rect x="0" y="0" width="1120" height="48" rx="8" fill="url(#header)"/>
+  <rect x="0" y="40" width="1120" height="8" fill="url(#header)"/>
+  <text x="560" y="31" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">Self-Harness — Evaluate → Diagnose → Propose → Validate → Promote</text>
+
+  <!-- Main path arrows -->
+  <line x1="200" y1="122" x2="260" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="430" y1="122" x2="490" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="660" y1="122" x2="720" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="890" y1="122" x2="950" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="1035" y1="158" x2="1035" y2="222" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="950" y1="264" x2="860" y2="264" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="690" y1="264" x2="600" y2="264" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="430" y1="264" x2="340" y2="264" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="170" y1="306" x2="170" y2="377" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="255" y1="419" x2="315" y2="419" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="485" y1="419" x2="545" y2="419" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="715" y1="419" x2="775" y2="419" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="945" y1="419" x2="1000" y2="419" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="1040" y1="461" x2="1040" y2="522" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="955" y1="564" x2="850" y2="564" stroke="#16a34a" stroke-width="1.9" marker-end="url(#arrow-green)"/>
+  <line x1="680" y1="564" x2="570" y2="564" stroke="#16a34a" stroke-width="1.9" marker-end="url(#arrow-green)"/>
+  <path d="M 400 564 L 350 564 L 350 629 L 115 629 L 115 158" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-dasharray="6,3" marker-end="url(#arrow-green)"/>
+  <path d="M 1040 606 L 1040 660 L 190 660 L 190 158" fill="none" stroke="#dc2626" stroke-width="1.6" stroke-dasharray="6,3" marker-end="url(#arrow-red)"/>
+
+  <!-- Evaluate -->
+  <rect x="28" y="70" width="1064" height="108" rx="9" fill="#eef2ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="48" y="92" fill="#1e3a8a" font-size="10" font-weight="700">01 / 评估当前 Harness h_t（模型、工具、预算和 evaluator 固定）</text>
+
+  <rect x="50" y="96" width="150" height="52" rx="8" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="125" y="117" text-anchor="middle" fill="#1e3a5f" font-size="11" font-weight="700">Current Harness h_t</text>
+  <text x="125" y="134" text-anchor="middle" fill="#64748b" font-size="8.5">declared editable surfaces</text>
+
+  <rect x="260" y="96" width="170" height="52" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="345" y="117" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Fixed Model M</text>
+  <text x="345" y="134" text-anchor="middle" fill="#64748b" font-size="8.5">run tasks under h_t</text>
+
+  <rect x="490" y="96" width="170" height="52" rx="8" fill="#fff7ed" stroke="#d97706" stroke-width="1.5"/>
+  <text x="575" y="117" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Held-in + Held-out</text>
+  <text x="575" y="134" text-anchor="middle" fill="#64748b" font-size="8.5">fixed split · two repeats</text>
+
+  <rect x="720" y="96" width="170" height="52" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="805" y="117" text-anchor="middle" fill="#334155" font-size="11" font-weight="700">Execution Records</text>
+  <text x="805" y="134" text-anchor="middle" fill="#64748b" font-size="8.5">trace + verifier outcome</text>
+
+  <rect x="950" y="90" width="170" height="68" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="1035" y="112" text-anchor="middle" fill="#1e3a5f" font-size="11" font-weight="700">Round Result R_t</text>
+  <text x="1035" y="129" text-anchor="middle" fill="#64748b" font-size="8.5">split pass counts</text>
+  <text x="1035" y="144" text-anchor="middle" fill="#64748b" font-size="8.5">held-in failed records</text>
+
+  <!-- Diagnose + propose -->
+  <rect x="28" y="204" width="1064" height="122" rx="9" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="48" y="226" fill="#475569" font-size="10" font-weight="700">02 / Weakness Mining 与并行提议</text>
+
+  <rect x="950" y="238" width="170" height="84" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="1035" y="260" text-anchor="middle" fill="#5b21b6" font-size="11" font-weight="700">Trace Diagnosis</text>
+  <text x="1035" y="277" text-anchor="middle" fill="#64748b" font-size="8.5">terminal cause</text>
+  <text x="1035" y="291" text-anchor="middle" fill="#64748b" font-size="8.5">criticality · mechanism</text>
+  <text x="1035" y="305" text-anchor="middle" fill="#64748b" font-size="8.5">held-in failures only</text>
+
+  <rect x="690" y="238" width="170" height="84" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="775" y="260" text-anchor="middle" fill="#5b21b6" font-size="11" font-weight="700">Causal Clusters</text>
+  <text x="775" y="277" text-anchor="middle" fill="#64748b" font-size="8.5">exact failure signature</text>
+  <text x="775" y="291" text-anchor="middle" fill="#64748b" font-size="8.5">representative evidence</text>
+  <text x="775" y="305" text-anchor="middle" fill="#64748b" font-size="8.5">passing cases to preserve</text>
+
+  <rect x="430" y="238" width="170" height="84" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="515" y="260" text-anchor="middle" fill="#0e7490" font-size="11" font-weight="700">Evidence Bundle B_t</text>
+  <text x="515" y="277" text-anchor="middle" fill="#64748b" font-size="8.5">failure patterns</text>
+  <text x="515" y="291" text-anchor="middle" fill="#64748b" font-size="8.5">current editable surfaces</text>
+  <text x="515" y="305" text-anchor="middle" fill="#64748b" font-size="8.5">no held-out content</text>
+
+  <rect x="170" y="238" width="170" height="84" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="255" y="260" text-anchor="middle" fill="#0e7490" font-size="11" font-weight="700">Same Model as Proposer</text>
+  <text x="255" y="277" text-anchor="middle" fill="#64748b" font-size="8.5">generate K distinct routes</text>
+  <text x="255" y="291" text-anchor="middle" fill="#64748b" font-size="8.5">one mechanism + one hook</text>
+  <text x="255" y="305" text-anchor="middle" fill="#64748b" font-size="8.5">decline allowed</text>
+
+  <!-- Candidate validation -->
+  <rect x="28" y="358" width="1064" height="124" rx="9" fill="#fff7ed" stroke="#d97706" stroke-width="1.5"/>
+  <text x="48" y="380" fill="#92400e" font-size="10" font-weight="700">03 / 候选物化与回归验证（各候选相互独立）</text>
+
+  <rect x="85" y="394" width="170" height="84" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="170" y="416" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">ProposalBundle × K</text>
+  <text x="170" y="433" text-anchor="middle" fill="#64748b" font-size="8.5">cluster · family · exact_hook</text>
+  <text x="170" y="447" text-anchor="middle" fill="#64748b" font-size="8.5">hypothesis · regression guard</text>
+  <text x="170" y="461" text-anchor="middle" fill="#64748b" font-size="8.5">candidate_values</text>
+
+  <rect x="315" y="394" width="170" height="84" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="400" y="416" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Deterministic Materialize</text>
+  <text x="400" y="433" text-anchor="middle" fill="#64748b" font-size="8.5">validate hook vocabulary</text>
+  <text x="400" y="447" text-anchor="middle" fill="#64748b" font-size="8.5">write candidate workspace</text>
+  <text x="400" y="461" text-anchor="middle" fill="#64748b" font-size="8.5">manifest + proposal audit</text>
+
+  <rect x="545" y="394" width="170" height="84" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="630" y="416" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Candidate Evaluation</text>
+  <text x="630" y="433" text-anchor="middle" fill="#64748b" font-size="8.5">same model + evaluator</text>
+  <text x="630" y="447" text-anchor="middle" fill="#64748b" font-size="8.5">held-in + held-out</text>
+  <text x="630" y="461" text-anchor="middle" fill="#64748b" font-size="8.5">repeat pass counts</text>
+
+  <rect x="775" y="394" width="170" height="84" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="860" y="416" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Acceptance Gate</text>
+  <text x="860" y="433" text-anchor="middle" fill="#64748b" font-size="8.5">no split drops</text>
+  <text x="860" y="447" text-anchor="middle" fill="#64748b" font-size="8.5">at least one improves</text>
+  <text x="860" y="461" text-anchor="middle" fill="#64748b" font-size="8.5">invalid run → reject</text>
+
+  <rect x="1000" y="394" width="80" height="84" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="1040" y="419" text-anchor="middle" fill="#334155" font-size="10" font-weight="700">Queue</text>
+  <text x="1040" y="436" text-anchor="middle" fill="#16a34a" font-size="8.5">accepted</text>
+  <text x="1040" y="452" text-anchor="middle" fill="#dc2626" font-size="8.5">rejected</text>
+  <text x="1040" y="468" text-anchor="middle" fill="#64748b" font-size="8">persisted</text>
+
+  <!-- Promotion -->
+  <rect x="28" y="504" width="1064" height="122" rx="9" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="48" y="526" fill="#065f46" font-size="10" font-weight="700">04 / Promotion 与下一轮</text>
+
+  <rect x="900" y="538" width="170" height="84" rx="8" fill="#fff" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="985" y="560" text-anchor="middle" fill="#334155" font-size="11" font-weight="700">Round Decisions</text>
+  <text x="985" y="577" text-anchor="middle" fill="#64748b" font-size="8.5">rejected 保留日志</text>
+  <text x="985" y="591" text-anchor="middle" fill="#64748b" font-size="8.5">accepted 等待合并</text>
+  <text x="985" y="605" text-anchor="middle" fill="#64748b" font-size="8.5">角色不能终止外层轮次</text>
+
+  <rect x="680" y="538" width="170" height="84" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="765" y="560" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Merge Compatible Edits</text>
+  <text x="765" y="577" text-anchor="middle" fill="#64748b" font-size="8.5">AST top-level functions</text>
+  <text x="765" y="591" text-anchor="middle" fill="#64748b" font-size="8.5">merged candidate re-eval</text>
+  <text x="765" y="605" text-anchor="middle" fill="#64748b" font-size="8.5">merge regression → reject</text>
+
+  <rect x="400" y="538" width="170" height="84" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="485" y="560" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Active Child Branch</text>
+  <text x="485" y="577" text-anchor="middle" fill="#64748b" font-size="8.5">h_(t+1) = accepted variant</text>
+  <text x="485" y="591" text-anchor="middle" fill="#64748b" font-size="8.5">new baseline result</text>
+  <text x="485" y="605" text-anchor="middle" fill="#64748b" font-size="8.5">branch_state lineage</text>
+
+  <!-- Foreground connectors -->
+  <line x1="200" y1="122" x2="260" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="430" y1="122" x2="490" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="660" y1="122" x2="720" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="890" y1="122" x2="950" y2="122" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <line x1="1035" y1="158" x2="1035" y2="238" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="950" y1="280" x2="860" y2="280" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="690" y1="280" x2="600" y2="280" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="430" y1="280" x2="340" y2="280" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="170" y1="322" x2="170" y2="394" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="255" y1="436" x2="315" y2="436" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="485" y1="436" x2="545" y2="436" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="715" y1="436" x2="775" y2="436" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <line x1="945" y1="436" x2="1000" y2="436" stroke="#d97706" stroke-width="1.8" marker-end="url(#arrow-orange)"/>
+  <path d="M 1040 478 L 1040 512 L 985 512 L 985 538" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="900" y1="580" x2="850" y2="580" stroke="#16a34a" stroke-width="1.9" marker-end="url(#arrow-green)"/>
+  <line x1="680" y1="580" x2="570" y2="580" stroke="#16a34a" stroke-width="1.9" marker-end="url(#arrow-green)"/>
+
+  <rect x="50" y="676" width="1020" height="28" rx="6" fill="#f1f5f9"/>
+  <text x="560" y="695" text-anchor="middle" fill="#334155" font-size="10">全部拒绝：h_(t+1) = h_t，性能曲线保持不变但迭代继续；接受：更新 active branch 后进入下一轮。</text>
+</svg>

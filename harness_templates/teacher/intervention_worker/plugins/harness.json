@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_intervention_worker_v3",
+  "role": {
+    "id": "intervention_worker",
+    "version": 1
+  },
+  "output_contract": {
+    "id": "intervention_worker_result",
+    "version": 3
+  },
+  "tools": [],
+  "prompt": {
+    "instance_id": "intervention_worker",
+    "entrypoint": "prompts/intervention_worker/plugin.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    },
+    "evolution_policy": "fixed"
+  }
+}

@@ -1,0 +1,78 @@
+"""使用可替换原生与 SDK 后端的 Teacher v2 角色运行时。"""
+
+from .contracts import (
+    CandidateReview,
+    CandidateReviewerInput,
+    CompilerInput,
+    CompilerResult,
+    DecisionEvaluator,
+    EvidenceReview,
+    EvidenceReviewerInput,
+    FailureAnalystInput,
+    FailureDirection,
+    HookPhaseName,
+    HypothesisEvaluationSpec,
+    HypothesisResearcherInput,
+    InterventionHypothesis,
+    InterventionPhaseDirective,
+    InterventionWorkerInput,
+    InterventionWorkerResult,
+    MechanismPhaseRule,
+    MechanismDistillation,
+    MechanismDistillerInput,
+    MechanismSpec,
+    TeacherRoleDefinition,
+    TrialReview,
+    TrialReviewerInput,
+    get_teacher_role,
+)
+from .loader import load_teacher_agent_spec
+from .intervention_runtime import InterventionRoleRuntime
+from .native_runtime import NativeChatTeacherRuntime, TeacherContinuation
+from .role_resources import (
+    CandidateReviewResourceConfig,
+    CompilerResourceConfig,
+    InterventionResourceConfig,
+)
+from .resources import TeacherResourceConfig, TeacherResources
+from .runtime import AgentsSdkTeacherRuntime
+from .spec import TeacherAgentSpec, TeacherPromptSpec
+
+__all__ = [
+    "CandidateReview",
+    "CandidateReviewerInput",
+    "CandidateReviewResourceConfig",
+    "CompilerInput",
+    "CompilerResourceConfig",
+    "CompilerResult",
+    "DecisionEvaluator",
+    "EvidenceReview",
+    "EvidenceReviewerInput",
+    "FailureAnalystInput",
+    "FailureDirection",
+    "HookPhaseName",
+    "HypothesisEvaluationSpec",
+    "HypothesisResearcherInput",
+    "InterventionHypothesis",
+    "InterventionPhaseDirective",
+    "InterventionRoleRuntime",
+    "InterventionResourceConfig",
+    "InterventionWorkerInput",
+    "InterventionWorkerResult",
+    "MechanismDistillation",
+    "MechanismDistillerInput",
+    "MechanismPhaseRule",
+    "MechanismSpec",
+    "NativeChatTeacherRuntime",
+    "AgentsSdkTeacherRuntime",
+    "TeacherAgentSpec",
+    "TeacherContinuation",
+    "TeacherPromptSpec",
+    "TeacherResourceConfig",
+    "TeacherResources",
+    "TeacherRoleDefinition",
+    "TrialReview",
+    "TrialReviewerInput",
+    "get_teacher_role",
+    "load_teacher_agent_spec",
+]

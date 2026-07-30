@@ -101,10 +101,18 @@ class InterventionRunner:
         fork_phase: str,
         intent: str,
         hook_guidance: dict[str, str],
+        activation_budgets: dict[str, int] | None = None,
+        system_prompt_template: str | None = None,
+        persist: bool = True,
     ) -> dict[str, Any]:
         """Run one isolated Intervention Worker and return its complete artifact."""
 
         guidance = _normalize_guidance(hook_guidance)
+        budgets = _normalize_activation_budgets(
+            guidance,
+            activation_budgets,
+            default=self.config.actor_max_steps,
+        )
         selector = PrefixSelector(
             rollout_file=rollout_file,
             example_id=example_id,
@@ -128,15 +136,20 @@ class InterventionRunner:
             intent=intent,
             hook_guidance=guidance,
             max_steps_per_activation=self.config.worker_max_steps_per_activation,
+            system_prompt_template=system_prompt_template,
         )
         intervention_context = InterventionContext(prefix)
+        activation_counts = {phase: 0 for phase in guidance}
 
         initial_guidance = guidance.get(fork_phase)
         if initial_guidance is not None:
+            activation_counts[fork_phase] = 1
             action = worker.activate(
                 phase=fork_phase,
                 guidance=initial_guidance,
                 snapshot=initial_worker_snapshot(prefix),
+                phase_activation=1,
+                max_activations=budgets[fork_phase],
             )
             intervention_context.apply_initial(action)
 
@@ -148,6 +161,8 @@ class InterventionRunner:
             worker=worker,
             intervention_context=intervention_context,
             hook_guidance=guidance,
+            activation_budgets=budgets,
+            initial_activation_counts=activation_counts,
         )
         loop = AgentLoop(
             model=student_model,
@@ -176,10 +191,6 @@ class InterventionRunner:
             branch_run.to_dict(),
             teacher_judge=judge,
         )
-        worker_effect = _worker_visible_effect(comparison)
-        summary = worker.summarize(worker_effect)
-        output_dir = _new_trial_dir(self.config.output_root)
-        artifact_file = output_dir / "intervention.json"
         artifact = {
             "schema_version": 1,
             "created_at": datetime.now(UTC).isoformat(),
@@ -205,19 +216,27 @@ class InterventionRunner:
             },
             "intent": intent,
             "hook_guidance": guidance,
+            "activation_budgets": budgets,
+            "activation_counts": bridge.activation_counts,
             "reconstructed_prefix": intervention_context.model_input.to_dict(),
             "intervention_changes": list(intervention_context.changes),
+            "phase_effects": _phase_effects(
+                list(intervention_context.changes),
+                branch_run.to_dict().get("trace"),
+            ),
             "branch_run": branch_run.to_dict(),
             "comparison": comparison,
-            "worker_summary": summary,
             "worker_trace": list(worker.trace),
         }
-        output_dir.mkdir(parents=True, exist_ok=False)
-        artifact_file.write_text(
-            json.dumps(artifact, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        artifact["artifact_file"] = str(artifact_file.resolve())
+        if persist:
+            output_dir = _new_trial_dir(self.config.output_root)
+            artifact_file = output_dir / "intervention.json"
+            output_dir.mkdir(parents=True, exist_ok=False)
+            artifact_file.write_text(
+                json.dumps(artifact, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            artifact["artifact_file"] = str(artifact_file.resolve())
         return artifact
 
 
@@ -294,7 +313,6 @@ class RunInterventionWorkerTool:
                 )
             },
             "comparison": artifact["comparison"],
-            "worker_summary": artifact["worker_summary"],
             "intervention_changes": artifact["intervention_changes"],
         }
         return ToolResult(
@@ -315,6 +333,28 @@ def _normalize_guidance(value: dict[str, object]) -> dict[str, str]:
             raise ValueError(f"hook guidance for {phase} must be a non-empty string")
         normalized[phase] = guidance.strip()
     return normalized
+
+
+def _normalize_activation_budgets(
+    guidance: dict[str, str],
+    value: dict[str, int] | None,
+    *,
+    default: int,
+) -> dict[str, int]:
+    if value is None:
+        return {phase: default for phase in guidance}
+    if set(value) != set(guidance):
+        raise ValueError(
+            "activation_budgets must contain exactly the guidance phases"
+        )
+    if any(
+        not isinstance(budget, int)
+        or isinstance(budget, bool)
+        or budget < 1
+        for budget in value.values()
+    ):
+        raise ValueError("activation budgets must be positive integers")
+    return dict(value)
 
 
 def _build_model(
@@ -403,10 +443,131 @@ def _resolved_score(
     return None, None
 
 
-def _worker_visible_effect(comparison: dict[str, Any]) -> dict[str, Any]:
-    """Exclude the reference answer while retaining behavior and score evidence."""
+def _phase_effects(
+    changes: list[dict[str, Any]],
+    trace: object,
+) -> list[dict[str, Any]]:
+    """Project each intervention onto its following Actor decision window."""
 
-    return json.loads(json.dumps(comparison, ensure_ascii=False))
+    events = trace if isinstance(trace, list) else []
+    effects: list[dict[str, Any]] = []
+    for change in changes:
+        if not isinstance(change, dict):
+            continue
+        phase = str(change.get("phase") or "")
+        action = change.get("action")
+        action = action if isinstance(action, dict) else {}
+        scope = str(change.get("scope") or "branch")
+        activation = _positive_int(change.get("phase_activation"), default=1)
+        anchor = -1
+        anchor_found = scope == "source_boundary"
+        if scope == "branch":
+            anchor = _hook_anchor_position(
+                events,
+                phase=phase,
+                step=change.get("step"),
+            )
+            anchor_found = anchor >= 0
+        window = events[anchor + 1 :] if anchor_found else []
+        next_decision = _next_event(window, "parsed_output")
+        next_final = _next_event(window, "final_answer")
+        final_index = (
+            _event_index(next_final)
+            if next_final is not None
+            else None
+        )
+        tool_calls = [
+            event
+            for event in window
+            if _event_type(event) == "tool_call"
+            and (
+                final_index is None
+                or _event_index(event) < final_index
+            )
+        ]
+        effects.append(
+            {
+                "phase": phase,
+                "phase_activation": activation,
+                "scope": scope,
+                "action_kind": action.get("kind"),
+                "modified": action.get("kind")
+                != "continue_without_change",
+                "activation_step": change.get("step"),
+                "anchor_found": anchor_found,
+                "next_model_decision": _parsed_decision(next_decision),
+                "tool_calls_before_next_final": len(tool_calls),
+                "next_final_step": (
+                    next_final.get("step")
+                    if isinstance(next_final, dict)
+                    else None
+                ),
+            }
+        )
+    return effects
+
+
+def _hook_anchor_position(
+    events: list[object],
+    *,
+    phase: str,
+    step: object,
+) -> int:
+    for position, event in enumerate(events):
+        if (
+            isinstance(event, dict)
+            and _event_type(event) == "hook_applied"
+            and isinstance(event.get("payload"), dict)
+            and event["payload"].get("phase") == phase
+            and event["payload"].get("hook_id")
+            == "intervention_worker_bridge"
+            and (step is None or event.get("step") == step)
+        ):
+            return position
+    return -1
+
+
+def _next_event(
+    events: list[object],
+    event_type: str,
+) -> dict[str, Any] | None:
+    for event in events:
+        if isinstance(event, dict) and _event_type(event) == event_type:
+            return event
+    return None
+
+
+def _parsed_decision(event: dict[str, Any] | None) -> dict[str, Any] | None:
+    if event is None:
+        return None
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    return {
+        "step": event.get("step"),
+        "kind": payload.get("kind"),
+        "tool_name": (
+            payload.get("tool_call", {}).get("name")
+            if isinstance(payload.get("tool_call"), dict)
+            else None
+        ),
+    }
+
+
+def _event_type(event: object) -> object:
+    return event.get("event_type") if isinstance(event, dict) else None
+
+
+def _event_index(event: object) -> int:
+    if not isinstance(event, dict):
+        return -1
+    value = event.get("index")
+    return value if isinstance(value, int) and not isinstance(value, bool) else -1
+
+
+def _positive_int(value: object, *, default: int) -> int:
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+    return default
 
 
 def _static_payload(value: Any) -> dict[str, Any]:

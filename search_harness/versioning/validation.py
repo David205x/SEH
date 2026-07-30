@@ -24,6 +24,7 @@ from search_harness.core import (
 )
 from search_harness.core.hooks import STAGE_KEYS_BY_PHASE
 from search_harness.core.trace import InMemoryTraceRecorder
+from search_harness.paths import COMPONENT_RUNS_ROOT
 from search_harness.registry import EvolutionPolicy, HarnessManifest, build_harness, load_manifest
 
 from .workspace import CandidateWorkspace, HarnessSnapshot
@@ -49,7 +50,12 @@ def stage_files(
 ) -> Iterator[Path]:
     """Materialize virtual files only for APIs that require filesystem imports."""
 
-    with tempfile.TemporaryDirectory(prefix="search-harness-") as tmpdir:
+    staging_root = (COMPONENT_RUNS_ROOT / "_staging").resolve()
+    staging_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="search-harness-",
+        dir=staging_root,
+    ) as tmpdir:
         root = Path(tmpdir) / "plugins"
         root.mkdir()
         for relative, content in files.items():

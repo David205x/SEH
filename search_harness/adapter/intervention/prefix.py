@@ -33,6 +33,12 @@ _BOUNDARY_EVENT = {
 _EVENT_BOUNDARY = {event_type: phase for phase, event_type in _BOUNDARY_EVENT.items()}
 
 
+def recoverable_prefix_phases() -> tuple[str, ...]:
+    """Return lifecycle phases with reconstructable Actor-visible prefixes."""
+
+    return tuple(_BOUNDARY_EVENT)
+
+
 class PrefixPromptBuilder:
     """Continue an Actor from a fixed structured prefix."""
 
@@ -83,6 +89,33 @@ def load_rollout_record(
 
     source = rollout_file.resolve()
     return dict(_find_record(_read_records(source), example_id, replicate_id))
+
+
+def list_rollout_references(rollout_file: Path) -> tuple[str, ...]:
+    """List stable example/replicate references in source-file order."""
+
+    references: list[str] = []
+    for record in _read_records(rollout_file.resolve()):
+        example = record.get("example")
+        if not isinstance(example, dict):
+            raise ValueError("rollout record lacks example object")
+        question = str(example.get("question") or "")
+        example_id = stable_example_id(
+            example.get("example_id"),
+            question,
+        )
+        replicate = record.get("replicate")
+        replicate_id = (
+            replicate.get("replicate_id")
+            if isinstance(replicate, dict)
+            else "r000"
+        )
+        if not isinstance(replicate_id, str) or not replicate_id.strip():
+            raise ValueError("rollout replicate_id must be a non-empty string")
+        references.append(f"{example_id}/{replicate_id}")
+    if len(references) != len(set(references)):
+        raise ValueError("rollout file contains duplicate references")
+    return tuple(references)
 
 
 def summarize_rollout_example(

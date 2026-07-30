@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_candidate_reviewer_v2",
+  "role": {
+    "id": "candidate_reviewer",
+    "version": 1
+  },
+  "output_contract": {
+    "id": "candidate_review",
+    "version": 2
+  },
+  "tools": [
+    {
+      "instance_id": "list_candidate_changes",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "list_candidate_changes"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_candidate_case",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_candidate_case"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_paired_actor_trajectory",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_paired_actor_trajectory"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_candidate_harness_diff",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_candidate_harness_diff"},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "candidate_reviewer",
+    "entrypoint": "prompts/candidate_reviewer/plugin.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    },
+    "evolution_policy": "fixed"
+  }
+}

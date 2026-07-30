@@ -37,6 +37,7 @@ class InterventionWorker:
         intent: str,
         hook_guidance: dict[str, str],
         max_steps_per_activation: int = 8,
+        system_prompt_template: str | None = None,
     ) -> None:
         if not intent.strip():
             raise ValueError("intervention intent must not be empty")
@@ -52,8 +53,9 @@ class InterventionWorker:
         self._history: list[ChatMessage] = []
         self._parser = TaggedOutputParser()
         self._activation_count = 0
-        definitions = _ActivationTools.definition_set()
-        self._system_prompt = _render_system_prompt(definitions)
+        self._system_prompt = _render_system_prompt(
+            template=system_prompt_template,
+        )
         self._history.append(
             ChatMessage(
                 role="user",
@@ -72,21 +74,29 @@ class InterventionWorker:
         phase: str,
         guidance: str,
         snapshot: dict[str, Any],
+        phase_activation: int = 1,
+        max_activations: int = 1,
     ) -> InterventionAction:
         """Run the Worker until one action tool terminates this Hook activation."""
 
+        if phase_activation < 1 or max_activations < phase_activation:
+            raise ValueError("invalid phase activation budget")
         self._activation_count += 1
         activation = _ActivationState(snapshot)
         tool_set = _ActivationTools(activation).tool_set
         runtime = ToolRuntime(tool_set.tools)
         step = snapshot.get("current_step")
+        tool_section = render_tagged_tool_section(tool_set.definitions)
         self._history.append(
             ChatMessage(
                 role="user",
                 content=(
                     f"Hook activation {self._activation_count}: phase={phase}, "
-                    f"actor_step={step}.\n"
+                    f"actor_step={step}, phase_activation="
+                    f"{phase_activation}/{max_activations}.\n"
                     f"Phase guidance: {guidance}\n"
+                    "Available tools for this activation:\n"
+                    f"{tool_section}\n"
                     "Inspect the bound Actor context as needed, then call exactly one "
                     "terminal action tool. The terminal tool ends this Hook activation."
                 ),
@@ -98,6 +108,8 @@ class InterventionWorker:
                 "activation": self._activation_count,
                 "phase": phase,
                 "actor_step": step,
+                "phase_activation": phase_activation,
+                "max_activations": max_activations,
                 "guidance": guidance,
             }
         )
@@ -163,49 +175,6 @@ class InterventionWorker:
             f"{self.max_steps_per_activation} steps"
         )
 
-    def summarize(self, effect: dict[str, Any]) -> str:
-        """Ask the same Worker to summarize the completed branch experiment."""
-
-        self._history.append(
-            ChatMessage(
-                role="user",
-                content=(
-                    "The Actor branch has ended. Summarize whether the intervention "
-                    "worked, why, risks, and what should be tried or compiled next. "
-                    "Treat the evaluator fields as authoritative. A static decision "
-                    "other than pass does not establish correctness; when no resolved "
-                    "score is available, describe correctness as unverified rather than "
-                    "inferring it from the trajectory. "
-                    "Do not call a tool. Return exactly one <final_answer> block.\n\n"
-                    f"Observed effect:\n{json.dumps(effect, ensure_ascii=False, indent=2)}"
-                ),
-            )
-        )
-        for worker_step in range(1, self.max_steps_per_activation + 1):
-            model_input = self._model_input()
-            raw_output = self.model.generate(model_input)
-            metadata = _model_metadata(self.model)
-            self.trace.append(
-                {
-                    "event_type": "worker_summary_output",
-                    "worker_step": worker_step,
-                    "model_input": model_input.to_dict(),
-                    "raw_output": raw_output,
-                    "metadata": metadata,
-                }
-            )
-            parsed = self._parser.parse(raw_output)
-            self._history.append(ChatMessage(role="assistant", content=raw_output))
-            if parsed.kind is ParsedOutputKind.FINAL_ANSWER:
-                return str(parsed.final_answer)
-            self._history.append(
-                ChatMessage(
-                    role="user",
-                    content="Return the summary in exactly one complete <final_answer> block.",
-                )
-            )
-        raise RuntimeError("Intervention Worker did not return a final summary")
-
     def _model_input(self) -> ModelInput:
         return ModelInput.from_messages(
             [ChatMessage(role="system", content=self._system_prompt), *self._history]
@@ -231,21 +200,20 @@ class _ActivationState:
 class _ActivationTools:
     def __init__(self, activation: _ActivationState) -> None:
         self._activation = activation
-        self.tool_set = ToolSet(
-            [
-                CallableTool.from_callable(self.inspect_actor_context),
-                CallableTool.from_callable(self.append_context_message),
-                CallableTool.from_callable(self.replace_model_input),
-                CallableTool.from_callable(self.defer_final_answer),
-                CallableTool.from_callable(self.accept_final_answer),
-                CallableTool.from_callable(self.continue_without_change),
-            ]
-        )
-
-    @classmethod
-    def definition_set(cls) -> ToolSet:
-        placeholder = cls(_ActivationState({}))
-        return placeholder.tool_set
+        tools = [
+            CallableTool.from_callable(self.inspect_actor_context),
+            CallableTool.from_callable(self.append_context_message),
+            CallableTool.from_callable(self.replace_model_input),
+        ]
+        if _stage_is_active(activation.snapshot, "final_decision"):
+            tools.extend(
+                [
+                    CallableTool.from_callable(self.defer_final_answer),
+                    CallableTool.from_callable(self.accept_final_answer),
+                ]
+            )
+        tools.append(CallableTool.from_callable(self.continue_without_change))
+        self.tool_set = ToolSet(tools)
 
     @tool(name="inspect_actor_context")
     def inspect_actor_context(self) -> ToolResult:
@@ -392,7 +360,20 @@ class _ActivationTools:
         )
 
 
-def _render_system_prompt(tools: ToolSet) -> str:
+def _render_system_prompt(
+    *,
+    template: str | None = None,
+) -> str:
+    tool_section = (
+        "The runtime lists the exact tools available for each Hook activation "
+        "in the current activation message. Use only that current list."
+    )
+    if template is not None:
+        if "{{tools}}" not in template:
+            raise ValueError(
+                "Intervention Worker system prompt template lacks {{tools}}"
+            )
+        return template.replace("{{tools}}", tool_section)
     return (
         "You are an Intervention Worker supervising one forked Actor trajectory. "
         "You may inspect all bound trace evidence and modify only through the supplied "
@@ -401,12 +382,15 @@ def _render_system_prompt(tools: ToolSet) -> str:
         "Actor, so do not write anything after its tool_call block. Never use a golden "
         "answer or invent evidence. Tool-phase recommendations are advisory; any active "
         "stage may be replaced when the experiment intent requires it.\n\n"
-        f"{render_tagged_tool_section(tools.definitions)}\n\n"
+        f"{tool_section}\n\n"
         "Write concise analysis before an action, then exactly one complete block:\n"
         '<tool_call>{"name": "<tool>", "arguments": {}}</tool_call>\n'
-        "When explicitly asked for the final experiment summary, return exactly one "
-        "<final_answer>...</final_answer> block instead."
     )
+
+
+def _stage_is_active(snapshot: dict[str, Any], key: str) -> bool:
+    active_stage = snapshot.get("active_stage")
+    return isinstance(active_stage, dict) and key in active_stage
 
 
 def _model_metadata(model: ModelClient) -> dict[str, Any]:

@@ -8,11 +8,13 @@ from unittest import TestCase
 from search_harness.adapter.intervention import (
     PrefixSelector,
     build_prefix_timeline,
+    list_rollout_references,
     load_reconstructed_prefix,
     load_rollout_record,
     resolve_prefix_boundary,
     summarize_rollout_example,
 )
+from search_harness.adapter.intervention.bridge import initial_worker_snapshot
 from search_harness.core import HookPhase, ToolResult
 
 
@@ -80,6 +82,27 @@ class InterventionPrefixTest(TestCase):
             },
         )
 
+    def test_lists_references_in_frozen_rollout_order(self) -> None:
+        """验证 Controller 可先取证据引用再扩展到固定评估候选池。"""
+
+        first = _rollout_record()
+        second = _rollout_record()
+        first["replicate"] = {"replicate_id": "r000"}
+        second["replicate"] = {"replicate_id": "r001"}
+        with TemporaryDirectory() as tmpdir:
+            rollout_file = Path(tmpdir) / "rollout.jsonl"
+            rollout_file.write_text(
+                json.dumps(first) + "\n" + json.dumps(second) + "\n",
+                encoding="utf-8",
+            )
+
+            references = list_rollout_references(rollout_file)
+
+        self.assertEqual(
+            references,
+            ("example-1/r000", "example-1/r001"),
+        )
+
     def test_post_tool_boundary_keeps_result_in_model_context(self) -> None:
         """验证 post_tool 语义边界保留工具结果但不暴露审计事件。"""
 
@@ -106,6 +129,41 @@ class InterventionPrefixTest(TestCase):
         self.assertNotIn("hook_applied", json.dumps(prefix.model_input.to_dict()))
         self.assertEqual(prefix.retained_trace[-1]["event_type"], "tool_result")
         self.assertIsInstance(prefix.stage_values["tool_result"], ToolResult)
+
+    def test_initial_worker_snapshot_does_not_expose_future_core_state(self) -> None:
+        """验证分叉快照不会泄露截断点后的完成状态和最终答案。"""
+
+        with TemporaryDirectory() as tmpdir:
+            rollout_file = Path(tmpdir) / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            prefix = load_reconstructed_prefix(
+                PrefixSelector(
+                    rollout_file=rollout_file,
+                    example_id="example-1",
+                    replicate_id="r000",
+                    step=1,
+                    phase=HookPhase.POST_TOOL,
+                )
+            )
+
+            snapshot = initial_worker_snapshot(prefix)
+
+        self.assertEqual(
+            snapshot["current_core"],
+            {
+                "question": "Who wrote The Hobbit?",
+                "max_steps": 4,
+                "step": 1,
+                "status": "running",
+                "final_answer": None,
+                "error": None,
+            },
+        )
+        self.assertEqual(snapshot["source"]["retained_trace"][-1]["index"], 6)
+        self.assertNotIn(
+            "Shakespeare",
+            json.dumps(snapshot["current_core"], ensure_ascii=False),
+        )
 
 
 def _write_rollout(path: Path) -> None:

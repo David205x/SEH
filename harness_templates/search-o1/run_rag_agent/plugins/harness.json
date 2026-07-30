@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "harness_id": "search_o1_run_rag_agent",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/plugin.py:build",
+      "config": {},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "agentic_search",
+    "entrypoint": "prompts/agentic_search/plugin.py:build",
+    "config": {},
+    "evolution_policy": "fixed"
+  },
+  "extensions": []
+}

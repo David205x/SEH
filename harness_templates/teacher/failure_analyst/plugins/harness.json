@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_failure_analyst_v1",
+  "role": {
+    "id": "failure_analyst",
+    "version": 1
+  },
+  "output_contract": {
+    "id": "failure_direction",
+    "version": 1
+  },
+  "tools": [
+    {
+      "instance_id": "list_evaluation_cases",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "list_evaluation_cases"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "list_evaluation_cases_by_cost",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "list_evaluation_cases_by_cost"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_cost_summary",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_cost_summary"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_evaluation_case",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_evaluation_case"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_actor_trajectory",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_actor_trajectory"},
+      "evolution_policy": "fixed"
+    },
+    {
+      "instance_id": "get_harness_manifest",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "get_harness_manifest"},
+      "evolution_policy": "fixed"
+    }
+  ],
+  "prompt": {
+    "instance_id": "failure_analyst",
+    "entrypoint": "prompts/failure_analyst/plugin.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    },
+    "evolution_policy": "fixed"
+  }
+}

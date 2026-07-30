@@ -21,6 +21,7 @@ from .progress import (
     EvolutionProgressReporter,
     LoggingProgressReporter,
 )
+from .research import EvidenceObligation, EvolutionResearchStore, IterationProduct
 from .types import (
     CandidateArtifact,
     CriticArtifact,
@@ -77,6 +78,7 @@ class EvolutionRunner:
         self.validation_env_file = validation_env_file
         self.progress = progress_reporter or LoggingProgressReporter()
         self.journal = EvolutionJournal(self.run_dir / "events.jsonl")
+        self.research = EvolutionResearchStore(self.run_dir / "research")
         self.run_file = self.run_dir / "run.json"
         self.experience_file = self.run_dir / "experience_set.jsonl"
 
@@ -182,10 +184,15 @@ class EvolutionRunner:
                 iteration_number, parent_version, parent_evaluation, paths
             )
             if not failure.result.problem_directions:
-                return self._finish(
-                    "no_direction",
-                    "Critic returned no prioritized problem direction",
+                self._record_iteration_product(
+                    IterationProduct(
+                        iteration=iteration_number,
+                        kind="evidence_recorded",
+                        summary="Critic returned no prioritized problem direction.",
+                        artifact_refs=(str(failure.log_file),),
+                    )
                 )
+                continue
             intervention = self._ensure_direction_intervention(
                 iteration_number, parent_version, parent_evaluation, failure, paths
             )
@@ -205,12 +212,36 @@ class EvolutionRunner:
                     continuation=continuation,
                 )
             if intervention.result.verdict != "supported":
-                return self._finish(
-                    "no_supported_strategy",
-                    "Coordinator did not validate a strategy for the Critic direction: "
-                    f"{intervention.result.verdict}",
+                kind = (
+                    "more_evidence_required"
+                    if intervention.result.verdict == "inconclusive"
+                    else "hypothesis_rejected"
                 )
+                self._record_iteration_product(
+                    IterationProduct(
+                        iteration=iteration_number,
+                        kind=kind,
+                        summary=(
+                            "Coordinator did not validate the current strategy: "
+                            f"{intervention.result.verdict}."
+                        ),
+                        artifact_refs=(str(intervention.log_file),),
+                        next_obligation=(
+                            (
+                                intervention.result.recommendation
+                                or (
+                                    "Gather evidence that distinguishes the "
+                                    "current strategy."
+                                )
+                            )
+                            if kind == "more_evidence_required"
+                            else None
+                        ),
+                    )
+                )
+                continue
             revision = 0
+            candidate: CandidateArtifact | None = None
             while True:
                 candidate = self._ensure_candidate(
                     iteration_number,
@@ -229,9 +260,17 @@ class EvolutionRunner:
                     final=exhausted,
                 )
                 if exhausted:
-                    return self._finish(
-                        "needs_clarification", candidate.clarification
+                    self._record_iteration_product(
+                        IterationProduct(
+                            iteration=iteration_number,
+                            kind="more_evidence_required",
+                            summary="Compiler clarification budget was exhausted.",
+                            artifact_refs=(str(candidate.compiler_log),),
+                            next_obligation=candidate.clarification,
+                        )
                     )
+                    candidate = None
+                    break
                 revision += 1
                 intervention = self._ensure_intervention_revision(
                     iteration_number,
@@ -244,11 +283,39 @@ class EvolutionRunner:
                     revision=revision,
                 )
                 if intervention.result.verdict != "supported":
-                    return self._finish(
-                        "no_supported_strategy",
-                        "Coordinator could not satisfy Compiler clarification: "
-                        f"{intervention.result.verdict}",
+                    kind = (
+                        "more_evidence_required"
+                        if intervention.result.verdict == "inconclusive"
+                        else "hypothesis_rejected"
                     )
+                    self._record_iteration_product(
+                        IterationProduct(
+                            iteration=iteration_number,
+                            kind=kind,
+                            summary=(
+                                "Coordinator could not satisfy Compiler clarification: "
+                                f"{intervention.result.verdict}."
+                            ),
+                            artifact_refs=(str(intervention.log_file),),
+                            next_obligation=(
+                                candidate.clarification
+                                if kind == "more_evidence_required"
+                                else None
+                            ),
+                        )
+                    )
+                    candidate = None
+                    break
+            if candidate is None:
+                continue
+            self.research.record_iteration_product(
+                IterationProduct(
+                    iteration=iteration_number,
+                    kind="candidate_compiled",
+                    summary=candidate.summary,
+                    artifact_refs=(str(candidate.compiler_log), candidate.iteration_id),
+                )
+            )
             if not candidate.validation_passed:
                 validation_errors = _validation_errors(candidate.validation)
                 reason = "Candidate failed deterministic validation"
@@ -648,17 +715,6 @@ class EvolutionRunner:
             iteration=iteration,
             details={"revision": revision, "clarification": candidate.clarification},
         )
-        if final and self.journal.find("candidate_rejected", iteration) is None:
-            payload = {
-                "iteration_id": candidate.iteration_id,
-                "candidate_digest": candidate.candidate_digest,
-                "compiler_summary": candidate.summary,
-                "reason": f"Compiler requested clarification: {candidate.clarification}",
-                "metrics": {},
-            }
-            self.journal.append("candidate_rejected", payload, iteration=iteration)
-            self._write_decision(iteration, "reject", payload)
-
     def _find_revision_event(
         self, event_type: str, iteration: int, revision: int
     ) -> EvolutionEvent | None:
@@ -786,6 +842,18 @@ class EvolutionRunner:
         if review_event is not None:
             payload["metric_delta"] = review_event.payload.get("metric_delta", {})
         self.journal.append("candidate_accepted", payload, iteration=iteration)
+        self.research.record_iteration_product(
+            IterationProduct(
+                iteration=iteration,
+                kind="candidate_accepted",
+                summary=candidate.summary,
+                artifact_refs=(
+                    candidate.iteration_id,
+                    str(evaluation.report_dir),
+                    str(review.log_file),
+                ),
+            )
+        )
         self._write_decision(iteration, "accept", payload)
         self._report(
             "decision",
@@ -822,6 +890,19 @@ class EvolutionRunner:
         if review_event is not None:
             payload["metric_delta"] = review_event.payload.get("metric_delta", {})
         self.journal.append("candidate_rejected", payload, iteration=iteration)
+        artifact_refs = [candidate.iteration_id, str(candidate.compiler_log)]
+        if evaluation is not None:
+            artifact_refs.append(str(evaluation.report_dir))
+        if review is not None:
+            artifact_refs.append(str(review.log_file))
+        self.research.record_iteration_product(
+            IterationProduct(
+                iteration=iteration,
+                kind="candidate_rejected",
+                summary=reason,
+                artifact_refs=tuple(artifact_refs),
+            )
+        )
         self._write_decision(iteration, "reject", payload)
         self._report(
             "decision",
@@ -842,8 +923,9 @@ class EvolutionRunner:
         return None
 
     def _failed_attempt_memory(self) -> tuple[dict[str, Any], ...]:
-        failures = [
+        memories = [
             {
+                "kind": "candidate_rejected",
                 "candidate_digest": event.payload.get("candidate_digest"),
                 "compiler_summary": event.payload.get("compiler_summary"),
                 "metrics": event.payload.get("metrics", {}),
@@ -854,8 +936,18 @@ class EvolutionRunner:
             for event in self.journal.events()
             if event.event_type == "candidate_rejected"
         ]
+        memories.extend(
+            {
+                "kind": "evidence_obligation",
+                "obligation_id": obligation.obligation_id,
+                "hypothesis_ref": obligation.hypothesis_ref,
+                "question": obligation.question,
+                "evidence_refs": list(obligation.evidence_refs),
+            }
+            for obligation in self.research.list_open_obligations()
+        )
         limit = self.config.failure_memory_limit
-        return tuple(failures[-limit:]) if limit else ()
+        return tuple(memories[-limit:]) if limit else ()
 
     def _is_rejected_duplicate(self, digest: str, current_iteration: int) -> bool:
         return any(
@@ -869,7 +961,47 @@ class EvolutionRunner:
         return tuple(
             event
             for event in self.journal.events()
-            if event.event_type in {"candidate_accepted", "candidate_rejected"}
+            if event.event_type
+            in {
+                "candidate_accepted",
+                "candidate_rejected",
+                "iteration_product_recorded",
+            }
+        )
+
+    def _record_iteration_product(self, product: IterationProduct) -> None:
+        """Record one evidence-centric iteration completion and keep the run moving."""
+
+        if self.journal.find("iteration_product_recorded", product.iteration) is not None:
+            return
+        payload = {
+            "kind": product.kind,
+            "summary": product.summary,
+            "artifact_refs": list(product.artifact_refs),
+            "next_obligation": product.next_obligation,
+        }
+        self.research.record_iteration_product(product)
+        if product.kind == "more_evidence_required":
+            assert product.next_obligation is not None
+            self.research.open_obligation(
+                EvidenceObligation(
+                    obligation_id=f"iteration_{product.iteration:04d}_next",
+                    hypothesis_ref=f"iteration_{product.iteration:04d}",
+                    question=product.next_obligation,
+                    evidence_refs=product.artifact_refs,
+                )
+            )
+        self.journal.append(
+            "iteration_product_recorded",
+            payload,
+            iteration=product.iteration,
+        )
+        self._write_decision(product.iteration, product.kind, payload)
+        self._report(
+            "iteration_product",
+            f"Recorded iteration product: {product.kind}",
+            iteration=product.iteration,
+            details={"summary": product.summary},
         )
 
     def _reconcile_version_store_decisions(self) -> None:
@@ -977,6 +1109,7 @@ class EvolutionRunner:
             accepted_iterations=accepted,
             latest_version=latest,
             reason=reason,
+            iteration_products=self._iteration_products(),
         )
         self._report_outcome(outcome)
         return outcome
@@ -991,8 +1124,26 @@ class EvolutionRunner:
                 accepted_iterations=int(event.payload["accepted_iterations"]),
                 latest_version=str(event.payload["latest_version"]),
                 reason=str(event.payload["reason"]),
+                iteration_products=self._iteration_products(),
             )
         return None
+
+    def _iteration_products(self) -> tuple[IterationProduct, ...]:
+        products: list[IterationProduct] = []
+        for event in self.journal.events():
+            if event.event_type != "iteration_product_recorded":
+                continue
+            assert event.iteration is not None
+            products.append(
+                IterationProduct(
+                    iteration=event.iteration,
+                    kind=event.payload["kind"],
+                    summary=event.payload["summary"],
+                    artifact_refs=tuple(event.payload.get("artifact_refs", ())),
+                    next_obligation=event.payload.get("next_obligation"),
+                )
+            )
+        return tuple(products)
 
     def _validate_run_identity(self) -> None:
         if not self.run_file.exists():

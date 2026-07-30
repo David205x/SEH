@@ -274,7 +274,6 @@ class InterventionCoordinatorContext:
                 "error": f"{type(exc).__name__}: {exc}",
                 "artifact_file": None,
                 "comparison": None,
-                "worker_summary": None,
                 "intervention_changes": [],
             }
         else:
@@ -284,7 +283,6 @@ class InterventionCoordinatorContext:
                 "error": None,
                 "artifact_file": artifact.get("artifact_file"),
                 "comparison": artifact.get("comparison"),
-                "worker_summary": artifact.get("worker_summary"),
                 "intervention_changes": _compact_changes(
                     artifact.get("intervention_changes")
                 ),

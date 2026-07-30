@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 660" font-family="'Noto Sans CJK SC', 'Microsoft YaHei', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="660" rx="8" fill="#fafbfc"/>
+  <rect x="0" y="0" width="920" height="46" rx="8" fill="url(#header)"/>
+  <rect x="0" y="38" width="920" height="8" fill="url(#header)"/>
+  <text x="460" y="29" text-anchor="middle" fill="#fff" font-size="17" font-weight="700">Search Harness — 当前 Evolution 思路流程</text>
+
+  <!-- Main arrows -->
+  <line x1="182" y1="117" x2="242" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="402" y1="117" x2="462" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="622" y1="117" x2="682" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="762" y1="151" x2="762" y2="208" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="682" y1="246" x2="602" y2="246" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="442" y1="246" x2="362" y2="246" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="202" y1="246" x2="122" y2="246" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="122" y1="284" x2="122" y2="357" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="202" y1="395" x2="262" y2="395" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="422" y1="395" x2="482" y2="395" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="642" y1="395" x2="702" y2="395" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="782" y1="433" x2="782" y2="498" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="702" y1="536" x2="622" y2="536" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <path d="M 462 536 L 406 536 L 406 584 L 122 584 L 122 433" fill="none" stroke="#16a34a" stroke-width="1.7" stroke-dasharray="6,3" marker-end="url(#arrow-green)"/>
+  <path d="M 762 284 L 876 284 L 876 246 L 842 246" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-red)"/>
+
+  <!-- Evaluation band -->
+  <rect x="32" y="70" width="856" height="102" rx="9" fill="#eef2ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="52" y="91" fill="#1e3a8a" font-size="10" font-weight="700">01 / 固定经验集评估</text>
+
+  <rect x="62" y="94" width="120" height="46" rx="7" fill="#fff" stroke="#2563eb" stroke-width="1.4"/>
+  <text x="122" y="113" text-anchor="middle" fill="#1e3a5f" font-size="11" font-weight="700">Accepted Harness</text>
+  <text x="122" y="129" text-anchor="middle" fill="#64748b" font-size="8.5">checkpoint plugins</text>
+
+  <rect x="242" y="91" width="160" height="52" rx="7" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.4"/>
+  <text x="322" y="112" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Student Actor Rollout</text>
+  <text x="322" y="129" text-anchor="middle" fill="#64748b" font-size="8.5">每题 n 次 · tools + hooks</text>
+
+  <rect x="462" y="91" width="160" height="52" rx="7" fill="#fff7ed" stroke="#d97706" stroke-width="1.4"/>
+  <text x="542" y="112" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Evaluation</text>
+  <text x="542" y="129" text-anchor="middle" fill="#64748b" font-size="8.5">规则优先 · Teacher Judge</text>
+
+  <rect x="682" y="91" width="160" height="60" rx="7" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="762" y="111" text-anchor="middle" fill="#334155" font-size="11" font-weight="700">Evidence Report</text>
+  <text x="762" y="127" text-anchor="middle" fill="#64748b" font-size="8.5">metrics · cases · trajectories</text>
+  <text x="762" y="141" text-anchor="middle" fill="#64748b" font-size="8.5">example + replicate identity</text>
+
+  <!-- Adapter band -->
+  <rect x="32" y="190" width="856" height="116" rx="9" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="52" y="211" fill="#475569" font-size="10" font-weight="700">02 / Teacher Adapter：诊断 → 试验 → 固化</text>
+
+  <rect x="682" y="224" width="160" height="76" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="762" y="246" text-anchor="middle" fill="#5b21b6" font-size="11" font-weight="700">Critic</text>
+  <text x="762" y="263" text-anchor="middle" fill="#6d28d9" font-size="8.5">失败模式 + 问题方向</text>
+  <text x="762" y="278" text-anchor="middle" fill="#64748b" font-size="8">当前固定选择 direction 0</text>
+  <text x="762" y="291" text-anchor="middle" fill="#dc2626" font-size="7.5">预算后不支持 → 当前 run 结束</text>
+
+  <rect x="442" y="224" width="160" height="76" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="522" y="246" text-anchor="middle" fill="#0e7490" font-size="11" font-weight="700">Coordinator</text>
+  <text x="522" y="263" text-anchor="middle" fill="#0e7490" font-size="8.5">提出 intervention 方案</text>
+  <text x="522" y="278" text-anchor="middle" fill="#64748b" font-size="8">管理 trial 与 continuation</text>
+
+  <rect x="202" y="224" width="160" height="76" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="282" y="246" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Intervention Worker</text>
+  <text x="282" y="263" text-anchor="middle" fill="#166534" font-size="8.5">prefix-fork + Hook 指导</text>
+  <text x="282" y="278" text-anchor="middle" fill="#64748b" font-size="8">Teacher 改上下文 · Student 续跑</text>
+
+  <rect x="42" y="224" width="160" height="76" rx="8" fill="#fff7ed" stroke="#d97706" stroke-width="1.6"/>
+  <text x="122" y="246" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Coordinator Result</text>
+  <text x="122" y="263" text-anchor="middle" fill="#92400e" font-size="8.5">supported / rejected</text>
+  <text x="122" y="278" text-anchor="middle" fill="#64748b" font-size="8">inconclusive + recommendation</text>
+
+  <!-- Candidate band -->
+  <rect x="32" y="340" width="856" height="114" rx="9" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="52" y="361" fill="#065f46" font-size="10" font-weight="700">03 / Candidate 事务</text>
+
+  <rect x="42" y="373" width="160" height="76" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="122" y="395" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Compiler</text>
+  <text x="122" y="412" text-anchor="middle" fill="#166534" font-size="8.5">生成插件文件事务</text>
+  <text x="122" y="427" text-anchor="middle" fill="#64748b" font-size="8">clarification 可回 Coordinator</text>
+
+  <rect x="262" y="373" width="160" height="76" rx="8" fill="#fff7ed" stroke="#d97706" stroke-width="1.6"/>
+  <text x="342" y="395" text-anchor="middle" fill="#92400e" font-size="11" font-weight="700">Deterministic Validation</text>
+  <text x="342" y="412" text-anchor="middle" fill="#92400e" font-size="8.5">manifest · fixed · import</text>
+  <text x="342" y="427" text-anchor="middle" fill="#64748b" font-size="8">syntax · smoke rollout</text>
+
+  <rect x="482" y="373" width="160" height="76" rx="8" fill="#f0f4ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="562" y="395" text-anchor="middle" fill="#1e3a5f" font-size="11" font-weight="700">Candidate Evaluation</text>
+  <text x="562" y="412" text-anchor="middle" fill="#1e3a5f" font-size="8.5">同一经验集完整 rollout</text>
+  <text x="562" y="427" text-anchor="middle" fill="#64748b" font-size="8">paired provenance</text>
+
+  <rect x="702" y="373" width="160" height="76" rx="8" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="782" y="395" text-anchor="middle" fill="#5b21b6" font-size="11" font-weight="700">Candidate Review</text>
+  <text x="782" y="412" text-anchor="middle" fill="#6d28d9" font-size="8.5">Critic 对比父 / 候选</text>
+  <text x="782" y="427" text-anchor="middle" fill="#64748b" font-size="8">accept / reject + reason</text>
+
+  <!-- Version band -->
+  <rect x="32" y="480" width="856" height="114" rx="9" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="52" y="501" fill="#475569" font-size="10" font-weight="700">04 / 持久化与下一轮</text>
+
+  <rect x="702" y="512" width="160" height="76" rx="8" fill="#fff" stroke="#94a3b8" stroke-width="1.4"/>
+  <text x="782" y="534" text-anchor="middle" fill="#334155" font-size="11" font-weight="700">Decision Journal</text>
+  <text x="782" y="551" text-anchor="middle" fill="#64748b" font-size="8.5">接受 / 拒绝证据</text>
+  <text x="782" y="566" text-anchor="middle" fill="#64748b" font-size="8">failed-attempt memory</text>
+
+  <rect x="462" y="512" width="160" height="76" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="542" y="534" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">Harness Version Store</text>
+  <text x="542" y="551" text-anchor="middle" fill="#166534" font-size="8.5">accepted checkpoint + Git</text>
+  <text x="542" y="566" text-anchor="middle" fill="#64748b" font-size="8">parent lineage</text>
+
+  <rect x="42" y="512" width="160" height="76" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="122" y="534" text-anchor="middle" fill="#0e7490" font-size="11" font-weight="700">Next Iteration</text>
+  <text x="122" y="551" text-anchor="middle" fill="#0e7490" font-size="8.5">accepted 使用新版本</text>
+  <text x="122" y="566" text-anchor="middle" fill="#64748b" font-size="8">rejected 继续父版本</text>
+
+  <!-- Foreground connectors -->
+  <line x1="182" y1="117" x2="242" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="402" y1="117" x2="462" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="622" y1="117" x2="682" y2="117" stroke="#2563eb" stroke-width="1.7" marker-end="url(#arrow-blue)"/>
+  <line x1="762" y1="151" x2="762" y2="224" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="682" y1="262" x2="602" y2="262" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="442" y1="262" x2="362" y2="262" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="202" y1="262" x2="122" y2="262" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="122" y1="300" x2="122" y2="373" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="202" y1="411" x2="262" y2="411" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="422" y1="411" x2="482" y2="411" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="642" y1="411" x2="702" y2="411" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="782" y1="449" x2="782" y2="512" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+  <line x1="702" y1="550" x2="622" y2="550" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <line x1="462" y1="550" x2="202" y2="550" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <path d="M 122 512 L 18 512 L 18 117 L 62 117" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow-green)"/>
+  <path d="M 122 373 L 122 330 L 522 330 L 522 300" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-orange)"/>
+
+  <rect x="60" y="614" width="800" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="460" y="634" text-anchor="middle" fill="#334155" font-size="10">核心：先用 prefix-fork 低成本验证机制，再由 Compiler 固化；当前中间 verdict 仍可能提前结束整次 run。</text>
+</svg>

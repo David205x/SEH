@@ -21,6 +21,9 @@
 13. [Hook 工具委托与提示注入实验](tool-delegation-injection-experiment.md)
 14. [分解上下文 Controller Hook 实验](decomposed-context-controller-experiment.md)
 15. [Self-Harness 与 Search Harness 对照分析](self-harness-comparison.md)
+16. [Teacher 上下文压缩候选方案](teacher-context-compaction-candidates.md)
+17. [Evolution Controller v2](evolution-controller-v2.md)
+18. [Evolution Controller v2 闭环验证](evolution-controller-v2-validation.md)
 
 ## 文档职责
 
@@ -39,6 +42,9 @@
 - `tool-delegation-injection-experiment.md` 记录动态委托 query、提示注入位置和 Hook 小模型的真实 rollout 对照实验。
 - `decomposed-context-controller-experiment.md` 记录带 Hook 模型、状态机和每步上下文重设的分解检索 controller 实现与实验。
 - `self-harness-comparison.md` 对照 Self-Harness 论文、公开实现和本项目当前架构，记录可迁移的控制原则、协议设计与研究差异。
+- `teacher-context-compaction-candidates.md` 记录 Claude Code 压缩机制中可迁移到 Teacher transcript continuation 的候选方法与实施顺序。
+- `evolution-controller-v2.md` 记录正式七角色闭环采用的事件议程、局部转移、确定性边界和明确不实现项。
+- `evolution-controller-v2-validation.md` 记录正式闭环的真实运行、恢复验证、候选评估、门禁结果和结论边界。
 
 ## 文档维护原则
 

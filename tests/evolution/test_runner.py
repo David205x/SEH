@@ -675,23 +675,41 @@ class EvolutionRunnerTest(TestCase):
             Path(continuation_events[0].payload["log_file"]),
         )
 
-    def test_inconclusive_intervention_stops_after_continuation_limit(self) -> None:
-        """验证续验预算耗尽后才以 no_supported_strategy 结束。"""
+    def test_inconclusive_intervention_records_evidence_product(self) -> None:
+        """验证续验预算耗尽后记录证据义务，而不由 Coordinator 终止 run。"""
 
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             store = _store(root)
             backend = ContinuingInterventionBackend(
-                store, ["inconclusive", "inconclusive", "inconclusive"]
+                store,
+                [
+                    "inconclusive",
+                    "inconclusive",
+                    "inconclusive",
+                    "inconclusive",
+                    "inconclusive",
+                    "inconclusive",
+                ],
             )
-            runner = _runner(root, store, backend, max_iterations=1)
+            runner = _runner(root, store, backend, max_iterations=2)
             runner.initialize(_examples())
 
             outcome = runner.run()
 
-        self.assertEqual(outcome.status, "no_supported_strategy")
-        self.assertEqual(len(backend.continued_logs), 2)
+        self.assertEqual(outcome.status, "completed")
+        self.assertEqual(outcome.completed_iterations, 2)
+        self.assertEqual(len(outcome.iteration_products), 2)
+        self.assertEqual(
+            outcome.iteration_products[0].kind,
+            "more_evidence_required",
+        )
+        self.assertEqual(len(backend.continued_logs), 4)
         self.assertEqual(backend.compile_calls, 0)
+        self.assertEqual(
+            backend.failure_memories[1][0]["kind"],
+            "evidence_obligation",
+        )
 
 
 def _runner(

@@ -11,6 +11,7 @@ from .coordinator_types import InterventionCoordinatorResult
 from .prefix import (
     PrefixPromptBuilder,
     build_prefix_timeline,
+    list_rollout_references,
     load_reconstructed_prefix,
     load_rollout_record,
     summarize_rollout_example,
@@ -36,6 +37,7 @@ __all__ = [
     "ReconstructedPrefix",
     "RunInterventionWorkerTool",
     "build_prefix_timeline",
+    "list_rollout_references",
     "load_reconstructed_prefix",
     "load_rollout_record",
     "summarize_rollout_example",

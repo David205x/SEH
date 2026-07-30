@@ -1,0 +1,52 @@
+{
+  "input": {
+    "hypothesis": {
+      "fork_phase": "post_tool",
+      "phase_plan": [
+        {
+          "phase": "post_tool",
+          "activation_condition": "The returned passages visibly cover only part of the relations requested by the user question.",
+          "instruction": "Append a concise, answer-free reminder to identify the still unsupported relation before choosing the next action.",
+          "expected_effect": "The next Actor generation explicitly identifies an evidence gap.",
+          "max_activations": 1
+        },
+        {
+          "phase": "pre_final",
+          "activation_condition": "The proposed final answer is still unsupported by a complete visible relation chain.",
+          "instruction": "Defer finalization once and ask the Actor to resolve the named evidence gap using its normal tools.",
+          "expected_effect": "The Actor performs a follow-up retrieval before finalizing.",
+          "max_activations": 1
+        }
+      ],
+      "evaluation": {
+        "primary_signal": "tool_call_after_intervention_before_final",
+        "success_condition": "At least one tool call occurs after activation and before finalization.",
+        "falsifier": "The Actor finalizes without another tool call after activation.",
+        "secondary_metrics": [
+          "answer_score",
+          "additional_tool_calls",
+          "additional_tokens"
+        ]
+      },
+      "applicability": "Multi-hop, comparison, or bridge questions where the initial search covers only part of the user-visible entities or factual relations and at least one Actor step remains. It does not assume that every missing relation exists in the retrieval corpus."
+    },
+    "trial_objective": "Test whether a question-derived evidence-coverage checklist, appended immediately after the first search result, causes the Actor to retrieve evidence for an uncovered named entity before answering.",
+    "example_id": "5ac061ab554299294b218fac",
+    "replicate_id": "r000",
+    "prefix_id": 5,
+    "prohibited_content": [
+      "the golden answer or any equivalent answer",
+      "a ready-made case-specific search query",
+      "facts not present in the original question or returned passages",
+      "hidden gold evidence or a precomputed entity path"
+    ]
+  },
+  "resources": {
+    "intervention": {
+      "rollout_file": "D:\\_Project\\Agent\\search_harness\\runs\\experiments\\evolution\\exp_05\\iterations\\0001\\incumbent_rollouts.jsonl",
+      "actor_plugins_root": "D:\\_Project\\Agent\\search_harness\\harness_templates\\actor\\baseline\\plugins",
+      "env_file": "D:\\_Project\\Agent\\search_harness\\.env",
+      "actor_max_steps": 8
+    }
+  }
+}
