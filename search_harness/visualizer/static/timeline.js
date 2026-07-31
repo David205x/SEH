@@ -226,7 +226,7 @@
 
     function appendStepMarker(step) {
       const marker = document.createElement("div");
-      marker.className = "critic-step-marker";
+      marker.className = "step-marker";
       marker.dataset.stepAnchor = String(step);
       marker.textContent = `Step ${step}`;
       conversation.append(marker);
