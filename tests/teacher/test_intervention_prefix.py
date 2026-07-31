@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from search_harness.adapter.intervention import (
+from search_harness.teacher._intervention import (
     PrefixSelector,
     build_prefix_timeline,
     list_rollout_references,
@@ -14,7 +14,7 @@ from search_harness.adapter.intervention import (
     resolve_prefix_boundary,
     summarize_rollout_example,
 )
-from search_harness.adapter.intervention.bridge import initial_worker_snapshot
+from search_harness.teacher._intervention.bridge import initial_worker_snapshot
 from search_harness.core import HookPhase, ToolResult
 
 

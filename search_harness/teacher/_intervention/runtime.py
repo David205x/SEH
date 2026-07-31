@@ -1,4 +1,4 @@
-"""Standalone single-case Intervention trial runtime and coordinator-facing tool."""
+"""Single-case intervention branch runtime used by the v2 Worker role."""
 
 from __future__ import annotations
 
@@ -7,14 +7,13 @@ import json
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Any
 
 from search_harness.core import (
     AgentLoop,
     HookPhase,
     ModelClient,
     TaggedOutputParser,
-    ToolResult,
     ToolRuntime,
 )
 from search_harness.evaluation import (
@@ -23,7 +22,6 @@ from search_harness.evaluation import (
     StaticDecision,
     TeacherBinaryJudge,
 )
-from search_harness.framework.tooling import CallableTool, ToolArg, ToolDefinition, tool
 from search_harness.models import OpenAICompatibleTextModel
 from search_harness.models.openai_compatible import OpenAICompatibleConfig
 from search_harness.paths import ACTOR_TEMPLATE_ROOT, COMPONENT_RUNS_ROOT
@@ -40,22 +38,12 @@ from .types import PrefixSelector
 from .worker import InterventionWorker
 
 
-_PHASE_CHOICES = (
-    HookPhase.PRE_PROMPT,
-    HookPhase.POST_PROMPT,
-    HookPhase.POST_MODEL,
-    HookPhase.POST_PARSE,
-    HookPhase.PRE_TOOL,
-    HookPhase.POST_TOOL,
-    HookPhase.PRE_FINAL,
-    HookPhase.ON_ERROR,
-)
 INTERVENTION_REQUEST_TIMEOUT_ENV = "INTERVENTION_REQUEST_TIMEOUT"
 
 
 @dataclass(frozen=True)
 class InterventionRuntimeConfig:
-    """Environment and bounded-loop settings for one Intervention tool instance."""
+    """Environment and bounded-loop settings for one intervention branch."""
 
     env_file: Path = Path(".env")
     plugins_root: Path = ACTOR_TEMPLATE_ROOT
@@ -238,88 +226,6 @@ class InterventionRunner:
             )
             artifact["artifact_file"] = str(artifact_file.resolve())
         return artifact
-
-
-class RunInterventionWorkerTool:
-    """Coordinator-facing adapter around the standalone Intervention runtime."""
-
-    def __init__(self, runner: InterventionRunner) -> None:
-        self._runner = runner
-        self._tool = CallableTool.from_callable(self.run_intervention_worker)
-
-    @property
-    def name(self) -> str:
-        return self._tool.name
-
-    @property
-    def definition(self) -> ToolDefinition:
-        return self._tool.definition
-
-    def run(self, arguments: dict[str, object]) -> ToolResult:
-        return self._tool.run(arguments)
-
-    @tool(name="run_intervention_worker")
-    def run_intervention_worker(
-        self,
-        rollout_file: Annotated[
-            str,
-            ToolArg("UTF-8 Actor rollout JSON or JSONL file."),
-        ],
-        example_id: Annotated[
-            str,
-            ToolArg("Stable logical example ID."),
-        ],
-        replicate_id: Annotated[
-            str,
-            ToolArg("Replicate ID identifying one concrete rollout trajectory."),
-        ],
-        fork_step: Annotated[
-            int,
-            ToolArg("One-based Actor step retained by the inclusive prefix.", minimum=1),
-        ],
-        fork_phase: Annotated[
-            str,
-            ToolArg("Inclusive lifecycle boundary phase.", choices=_PHASE_CHOICES),
-        ],
-        intent: Annotated[
-            str,
-            ToolArg("General intervention hypothesis the Worker should test."),
-        ],
-        hook_guidance: Annotated[
-            dict[str, object],
-            ToolArg("Mapping from Hook phase names to Worker behavior guidance."),
-        ],
-    ) -> ToolResult:
-        """Run one teacher-guided Worker on one Actor prefix and return its effect."""
-
-        artifact = self._runner.run(
-            rollout_file=Path(rollout_file),
-            example_id=example_id,
-            replicate_id=replicate_id,
-            fork_step=fork_step,
-            fork_phase=fork_phase,
-            intent=intent,
-            hook_guidance=_normalize_guidance(hook_guidance),
-        )
-        compact = {
-            "artifact_file": artifact["artifact_file"],
-            "source": {
-                key: artifact["source"][key]
-                for key in (
-                    "example_id",
-                    "replicate_id",
-                    "fork_step",
-                    "fork_phase",
-                )
-            },
-            "comparison": artifact["comparison"],
-            "intervention_changes": artifact["intervention_changes"],
-        }
-        return ToolResult(
-            name=self.name,
-            content=json.dumps(compact, ensure_ascii=False),
-            metadata={"artifact_file": artifact["artifact_file"]},
-        )
 
 
 def _normalize_guidance(value: dict[str, object]) -> dict[str, str]:

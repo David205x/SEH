@@ -8,24 +8,10 @@ from pathlib import Path
 
 HARNESS_TEMPLATES_ROOT = Path("harness_templates")
 ACTOR_TEMPLATE_ROOT = HARNESS_TEMPLATES_ROOT / "actor" / "baseline" / "plugins"
-CRITIC_TEMPLATE_ROOT = (
-    HARNESS_TEMPLATES_ROOT / "adapter" / "critic" / "baseline" / "plugins"
-)
-COMPILER_TEMPLATE_ROOT = (
-    HARNESS_TEMPLATES_ROOT / "adapter" / "compiler" / "baseline" / "plugins"
-)
-INTERVENTION_COORDINATOR_TEMPLATE_ROOT = (
-    HARNESS_TEMPLATES_ROOT
-    / "adapter"
-    / "intervention_coordinator"
-    / "baseline"
-    / "plugins"
-)
 HARNESS_CHECKPOINTS_ROOT = Path("harness_checkpoints")
 DEFAULT_CHECKPOINT_STORE = HARNESS_CHECKPOINTS_ROOT / "search_actor"
 RUNS_ROOT = Path("runs")
 COMPONENT_RUNS_ROOT = RUNS_ROOT / "components"
-EXPERIMENT_RUNS_ROOT = RUNS_ROOT / "experiments"
 
 
 def new_component_run_dir(component: str) -> Path:

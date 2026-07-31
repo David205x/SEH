@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, get_args
 
-from search_harness.adapter.intervention.prefix import (
+from ._intervention.prefix import (
     recoverable_prefix_phases,
 )
 from search_harness.core import HookPhase
@@ -86,7 +86,7 @@ def intervention_capabilities() -> dict[str, Any]:
         "source_contracts": [
             "core.hooks.HookPhase",
             "core.hooks.STAGE_KEYS_BY_PHASE",
-            "adapter.intervention.prefix.recoverable_prefix_phases",
+            "teacher._intervention.prefix.recoverable_prefix_phases",
             "teacher.contracts.InterventionActionName",
             "teacher.hook_api.query_hook_api",
         ],

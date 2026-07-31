@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from search_harness.adapter.intervention import (
+from ._intervention import (
     InterventionRunner,
     InterventionRuntimeConfig,
     load_rollout_record,

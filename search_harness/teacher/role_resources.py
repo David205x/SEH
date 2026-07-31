@@ -10,17 +10,17 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from search_harness.adapter.intervention.bridge import (
+from ._intervention.bridge import (
     InterventionContext,
 )
-from search_harness.adapter.intervention.prefix import (
+from ._intervention.prefix import (
     PrefixPromptBuilder,
     build_prefix_timeline,
     load_reconstructed_prefix,
     load_rollout_record,
     resolve_prefix_boundary,
 )
-from search_harness.adapter.intervention.types import (
+from ._intervention.types import (
     InterventionAction,
     PrefixSelector,
 )

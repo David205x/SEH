@@ -32,7 +32,7 @@ from search_harness.evolution.control.policies import evaluate_promotion
 from search_harness.evolution.control.transitions import (
     transition_completed,
 )
-from search_harness.evolution.types import CandidateArtifact
+from search_harness.evolution.control.evaluation import CandidateArtifact
 from search_harness.versioning import (
     FileEdit,
     HarnessVersionStore,

@@ -18,7 +18,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from search_harness.adapter.intervention.prefix import (
+from search_harness.teacher._intervention.prefix import (
     build_prefix_timeline,
     load_rollout_record,
 )

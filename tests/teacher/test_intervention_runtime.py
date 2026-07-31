@@ -16,7 +16,7 @@ from search_harness.teacher.role_resources import (
     InterventionResourceConfig,
 )
 
-from tests.adapter.intervention.test_prefix import _write_rollout
+from tests.teacher.test_intervention_prefix import _write_rollout
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

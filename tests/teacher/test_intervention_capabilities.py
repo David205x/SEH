@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from typing import get_args
 
-from search_harness.adapter.intervention.prefix import (
+from search_harness.teacher._intervention.prefix import (
     recoverable_prefix_phases,
 )
 from search_harness.core import HookPhase

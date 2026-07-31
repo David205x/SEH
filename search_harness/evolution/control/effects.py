@@ -8,16 +8,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from search_harness.adapter.intervention.prefix import (
+from search_harness.teacher._intervention.prefix import (
     build_prefix_timeline,
     list_rollout_references,
     load_rollout_record,
 )
-from search_harness.evolution.backend import (
-    LocalEvolutionBackend,
-    LocalEvolutionBackendConfig,
-)
-from search_harness.evolution.types import CandidateArtifact
 from search_harness.teacher.contracts import (
     CandidateReview,
     CompilerResult,
@@ -56,6 +51,11 @@ from ..conformance import (
     aggregate_conformance,
     load_conformance_cases,
     runtime_error_finding,
+)
+from .evaluation import (
+    CandidateArtifact,
+    LocalEvaluationBackend,
+    LocalEvaluationConfig,
 )
 from .domain import ControlState, EffectResult, WorkItem, WorkKind
 
@@ -115,9 +115,9 @@ class LocalControlEffects:
             max_steps_per_activation=config.teacher_max_turns,
             teacher_judge=config.teacher_judge,
         )
-        self.backend = LocalEvolutionBackend(
+        self.backend = LocalEvaluationBackend(
             store=store,
-            config=LocalEvolutionBackendConfig(
+            config=LocalEvaluationConfig(
                 env_file=config.env_file,
                 actor_max_steps=config.actor_max_steps,
                 rollout_workers=config.rollout_workers,

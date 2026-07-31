@@ -6,15 +6,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from search_harness.adapter.intervention import (
+from search_harness.teacher._intervention import (
     InterventionRunner,
     InterventionRuntimeConfig,
-    RunInterventionWorkerTool,
 )
-from search_harness.adapter.intervention.runtime import _phase_effects
+from search_harness.teacher._intervention.runtime import _phase_effects
 from search_harness.core import HookPhase, ModelInput
 
-from .test_prefix import _write_rollout
+from tests.teacher.test_intervention_prefix import _write_rollout
 
 
 @dataclass
@@ -392,33 +391,6 @@ class InterventionRuntimeTest(TestCase):
         self.assertFalse(effects[0]["anchor_found"])
         self.assertIsNone(effects[0]["next_model_decision"])
         self.assertEqual(effects[0]["tool_calls_before_next_final"], 0)
-
-    def test_exposes_coordinator_facing_tool_schema(self) -> None:
-        """验证 Worker runtime 仍可独立封装为 Coordinator 可调用的 DefinedTool。"""
-
-        runner = InterventionRunner(
-            InterventionRuntimeConfig(),
-            student_model=SequenceModel([]),
-            teacher_model=SequenceModel([]),
-        )
-        tool = RunInterventionWorkerTool(runner)
-
-        schema = tool.definition.to_json_schema()
-
-        self.assertEqual(tool.name, "run_intervention_worker")
-        self.assertEqual(
-            set(schema["required"]),
-            {
-                "rollout_file",
-                "example_id",
-                "replicate_id",
-                "fork_step",
-                "fork_phase",
-                "intent",
-                "hook_guidance",
-            },
-        )
-
 
 def _runner(
     root: Path,

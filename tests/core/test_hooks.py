@@ -42,11 +42,6 @@ DECOMPOSED_EXPERIMENT_PLUGINS_ROOT = (
     / "decomposed_context_student"
     / "plugins"
 )
-CRITIC_PLUGINS_ROOT = (
-    Path(__file__).parents[2] / "harness_templates" / "adapter" / "critic" / "baseline" / "plugins"
-)
-
-
 @dataclass
 class StaticModel:
     output: str
@@ -757,42 +752,6 @@ class HookPipelineTest(TestCase):
             )
         )
 
-    def test_format_feedback_hook_reports_incomplete_tool_block(self) -> None:
-        """Verifies the format feedback hook reports incomplete tool block contract."""
-        hook = _build_format_error_feedback_hook()
-        model = RecordingSequentialModel(
-            outputs=[
-                '<tool_call>{"name": "echo", "arguments": {"text": "x"}}',
-                "<final_answer>recovered</final_answer>",
-            ]
-        )
-        loop = AgentLoop(
-            model=model,
-            prompt_builder=_ConversationPromptBuilder(),
-            parser=TaggedOutputParser(),
-            tool_runtime=ToolRuntime([]),
-            max_steps=2,
-            hooks=HookPipeline([hook]),
-        )
-
-        run = loop.run("Recover from malformed output.")
-
-        self.assertEqual(run.answer, "recovered")
-        feedback = model.model_inputs[1].messages[-1].content
-        self.assertIn("<tool_call> is missing </tool_call>", feedback)
-        hook_event = next(
-            event
-            for event in run.trace
-            if event.event_type == "hook_applied"
-            and event.payload["hook_id"] == "format_error_feedback"
-        )
-        self.assertEqual(hook_event.payload["phase"], "post_parse")
-        self.assertEqual(
-            hook_event.payload["changes"][0]["key"],
-            "stage.parsed_output",
-        )
-
-
 def _build_loop(hooks: HookPipeline, output: str) -> AgentLoop:
     return AgentLoop(
         model=StaticModel(output=output),
@@ -857,17 +816,6 @@ def _build_result_summary_prompt_hook() -> BaseHook:
     return factory(
         {}, PluginContext(plugins_root=DELEGATION_EXPERIMENT_PLUGINS_ROOT)
     )
-
-
-def _build_format_error_feedback_hook() -> BaseHook:
-    spec = ComponentSpec(
-        instance_id="format_error_feedback",
-        entrypoint="extensions/format_error_feedback/plugin.py:build",
-        config={},
-        evolution_policy=EvolutionPolicy.FIXED,
-    )
-    factory = load_factory(CRITIC_PLUGINS_ROOT, spec)
-    return factory({}, PluginContext(plugins_root=CRITIC_PLUGINS_ROOT))
 
 
 def _build_tool_delegation_hook(config: dict[str, object] | None = None) -> BaseHook:

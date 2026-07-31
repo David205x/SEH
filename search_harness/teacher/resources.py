@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from search_harness.adapter.intervention.prefix import load_rollout_record
+from ._intervention.prefix import load_rollout_record
 
 from .compiler_capabilities import build_compiler_capability_packet
 from .contracts import (
