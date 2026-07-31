@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-`search_harness.evolution.control` 是 v2 八角色的正式闭环入口。它与旧版
+`search_harness.evolution.control` 是 v2 九角色的正式闭环入口。它与旧版
 `search_harness.evolution.runner.EvolutionRunner` 并存；旧入口没有被删除，也
 不会被新 Controller 调用。
 
@@ -15,37 +15,57 @@
 | `policies.py` | 工作/token 预算和确定性 promotion gate。 |
 | `transitions.py` | 每个 WorkKind 的局部转移与修订路由。 |
 | `controller.py` | 回放、恢复、执行一个待办和提交事件。 |
-| `effects.py` | 八角色、rollout/evaluation 和 Version Store 的本地实现。 |
+| `effects.py` | 九角色、rollout/evaluation 和 Version Store 的本地实现。 |
 | `cli.py` | 新建和恢复运行。 |
 
 设计理由和协议字段见
 [Evolution Controller v2 设计](../design/evolution-controller-v2.md)。
 
-## 闭环组成
+## 主运行流程与角色激活
 
-当前 Controller 使用以下八个 v2 角色：
+主路径为：
 
-1. Failure Analyst；
-2. Hypothesis Researcher；
-3. Intervention Worker；
-4. Trial Reviewer；
-5. Evidence Reviewer；
-6. Mechanism Distiller；
-7. Compiler；
-8. Candidate Reviewer。
+```text
+评估 incumbent
+→ Failure Analyst
+→ Hypothesis Researcher
+→ 选择 prefix
+→ Intervention Worker
+→ Trial Reviewer
+→ Evidence Reviewer
+→ Mechanism Distiller
+→ Compiler
+→ 导入并验证 candidate
+→ 对 intervention examples 执行 Mechanism Conformance Replay
+→ 评估 candidate
+→ Candidate Reviewer
+→ 接受、拒绝或返回指定层修订
+```
+
+其中评估、prefix 选择、候选导入验证和版本接受/拒绝是确定性 Controller
+effect，不是模型角色。
+
+| 角色 | 激活时机 | 主要去向 |
+| --- | --- | --- |
+| Failure Analyst | 每代 incumbent 评估完成后 | 生成失败方向，进入 Hypothesis Researcher。 |
+| Hypothesis Researcher | 首次失败分析后；或 Worker 判定假设不受支持、Evidence Reviewer 要求修订/拒绝时 | 形成或修订假设，进入 prefix 选择。 |
+| Intervention Worker | Controller 选出符合假设 phase 的 rollout prefix 后 | 执行 trial；assignment 不合适时重选 prefix，假设不受支持时返回 Researcher。 |
+| Trial Reviewer | 每条 trial 成功执行后 | 独立审阅该 trial，再交给 Evidence Reviewer 聚合。已有审阅在追加 trial 时复用。 |
+| Evidence Reviewer | 当前假设的 trial 均完成局部审阅后 | `continue` 追加 trial；`revise/reject` 返回 Researcher；`ready_to_distill` 进入 Distiller。 |
+| Mechanism Distiller | Evidence Reviewer 判定证据可蒸馏后；或 Compiler/Candidate Reviewer 要求机制层修订时 | `needs_evidence` 返回 trial；`distilled` 进入 Compiler；`not_distillable` 结束本代研究。 |
+| Compiler | 机制蒸馏完成后；或候选校验、Conformance Replay、Candidate Reviewer 要求实现层修订时 | 提交候选；若能力不足则返回 Distiller。 |
+| Conformance Reviewer | Candidate 通过静态校验后，对每个 intervention example 的每条完整 replay 独立调用 | 程序聚合后通过则进入全量评估；不通过则携带脱敏义务返回 Compiler。 |
+| Candidate Reviewer | 候选通过 conformance 并完成与 incumbent 的对照评估后 | 建议接受、拒绝，或返回 evidence/mechanism/implementation 层修订；接受仍须通过确定性 promotion gate。 |
+
+实现上，Trial Reviewer 与 Evidence Reviewer 共用一个 `review_evidence`
+WorkItem：Controller 先为尚未审阅的 trial 运行 Trial Reviewer，再运行
+Evidence Reviewer。Intervention Worker 使用专用 `InterventionRoleRuntime`；
+其他八个角色使用通用 `NativeChatTeacherRuntime`。
 
 incumbent/candidate rollout 与 HotpotQA evaluation 复用现有
-`LocalEvolutionBackend` 的评估实现。候选评审后，Controller 操作
-`HarnessVersionStore.IterationSession` 完成 accept/reject。
-
-Intervention Worker effect 使用专用 `InterventionRoleRuntime`：Controller
-只按假设的 `fork_phase` 选择一个 inclusive prefix；`phase_plan` 中其余 phase
-由同一个 Worker transcript 在该 Student 分支后续生命周期内处理。每条
-executed trial 随后由独立 Trial Reviewer 读取完整轨迹；Evidence Reviewer
-只聚合这些局部审阅。其他七个
-Teacher 角色继续使用通用 `NativeChatTeacherRuntime`。
-`continue` 新增证据时，Controller 复用已绑定当前冻结假设的 TrialReview，
-只为新增 trial 启动新的局部审阅。
+`LocalEvolutionBackend`。候选评审后，Controller 通过
+`HarnessVersionStore.IterationSession` 完成 accept/reject；接受后若仍有
+generation 预算，则以新版本重新开始 incumbent 评估。
 
 ## 运行目录
 
@@ -92,12 +112,13 @@ Git version。
 
 | 参数 | 默认值 | 含义 |
 | --- | ---: | --- |
-| `--min-accuracy-delta` | `0.0` | candidate 相对 incumbent 的最低 accuracy 变化。 |
+| `--min-accuracy-delta` | `-0.02` | 确定性安全门禁允许的最大 accuracy 回撤；效果是否值得接受仍由 Reviewer 判断。 |
 | `--max-total-token-ratio` | `3.0` | candidate/incumbent 总 token 最大比例。 |
 | `--max-total-tokens` | 未限制 | 整个 Controller run 的 effect token 预算。 |
+| `--candidate-error-streak-limit` | `3` | candidate 连续出现同一 runner error 时提前结束 rollout 批次。 |
 
-Candidate Reviewer 必须建议 `accept`，并且准确率和成本门禁都通过，Controller
-才会执行 promotion。
+Candidate promotion 使用双层 gate。确定性安全门禁必须通过，同时 Candidate
+Reviewer 的效果判断必须建议 `accept`，Controller 才会执行 promotion。
 
 ## 恢复运行
 
@@ -118,16 +139,24 @@ Candidate Reviewer 必须建议 `accept`，并且准确率和成本门禁都通�
 
 ## Promotion gate
 
-当前确定性 gate 只包含已经实际用于闭环的最小规则：
+Promotion 由两个职责不同的 gate 共同决定：
 
-1. Candidate Reviewer recommendation 必须是 `accept`；
-2. `candidate_accuracy - incumbent_accuracy` 不低于
-   `min_accuracy_delta`；
-3. 配置成本上限时，`candidate_total_tokens / incumbent_total_tokens`
-   不高于 `max_total_token_ratio`。
+1. **确定性安全门禁**：Version Store validation 必须通过；candidate 不得包含
+   `runner_error`；准确率、执行状态及已配置的成本指标必须完整；
+   `candidate_accuracy - incumbent_accuracy` 不得低于
+   `min_accuracy_delta`；配置成本上限时 token 比例不得超限。
+2. **Reviewer 效果判断门禁**：Candidate Reviewer 综合 aggregate accuracy、
+   每题稳定性、机制针对的失败子集、gain/loss 代表轨迹、Harness diff 和 token
+   成本，判断机制是否值得采用。Reviewer 不执行隐式的
+   `accuracy_delta >= 0` 规则，正向 aggregate delta 也不能替代机制有效性证据。
 
-Compiler validation 和 Version Store validation 都必须通过。Reviewer 不能绕过
-这些规则，Controller 也不会从 Reviewer 自由文本推断额外阈值。
+两个 gate 的结果分别写入 promotion artifact。Reviewer 不能绕过安全门禁，
+Controller 也不会从 Reviewer 自由文本推断额外阈值。
+
+Version Store 的 Hook phase contract smoke 使用一段代表性的非空历史轨迹，
+用于覆盖读取 `HookContext.trace` 的分支。通过该检查后，candidate rollout
+仍启用连续同类 `runner_error` 熔断；熔断后保留已生成记录并继续生成 evaluation
+与 Candidate Reviewer 证据，而不是消耗整个 Experience Set。
 
 ## 维护规则
 

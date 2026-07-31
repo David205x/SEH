@@ -89,6 +89,62 @@ class DatasetRunnerTest(TestCase):
         self.assertEqual(records[0]["runner_error"]["type"], "RuntimeError")
         self.assertEqual(records[1]["run"]["answer"], "answer for question two")
 
+    def test_stops_after_consecutive_identical_runner_errors(self) -> None:
+        """验证候选批次遇到连续同类 runner error 时提前止损。"""
+
+        examples = [_example(str(index)) for index in range(10)]
+
+        with TemporaryDirectory() as tmpdir:
+            output_file = Path(tmpdir) / "rollouts.jsonl"
+            summary = run_examples(
+                examples=examples,
+                loop_factory=lambda seed: _RecordingLoop([], fail=True),
+                output_file=output_file,
+                limit=len(examples),
+                show_progress=False,
+                max_consecutive_identical_errors=3,
+            )
+            records = [
+                json.loads(line)
+                for line in output_file.read_text(
+                    encoding="utf-8"
+                ).splitlines()
+            ]
+
+        self.assertEqual(summary.processed, 3)
+        self.assertEqual(summary.runner_errors, 3)
+        self.assertTrue(summary.stopped_early)
+        self.assertIn(
+            "consecutive identical runner error limit reached",
+            summary.stop_reason or "",
+        )
+        self.assertEqual(len(records), 3)
+
+    def test_success_resets_consecutive_runner_error_streak(self) -> None:
+        """验证成功 rollout 会重置同类错误连续计数。"""
+
+        attempts = 0
+
+        def loop_factory(seed: int | None) -> _RecordingLoop:
+            del seed
+            nonlocal attempts
+            attempts += 1
+            return _RecordingLoop([], fail=attempts in {1, 2, 4, 5})
+
+        with TemporaryDirectory() as tmpdir:
+            summary = run_examples(
+                examples=[_example(str(index)) for index in range(5)],
+                loop_factory=loop_factory,
+                output_file=Path(tmpdir) / "rollouts.jsonl",
+                limit=5,
+                show_progress=False,
+                max_consecutive_identical_errors=3,
+            )
+
+        self.assertEqual(summary.processed, 5)
+        self.assertEqual(summary.runner_errors, 4)
+        self.assertFalse(summary.stopped_early)
+
     def test_parallel_rollouts_preserve_dataset_order_and_worker_bound(self) -> None:
         """验证并发 rollout 有界执行且 JSONL 保持数据集顺序。"""
 

@@ -97,10 +97,13 @@ Actor obligation 应实现为给 Actor 的反馈，不能被误写成 Hook 自�
 4. 解析 `required_capabilities` 中可直接查询的公开符号；
 5. 任一 rule 使用 `decision_evaluator=hook_model` 时加入模型调用契约和
    authoring 规则，同时保留其他 rule 的确定性边界；
-6. 语义输入保留为语义，不猜测成框架 API；
-7. 自然语言 Actor 能力保留为语义约束，不被误判为缺失 API；
-8. 非触发判断用途的 Hook-model 能力仍由显式 capability 描述按需加入；
-9. 精确 API 仍无法解析时，由 Compiler 返回 `needs_revision`。
+6. 已确认的常见语义输入使用显式映射；当前
+   `conversation_history` 映射为 `HookContext.trace` 与 `TraceEvent`；
+7. 没有映射的语义输入仍保留为语义，不猜测成框架 API；
+8. 自然语言 Actor 能力保留为语义约束，不被误判为缺失 API；
+9. 非触发判断用途的 Hook-model 能力仍由显式 capability 描述按需加入；
+10. packet 确实遗漏实现关键符号时，Compiler 可在硬预算内精确查询；
+11. 精确 API 仍无法解析时，由 Compiler 返回 `needs_revision`。
 
 Compiler 必须逐 rule 服从 evaluator 边界：`deterministic` 不得擅自增加模型
 调用，也不得使用新造的关键词、正则或分数近似开放语义判断；`hook_model`
@@ -110,8 +113,10 @@ Compiler 必须逐 rule 服从 evaluator 边界：`deterministic` 不得擅自�
 模型能力出现时，packet 还会通过 `authoring.allowed_model_profiles` 列出可用
 profile；当前 Actor 装配只允许 `student`，Compiler 不应猜测或写入其他角色。
 
-Compiler template 不再注册 API 浏览和 authoring guide 工具。packet 是本次实现
-唯一的公开 API 边界。
+Compiler template 不注册 API 列表和 authoring guide 工具。packet 是主要公开
+API 边界；`query_hook_api` 只是 packet 缺口的 exact-query 逃生口。每次 run
+最多查询 4 个唯一符号，未知符号也消耗预算；packet 已包含、已经查询或超过预算
+的请求只返回简短拒绝原因，不重复返回契约。
 
 多 phase 机制可以由一个订阅多个 phase 的 Hook 实现，也可以由同一个
 extension 返回多个 Hook。跨 phase 交接必须使用 manifest 已声明的
@@ -135,12 +140,13 @@ workspace 规则：
 
 ## 工具
 
-Compiler 当前只注册五个固定工具：
+Compiler 当前注册六个固定工具：
 
 | 工具 | 用途 |
 | --- | --- |
 | `list_harness_files` | 查看当前候选文件目录和大小 |
 | `read_harness_file` | 读取当前候选中的 UTF-8 文件 |
+| `query_hook_api` | 在最多 4 个唯一符号的硬预算内解析 packet 缺口 |
 | `write_candidate_file` | 新建或完整替换 mutable 文件 |
 | `delete_candidate_file` | 删除 mutable 文件 |
 | `finalize_candidate` | 审查、校验并冻结当前 revision，或返回修复错误 |

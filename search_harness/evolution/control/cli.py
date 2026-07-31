@@ -32,8 +32,22 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     run.add_argument("--max-generations", type=int, default=1)
     run.add_argument("--max-trials-per-hypothesis", type=int, default=4)
     run.add_argument("--max-trial-assignments", type=int, default=12)
+    run.add_argument("--max-hypothesis-revisions", type=int, default=2)
+    run.add_argument("--max-mechanism-revisions", type=int, default=2)
+    run.add_argument("--max-compiler-revisions", type=int, default=2)
+    run.add_argument("--max-candidate-revisions", type=int, default=2)
+    run.add_argument("--max-work-retries", type=int, default=1)
+    run.add_argument("--max-work-items", type=int, default=80)
     run.add_argument("--max-total-tokens", type=int)
-    run.add_argument("--min-accuracy-delta", type=float, default=0.0)
+    run.add_argument(
+        "--min-accuracy-delta",
+        type=float,
+        default=-0.02,
+        help=(
+            "Deterministic safety floor for candidate accuracy delta; "
+            "effect acceptance remains the Candidate Reviewer's decision."
+        ),
+    )
     run.add_argument("--max-total-token-ratio", type=float, default=3.0)
     _add_effect_arguments(run)
 
@@ -99,6 +113,12 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         max_generations=args.max_generations,
         max_trials_per_hypothesis=args.max_trials_per_hypothesis,
         max_trial_assignments=args.max_trial_assignments,
+        max_hypothesis_revisions=args.max_hypothesis_revisions,
+        max_mechanism_revisions=args.max_mechanism_revisions,
+        max_compiler_revisions=args.max_compiler_revisions,
+        max_candidate_revisions=args.max_candidate_revisions,
+        max_work_retries=args.max_work_retries,
+        max_work_items=args.max_work_items,
         max_total_tokens=args.max_total_tokens,
         min_accuracy_delta=args.min_accuracy_delta,
         max_total_token_ratio=args.max_total_token_ratio,
@@ -113,6 +133,7 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         judge_workers=args.judge_workers,
         teacher_judge=not args.no_teacher_judge,
         show_progress=not args.no_progress,
+        candidate_error_streak_limit=args.candidate_error_streak_limit,
     )
     payload = {
         "schema_version": 1,
@@ -192,6 +213,15 @@ def _add_effect_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--rollout-workers", type=int, default=2)
     parser.add_argument("--rollouts-per-example", type=int, default=1)
     parser.add_argument("--judge-workers", type=int, default=8)
+    parser.add_argument(
+        "--candidate-error-streak-limit",
+        type=int,
+        default=3,
+        help=(
+            "Stop candidate rollout after this many consecutive identical "
+            "runner errors; default: 3."
+        ),
+    )
     parser.add_argument("--no-teacher-judge", action="store_true")
     parser.add_argument("--no-progress", action="store_true")
 

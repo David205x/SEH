@@ -386,8 +386,57 @@ class _CompletedTransition:
             }
         )
         return self._one(
-            WorkKind.EVALUATE_CANDIDATE,
+            WorkKind.VERIFY_CONFORMANCE,
             "candidate_valid",
+            refs=refs,
+            payload=payload,
+        )
+
+    def on_verify_conformance(self) -> TransitionPlan:
+        decision = _required_string(self.result.outcome, "decision")
+        refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
+        payload = _context(self.item)
+        summary = _required_object(self.result.outcome, "summary")
+        payload["conformance_summary"] = summary
+        if decision == "pass":
+            return self._one(
+                WorkKind.EVALUATE_CANDIDATE,
+                "conformance_passed",
+                refs=refs,
+                payload=payload,
+            )
+        if decision != "revise_implementation":
+            raise ValueError(
+                f"unknown conformance decision: {decision}"
+            )
+        revision = int(payload.get("candidate_revision", 0)) + 1
+        payload["candidate_revision"] = revision
+        feedback = summary.get("compiler_feedback")
+        obligations = (
+            [str(value) for value in feedback if str(value).strip()]
+            if isinstance(feedback, list)
+            else []
+        )
+        obligation = (
+            " | ".join(obligations)
+            if obligations
+            else (
+                "Repair the Candidate so every intervention example has "
+                "at least one faithful complete replay and no runtime or "
+                "implementation mismatch."
+            )
+        )
+        payload["after_rejection"] = (
+            {
+                "target": "implementation",
+                "obligation": obligation,
+            }
+            if revision <= self.config.max_candidate_revisions
+            else None
+        )
+        return self._one(
+            WorkKind.REJECT_CANDIDATE,
+            "conformance_failed",
             refs=refs,
             payload=payload,
         )
@@ -413,6 +462,10 @@ class _CompletedTransition:
         payload = _context(self.item)
         gate = evaluate_promotion(
             reviewer_recommendation=recommendation,
+            validation_summary=_required_payload_object(
+                payload,
+                "validation_summary",
+            ),
             incumbent_metrics=_required_payload_object(
                 payload,
                 "incumbent_metrics",
@@ -497,6 +550,7 @@ class _CompletedTransition:
             self.item.input_refs,
             (
                 "candidate_",
+                "conformance_",
                 "compiler_artifact",
                 "iteration_",
             ),

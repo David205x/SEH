@@ -82,6 +82,24 @@ def build(config, context):
     return DynamicAttributeHook()
 '''
 
+INVALID_TRACE_ATTRIBUTE_HOOK = '''from search_harness.core import BaseHook, HookPhase
+
+class InvalidTraceAttributeHook(BaseHook):
+    def __init__(self):
+        super().__init__(
+            hook_id="invalid_trace_attribute",
+            phases=frozenset({HookPhase.POST_PROMPT}),
+        )
+
+    def handle(self, context):
+        for event in context.trace:
+            if event.kind == "final_deferred":
+                return
+
+def build(config, context):
+    return InvalidTraceAttributeHook()
+'''
+
 
 class CandidateWorkspaceTest(TestCase):
     def test_transaction_rolls_back_all_file_changes(self) -> None:
@@ -265,6 +283,32 @@ class HarnessVersionStoreTest(TestCase):
             any(
                 "Hook contract failed for invalid_attribute at pre_final" in error
                 and "is_accepted" in error
+                for error in report.errors
+            ),
+            report.errors,
+        )
+
+    def test_validation_exercises_hook_against_non_empty_trace(self) -> None:
+        """验证契约 smoke 能发现仅在遍历历史事件时暴露的错误属性。"""
+
+        with TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            store = HarnessVersionStore(base / "versions")
+            first = store.initialize(_make_plugins_root(base))
+            workspace = store.open_workspace(first.version_id)
+            workspace.add_extension(
+                instance_id="invalid_trace_attribute",
+                files={"plugin.py": INVALID_TRACE_ATTRIBUTE_HOOK},
+            )
+
+            report = store.validate(workspace)
+
+        self.assertFalse(report.passed)
+        self.assertTrue(
+            any(
+                "Hook contract failed for invalid_trace_attribute at post_prompt"
+                in error
+                and "kind" in error
                 for error in report.errors
             ),
             report.errors,

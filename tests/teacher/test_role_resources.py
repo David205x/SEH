@@ -188,6 +188,71 @@ class TeacherRoleResourceTest(unittest.TestCase):
         self.assertGreaterEqual(len(result["errors"]), 3)
         self.assertIsNone(store.artifact())
 
+    def test_compiler_exact_api_query_enforces_packet_and_budget(self) -> None:
+        """验证 exact query 拒绝 packet 重复并硬限制四个唯一符号。"""
+
+        store = CompilerWorkspaceStore.load(
+            CompilerResourceConfig(
+                parent_plugins_root=BASELINE_PLUGINS,
+                env_file=PROJECT_ROOT / ".env",
+            )
+        )
+        store.bind_capability_packet(
+            {
+                "contracts": [
+                    {
+                        "symbol": "HookContext",
+                        "fields": [
+                            {"symbol": "HookContext.trace"},
+                        ],
+                    }
+                ]
+            }
+        )
+
+        packet_hit = store.query_hook_api("HookContext.trace")
+        first = store.query_hook_api("ToolResult")
+        duplicate = store.query_hook_api("ToolResult")
+        unknown = store.query_hook_api("MissingPublicSymbol")
+        third = store.query_hook_api("TraceEvent")
+        fourth = store.query_hook_api("ParsedOutput")
+        exhausted = store.query_hook_api("ChatMessage")
+
+        self.assertEqual(packet_hit["reason"], "already_in_packet")
+        self.assertNotIn("contract", packet_hit)
+        self.assertEqual(first["status"], "resolved")
+        self.assertIn("contract", first)
+        self.assertEqual(duplicate["reason"], "already_queried")
+        self.assertNotIn("contract", duplicate)
+        self.assertEqual(unknown["reason"], "unknown_symbol")
+        self.assertNotIn("contract", unknown)
+        self.assertEqual(third["status"], "resolved")
+        self.assertEqual(fourth["status"], "resolved")
+        self.assertEqual(exhausted["reason"], "query_budget_exhausted")
+        self.assertNotIn("contract", exhausted)
+        self.assertEqual(
+            store.queried_symbols,
+            {
+                "ToolResult",
+                "MissingPublicSymbol",
+                "TraceEvent",
+                "ParsedOutput",
+            },
+        )
+
+    def test_compiler_api_query_requires_bound_packet(self) -> None:
+        """验证程序遗漏 packet 绑定时 exact query 立即失败。"""
+
+        store = CompilerWorkspaceStore.load(
+            CompilerResourceConfig(
+                parent_plugins_root=BASELINE_PLUGINS,
+                env_file=PROJECT_ROOT / ".env",
+            )
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "must be bound"):
+            store.query_hook_api("TraceEvent")
+
     def test_candidate_review_pairs_example_and_replicate(self) -> None:
         """验证 Reviewer 按相同 example/replicate 比较改进与完整轨迹。"""
 

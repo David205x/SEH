@@ -30,6 +30,7 @@ from search_harness.adapter.intervention import (
     InterventionCoordinatorRunner,
     InterventionRuntimeConfig,
 )
+from search_harness.datasets import DatasetExample
 from search_harness.evaluation import (
     HotpotQAEvaluator,
     TeacherBinaryJudge,
@@ -93,6 +94,7 @@ class LocalEvolutionBackendConfig:
     judge_workers: int = 8
     teacher_judge: bool = True
     show_progress: bool = True
+    candidate_error_streak_limit: int = 3
 
     def __post_init__(self) -> None:
         if self.rollout_workers < 1:
@@ -107,6 +109,8 @@ class LocalEvolutionBackendConfig:
             raise ValueError("critic_protocol_repair_limit must not be negative")
         if self.compiler_smoke_examples < 1:
             raise ValueError("compiler_smoke_examples must be positive")
+        if self.candidate_error_streak_limit < 1:
+            raise ValueError("candidate_error_streak_limit must be positive")
 
 
 class LocalEvolutionBackend(EvolutionBackend):
@@ -126,6 +130,7 @@ class LocalEvolutionBackend(EvolutionBackend):
             output_dir=output_dir,
             version_id=version_id,
             iteration_id=None,
+            max_consecutive_identical_errors=None,
         )
 
     def analyze_failures(
@@ -591,7 +596,85 @@ class LocalEvolutionBackend(EvolutionBackend):
             output_dir=output_dir,
             version_id=None,
             iteration_id=candidate.iteration_id,
+            max_consecutive_identical_errors=(
+                self.config.candidate_error_streak_limit
+            ),
         )
+
+    def rollout_candidate_examples(
+        self,
+        *,
+        candidate: CandidateArtifact,
+        examples: tuple[DatasetExample, ...],
+        experience_file: Path,
+        output_file: Path,
+        rollouts_per_example: int,
+    ) -> dict[str, Any]:
+        """Run a pending Candidate on a fixed conformance example subset."""
+
+        if not examples:
+            raise ValueError("candidate conformance examples must not be empty")
+        with open_harness_source(
+            checkpoint_store=self.store.root,
+            iteration_id=candidate.iteration_id,
+            env_file=self.config.env_file,
+        ) as (plugins_root, source):
+            model = OpenAICompatibleConfig.from_env(
+                env_file=self.config.env_file,
+                prefix=self.config.actor_model_role.upper(),
+            )
+            provenance = {
+                "schema_version": 1,
+                "dataset": {
+                    "path": str(experience_file.resolve()),
+                    "digest": file_digest(experience_file),
+                    "selection": {
+                        "kind": "mechanism_conformance",
+                        "example_ids": [
+                            example.example_id for example in examples
+                        ],
+                    },
+                },
+                "model": {
+                    "role": self.config.actor_model_role,
+                    **model.provenance(),
+                },
+                "harness": source.to_dict(),
+                "execution": {
+                    "rollout_workers": self.config.rollout_workers,
+                    "rollouts_per_example": rollouts_per_example,
+                    "seed_strategy": "base_plus_replicate_index",
+                },
+            }
+            summary = run_examples(
+                examples=examples,
+                loop_factory=lambda seed: build_loop(
+                    env_file=self.config.env_file,
+                    model_role=self.config.actor_model_role,
+                    plugins_root=plugins_root,
+                    max_steps=self.config.actor_max_steps,
+                    seed=seed,
+                ),
+                output_file=output_file,
+                limit=len(examples),
+                fail_fast=False,
+                show_progress=self.config.show_progress,
+                harness_source=source.to_dict(),
+                experiment_provenance=provenance,
+                max_workers=self.config.rollout_workers,
+                rollouts_per_example=rollouts_per_example,
+                base_seed=model.seed,
+                max_consecutive_identical_errors=rollouts_per_example,
+            )
+        return {
+            "output_file": str(summary.output_file.resolve()),
+            "requested_examples": summary.requested,
+            "requested_rollouts": summary.requested_rollouts,
+            "processed_rollouts": summary.processed,
+            "runner_errors": summary.runner_errors,
+            "stopped_early": summary.stopped_early,
+            "stop_reason": summary.stop_reason,
+        }
 
     def review_candidate(
         self,
@@ -657,6 +740,7 @@ class LocalEvolutionBackend(EvolutionBackend):
         output_dir: Path,
         version_id: str | None,
         iteration_id: str | None,
+        max_consecutive_identical_errors: int | None,
     ) -> EvaluationArtifact:
         examples = load_experience_set(experience_file)
         rollout_file = output_dir.parent / f"{output_dir.name.removesuffix('_report')}_rollouts.jsonl"
@@ -683,6 +767,9 @@ class LocalEvolutionBackend(EvolutionBackend):
                     "rollout_workers": self.config.rollout_workers,
                     "rollouts_per_example": self.config.rollouts_per_example,
                     "seed_strategy": "base_plus_replicate_index",
+                    "max_consecutive_identical_errors": (
+                        max_consecutive_identical_errors
+                    ),
                 },
             }
             run_examples(
@@ -703,6 +790,9 @@ class LocalEvolutionBackend(EvolutionBackend):
                 max_workers=self.config.rollout_workers,
                 rollouts_per_example=self.config.rollouts_per_example,
                 base_seed=model.seed,
+                max_consecutive_identical_errors=(
+                    max_consecutive_identical_errors
+                ),
             )
         evaluator = HotpotQAEvaluator()
         judge_factory = None

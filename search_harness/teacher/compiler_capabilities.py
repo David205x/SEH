@@ -76,6 +76,32 @@ _MODEL_SYMBOLS = (
     "HookModelResponse.json_object",
 )
 
+_SEMANTIC_INPUT_SYMBOLS = {
+    "conversation_history": (
+        "core.conversation_messages",
+        "core.tool_interactions",
+        "HookContext.trace",
+        "TraceEvent",
+    ),
+    "conversation_history_messages": (
+        "core.conversation_messages",
+        "core.tool_interactions",
+        "HookContext.trace",
+        "TraceEvent",
+    ),
+    "conversation_messages": (
+        "core.conversation_messages",
+        "core.tool_interactions",
+        "HookContext.trace",
+        "TraceEvent",
+    ),
+    "prior_tool_results": (
+        "core.tool_interactions",
+        "HookContext.trace",
+        "TraceEvent",
+    ),
+}
+
 _KEEP_CONTRACT_KEYS = frozenset(
     {
         "symbol",
@@ -140,6 +166,18 @@ def build_compiler_capability_packet(
             for value in rule.decision_inputs
             if value not in exact_inputs
         ]
+        semantic_input_mappings = []
+        for value in semantic_inputs:
+            mapped_symbols = _semantic_input_symbols(value)
+            if not mapped_symbols:
+                continue
+            phase_symbols.extend(mapped_symbols)
+            semantic_input_mappings.append(
+                {
+                    "input": value,
+                    "symbols": list(mapped_symbols),
+                }
+            )
         all_exact_inputs.extend(exact_inputs)
         phase_selections.append(
             {
@@ -148,6 +186,7 @@ def build_compiler_capability_packet(
                 "activation_budget": rule.activation_budget,
                 "exact_decision_inputs": exact_inputs,
                 "semantic_decision_inputs": semantic_inputs,
+                "semantic_input_mappings": semantic_input_mappings,
             }
         )
     (
@@ -183,7 +222,7 @@ def build_compiler_capability_packet(
     state_access = get_hook_authoring_guide("state_access")
     manifest = get_hook_authoring_guide("manifest")
     return {
-        "packet_version": 3,
+        "packet_version": 4,
         "catalog_versions": {
             "hook_api": HOOK_API_CATALOG_VERSION,
             "authoring_guide": HOOK_AUTHORING_API_VERSION,
@@ -217,6 +256,12 @@ def build_compiler_capability_packet(
                 (
                     "Use explicit isinstance checks before accessing fields on "
                     "stage.model_input, stage.tool_call, or stage.tool_result."
+                ),
+                (
+                    "At POST_TOOL, append feedback for the next Actor "
+                    "generation by replacing stage.tool_result with a "
+                    "ToolResult whose content includes the feedback; the "
+                    "Loop records that content as the next user-role message."
                 ),
                 "Do not catch Exception or BaseException.",
                 (
@@ -276,6 +321,11 @@ def _classify_required_capabilities(
         else:
             exact.append(value)
     return exact, semantic, unresolved
+
+
+def _semantic_input_symbols(value: str) -> tuple[str, ...]:
+    normalized = value.strip().casefold()
+    return _SEMANTIC_INPUT_SYMBOLS.get(normalized, ())
 
 
 def _looks_like_api_symbol(value: str) -> bool:

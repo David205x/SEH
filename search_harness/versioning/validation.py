@@ -237,7 +237,7 @@ class _ValidationHookModelBackend:
 
 
 def _hook_contract_errors(hooks: tuple[Any, ...]) -> list[str]:
-    """Exercise each subscribed phase and report invalid stage-state access."""
+    """Exercise each subscribed phase against representative non-empty trace."""
 
     errors: list[str] = []
     for hook in hooks:
@@ -249,12 +249,13 @@ def _hook_contract_errors(hooks: tuple[Any, ...]) -> list[str]:
                 (hook,), model_backend=_ValidationHookModelBackend()
             )
             store = pipeline.begin_run(state)
+            trace = _validation_trace()
             try:
                 pipeline.run_phase(
                     phase,
                     state=state,
                     store=store,
-                    trace=InMemoryTraceRecorder(),
+                    trace=trace,
                     stage_values=_validation_stage_values(phase),
                 )
             except Exception as exc:
@@ -263,6 +264,40 @@ def _hook_contract_errors(hooks: tuple[Any, ...]) -> list[str]:
                     f"{type(exc).__name__}: {exc}"
                 )
     return errors
+
+
+def _validation_trace() -> InMemoryTraceRecorder:
+    """Build a short prior trajectory that exercises trace-reading Hook branches."""
+
+    trace = InMemoryTraceRecorder()
+    trace.record(
+        "model_input",
+        1,
+        ModelInput.from_messages(
+            [ChatMessage(role="user", content="Validation question")]
+        ).to_dict(),
+    )
+    trace.record(
+        "model_output",
+        1,
+        {"content": '<tool_call>{"name":"search","arguments":{"query":"validation"}}</tool_call>'},
+    )
+    trace.record(
+        "tool_call",
+        1,
+        ToolCall(name="search", arguments={"query": "validation"}).to_dict(),
+    )
+    trace.record(
+        "tool_result",
+        1,
+        ToolResult(name="search", content="validation result").to_dict(),
+    )
+    trace.record(
+        "final_deferred",
+        1,
+        {"feedback": "Collect direct evidence before answering."},
+    )
+    return trace
 
 
 def _validation_stage_values(phase: str) -> dict[str, Any]:

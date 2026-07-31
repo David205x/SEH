@@ -19,6 +19,7 @@ class WorkKind(str, Enum):
     DISTILL_MECHANISM = "distill_mechanism"
     COMPILE_CANDIDATE = "compile_candidate"
     STAGE_CANDIDATE = "stage_candidate"
+    VERIFY_CONFORMANCE = "verify_conformance"
     EVALUATE_CANDIDATE = "evaluate_candidate"
     REVIEW_CANDIDATE = "review_candidate"
     PROMOTE_CANDIDATE = "promote_candidate"
@@ -199,7 +200,7 @@ class EvolutionControlConfig:
     max_work_retries: int = 1
     max_work_items: int = 80
     max_total_tokens: int | None = None
-    min_accuracy_delta: float = 0.0
+    min_accuracy_delta: float = -0.02
     max_total_token_ratio: float | None = 3.0
 
     def __post_init__(self) -> None:
@@ -229,6 +230,8 @@ class EvolutionControlConfig:
             and self.max_total_token_ratio <= 0
         ):
             raise ValueError("max_total_token_ratio must be positive")
+        if not -1.0 <= self.min_accuracy_delta <= 1.0:
+            raise ValueError("min_accuracy_delta must be between -1 and 1")
 
 
 @dataclass(frozen=True)

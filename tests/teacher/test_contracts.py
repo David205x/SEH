@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from search_harness.teacher.contracts import (
     CandidateReview,
     CompilerResult,
+    ConformanceFinding,
     EvidenceReview,
     FailureAnalystInput,
     FailureDirection,
@@ -116,6 +117,37 @@ class TeacherContractTest(unittest.TestCase):
             ).output_contract_id,
             "trial_review",
         )
+        self.assertEqual(
+            get_teacher_role(
+                "conformance_reviewer",
+                1,
+            ).output_contract_id,
+            "conformance_finding",
+        )
+
+    def test_conformance_finding_separates_fidelity_from_repair(
+        self,
+    ) -> None:
+        """验证 faithful 必须观察 phase，失败 verdict 必须给修订义务。"""
+
+        with self.assertRaises(ValidationError):
+            ConformanceFinding(
+                trial_refs=["trial_001"],
+                candidate_run_ref="example-1/r000",
+                verdict="faithful",
+                observed_phases=[],
+                assessment="No phase was observed.",
+                repair_obligation=None,
+            )
+        with self.assertRaises(ValidationError):
+            ConformanceFinding(
+                trial_refs=["trial_001"],
+                candidate_run_ref="example-1/r001",
+                verdict="not_observed",
+                observed_phases=[],
+                assessment="The mechanism was not observed.",
+                repair_obligation=None,
+            )
 
     def test_continue_review_requires_next_obligation(self) -> None:
         """验证继续取证时必须指出唯一的下一项证据义务。"""

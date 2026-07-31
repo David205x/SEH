@@ -23,6 +23,12 @@
       "evolution_policy": "fixed"
     },
     {
+      "instance_id": "query_hook_api",
+      "entrypoint": "tools/runtime/plugin.py:build",
+      "config": {"kind": "query_hook_api"},
+      "evolution_policy": "fixed"
+    },
+    {
       "instance_id": "write_candidate_file",
       "entrypoint": "tools/runtime/plugin.py:build",
       "config": {"kind": "write_candidate_file"},

@@ -39,6 +39,9 @@ from .hook_api import list_hook_api_symbols, query_hook_api
 from .hook_authoring import get_hook_authoring_guide
 
 
+COMPILER_EXACT_QUERY_BUDGET = 4
+
+
 class InterventionResourceConfig(BaseModel):
     """一个 Worker 单分支试验的运行资源。"""
 
@@ -273,6 +276,8 @@ class CompilerWorkspaceStore:
     validator: HarnessValidator = field(default_factory=HarnessValidator)
     last_validation: dict[str, Any] | None = None
     submitted: dict[str, dict[str, Any]] = field(default_factory=dict)
+    packet_symbols: frozenset[str] | None = None
+    queried_symbols: set[str] = field(default_factory=set)
 
     @classmethod
     def load(cls, config: CompilerResourceConfig) -> "CompilerWorkspaceStore":
@@ -290,7 +295,20 @@ class CompilerWorkspaceStore:
             "harness_id": manifest.get("harness_id"),
             "file_count": len(self.workspace.parent.files),
             "fixed_components": _fixed_component_ids(manifest),
+            "exact_api_query": {
+                "unique_symbol_budget": COMPILER_EXACT_QUERY_BUDGET,
+                "scope": "symbols absent from capability_packet only",
+            },
         }
+
+    def bind_capability_packet(self, packet: dict[str, Any]) -> None:
+        """绑定本次 packet，并初始化受控 exact-query 账本。"""
+
+        contracts = packet.get("contracts")
+        if not isinstance(contracts, list):
+            raise TypeError("Compiler capability packet contracts must be an array")
+        self.packet_symbols = frozenset(_contract_symbols(contracts))
+        self.queried_symbols.clear()
 
     def list_files(self) -> dict[str, Any]:
         files = self.workspace.materialized_files()
@@ -324,9 +342,41 @@ class CompilerWorkspaceStore:
         )
 
     def query_hook_api(self, symbol: str) -> dict[str, Any]:
-        """查询一个公开 Hook API 符号的当前源码契约。"""
+        """在 packet 缺口和唯一符号预算内查询一个公开契约。"""
 
-        return query_hook_api(symbol)
+        if self.packet_symbols is None:
+            raise RuntimeError(
+                "Compiler capability packet must be bound before API queries"
+            )
+        normalized = symbol.strip()
+        if not normalized:
+            return _query_rejection("", "empty_symbol")
+        if normalized in self.packet_symbols:
+            return _query_rejection(normalized, "already_in_packet")
+        if normalized in self.queried_symbols:
+            return _query_rejection(normalized, "already_queried")
+        if len(self.queried_symbols) >= COMPILER_EXACT_QUERY_BUDGET:
+            return _query_rejection(normalized, "query_budget_exhausted")
+
+        self.queried_symbols.add(normalized)
+        remaining = COMPILER_EXACT_QUERY_BUDGET - len(
+            self.queried_symbols
+        )
+        try:
+            contract = query_hook_api(normalized)
+        except ValueError:
+            return {
+                "status": "rejected",
+                "reason": "unknown_symbol",
+                "symbol": normalized,
+                "remaining_unique_queries": remaining,
+            }
+        return {
+            "status": "resolved",
+            "symbol": normalized,
+            "remaining_unique_queries": remaining,
+            "contract": contract,
+        }
 
     def write_file(self, *, path: str, content: str) -> dict[str, Any]:
         self.workspace.write_text(path, content)
@@ -459,6 +509,33 @@ class CompilerWorkspaceStore:
         return self.submitted[f"candidate_{len(self.submitted):03d}"]
 
 
+def _contract_symbols(contracts: list[Any]) -> set[str]:
+    """递归收集 packet 已公开的顶层和成员符号。"""
+
+    symbols: set[str] = set()
+    pending = list(contracts)
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            symbol = value.get("symbol")
+            if isinstance(symbol, str) and symbol.strip():
+                symbols.add(symbol.strip())
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    return symbols
+
+
+def _query_rejection(symbol: str, reason: str) -> dict[str, Any]:
+    """返回不会重新展开契约的紧凑查询拒绝结果。"""
+
+    return {
+        "status": "rejected",
+        "reason": reason,
+        "symbol": symbol,
+    }
+
+
 @dataclass
 class CandidateComparisonStore:
     """Incumbent 与 candidate evaluation 的只读配对视图。"""
@@ -581,13 +658,28 @@ class CandidateComparisonStore:
         }
 
     def validate_review(self) -> None:
-        """要求 promotion 建议至少核查一组成对 Actor 轨迹。"""
+        """要求 promotion 建议核查可用的 gain/loss 成对轨迹。"""
 
         if not self.inspected_trajectories:
             raise ValueError(
                 "Candidate Reviewer must inspect at least one paired Actor "
                 "trajectory before submitting"
             )
+        changes = self._changes()
+        inspected_examples = {
+            example_id for example_id, _ in self.inspected_trajectories
+        }
+        for change in ("improved", "regressed"):
+            available = {
+                str(item["example_id"])
+                for item in changes
+                if item["change"] == change
+            }
+            if available and not inspected_examples.intersection(available):
+                raise ValueError(
+                    "Candidate Reviewer must inspect at least one paired "
+                    f"{change} Actor trajectory before submitting"
+                )
 
     def harness_diff(self) -> dict[str, Any]:
         incumbent_root = self.config.incumbent_plugins_root

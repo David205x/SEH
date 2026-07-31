@@ -8,6 +8,7 @@ import shutil
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from uuid import uuid4
 
 from search_harness.evolution.control.controller import EvolutionController
@@ -31,6 +32,7 @@ from search_harness.evolution.control.policies import evaluate_promotion
 from search_harness.evolution.control.transitions import (
     transition_completed,
 )
+from search_harness.evolution.types import CandidateArtifact
 from search_harness.versioning import (
     FileEdit,
     HarnessVersionStore,
@@ -147,6 +149,29 @@ class HappyPathEffects:
                     "validation": {"passed": True},
                 },
             )
+        if work.kind == WorkKind.VERIFY_CONFORMANCE:
+            return EffectResult(
+                outcome={
+                    "decision": "pass",
+                    "summary": {
+                        "decision": "pass",
+                        "finding_counts": {"faithful": 3},
+                        "per_example": {
+                            "example-1": {
+                                "faithful_count": 3,
+                                "passed": True,
+                            }
+                        },
+                        "compiler_feedback": [],
+                        "finding_refs": [],
+                    },
+                },
+                artifact_refs={
+                    "conformance_summary_artifact": artifact,
+                    "conformance_rollout_file": artifact,
+                },
+                usage={"total_tokens": 10},
+            )
         if work.kind == WorkKind.EVALUATE_CANDIDATE:
             return EffectResult(
                 outcome={"metrics": _metrics(accuracy=0.6, tokens=120)},
@@ -251,7 +276,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(outcome.status, "completed")
         self.assertEqual(outcome.current_version, "harness_v0002")
-        self.assertEqual(outcome.completed_work_count, 12)
+        self.assertEqual(outcome.completed_work_count, 13)
         self.assertEqual(
             [item.kind for item in effects.calls],
             [
@@ -264,6 +289,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 WorkKind.DISTILL_MECHANISM,
                 WorkKind.COMPILE_CANDIDATE,
                 WorkKind.STAGE_CANDIDATE,
+                WorkKind.VERIFY_CONFORMANCE,
                 WorkKind.EVALUATE_CANDIDATE,
                 WorkKind.REVIEW_CANDIDATE,
                 WorkKind.PROMOTE_CANDIDATE,
@@ -326,6 +352,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                     accuracy=0.55,
                     tokens=120,
                 ),
+                "validation_summary": {"passed": True},
                 "candidate_revision": 0,
                 "iteration_id": "iteration-1",
             },
@@ -392,6 +419,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                     accuracy=0.5,
                     tokens=100,
                 ),
+                "validation_summary": {"passed": True},
                 "iteration_id": "iteration-1",
             },
         )
@@ -437,6 +465,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
 
         decision = evaluate_promotion(
             reviewer_recommendation="accept",
+            validation_summary={"passed": True},
             incumbent_metrics=_metrics(accuracy=0.5, tokens=100),
             candidate_metrics=_metrics(accuracy=0.6, tokens=301),
             config=EvolutionControlConfig(
@@ -446,6 +475,233 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(decision.passed)
         self.assertEqual(decision.total_token_ratio, 3.01)
+
+    def test_conformance_failure_rejects_candidate_and_routes_compiler(
+        self,
+    ) -> None:
+        """验证 replay 脱敏义务经持久拒绝后返回 Compiler。"""
+
+        work = WorkItem(
+            work_id="verify-conformance",
+            kind=WorkKind.VERIFY_CONFORMANCE,
+            subject_ref="generation:1",
+            input_refs={
+                "compiler_artifact": "compiler.json",
+                "conformance_rollout_file": "replay.jsonl",
+                "trial_001": "trial.json",
+            },
+            payload={
+                "iteration_id": "iteration-1",
+                "candidate_revision": 0,
+            },
+        )
+        result = EffectResult(
+            outcome={
+                "decision": "revise_implementation",
+                "summary": {
+                    "decision": "revise_implementation",
+                    "finding_counts": {"not_observed": 3},
+                    "per_example": {
+                        "example-1": {
+                            "faithful_count": 0,
+                            "passed": False,
+                        }
+                    },
+                    "compiler_feedback": [
+                        "Ensure the pre_final Hook produces an observable "
+                        "action."
+                    ],
+                    "finding_refs": [],
+                },
+            },
+        )
+
+        reject_work = transition_completed(
+            item=work,
+            result=result,
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        compile_work = transition_completed(
+            item=reject_work,
+            result=EffectResult(
+                outcome={
+                    "status": "rejected",
+                    "iteration_id": "iteration-1",
+                }
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+
+        self.assertEqual(reject_work.kind, WorkKind.REJECT_CANDIDATE)
+        self.assertEqual(compile_work.kind, WorkKind.COMPILE_CANDIDATE)
+        self.assertEqual(
+            compile_work.payload["implementation_constraints"],
+            [
+                "Ensure the pre_final Hook produces an observable action."
+            ],
+        )
+        self.assertNotIn(
+            "conformance_rollout_file",
+            compile_work.input_refs,
+        )
+
+    def test_conformance_passes_to_full_candidate_evaluation(self) -> None:
+        """验证每题存在 faithful 且无硬失败时才启动全量评估。"""
+
+        plan = transition_completed(
+            item=WorkItem(
+                work_id="verify-conformance-pass",
+                kind=WorkKind.VERIFY_CONFORMANCE,
+                subject_ref="generation:1",
+                payload={"iteration_id": "iteration-1"},
+            ),
+            result=EffectResult(
+                outcome={
+                    "decision": "pass",
+                    "summary": {
+                        "decision": "pass",
+                        "finding_counts": {"faithful": 1},
+                        "per_example": {
+                            "example-1": {
+                                "faithful_count": 1,
+                                "passed": True,
+                            }
+                        },
+                        "compiler_feedback": [],
+                        "finding_refs": [],
+                    },
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertEqual(
+            plan.next_items[0].kind,
+            WorkKind.EVALUATE_CANDIDATE,
+        )
+
+    def test_promotion_gate_rejects_runner_errors_without_crashing(self) -> None:
+        """验证 runner_error 与缺失 token 被表示为门禁失败而非异常。"""
+
+        candidate = _metrics(accuracy=0.0, tokens=0)
+        candidate["tokens"]["total_tokens"] = None
+        candidate["execution"]["status_counts"] = {"runner_error": 3}
+        decision = evaluate_promotion(
+            reviewer_recommendation="revise",
+            validation_summary={"passed": True},
+            incumbent_metrics=_metrics(accuracy=0.5, tokens=100),
+            candidate_metrics=candidate,
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertFalse(decision.passed)
+        self.assertIsNone(decision.total_token_ratio)
+        self.assertIn(
+            "candidate execution contains runner errors: 3",
+            decision.reasons,
+        )
+        self.assertIn(
+            "candidate total token count is unavailable",
+            decision.reasons,
+        )
+
+    def test_review_with_failed_candidate_routes_to_rejection(self) -> None:
+        """验证异常候选仍可携带 Reviewer 修订义务进入拒绝流程。"""
+
+        candidate = _metrics(accuracy=0.0, tokens=0)
+        candidate["tokens"]["total_tokens"] = None
+        candidate["execution"]["status_counts"] = {"runner_error": 3}
+        work = WorkItem(
+            work_id="review-runner-error",
+            kind=WorkKind.REVIEW_CANDIDATE,
+            subject_ref="generation:1",
+            payload={
+                "incumbent_metrics": _metrics(
+                    accuracy=0.5,
+                    tokens=100,
+                ),
+                "candidate_metrics": candidate,
+                "validation_summary": {"passed": True},
+                "iteration_id": "iteration-1",
+            },
+        )
+        result = EffectResult(
+            outcome={
+                "output": {
+                    "recommendation": "revise",
+                    "observed_effect": "All sampled rollouts failed.",
+                    "reason": "The Hook accessed an invalid trace field.",
+                    "next_obligation": "Use TraceEvent.event_type.",
+                    "revision_target": "implementation",
+                }
+            }
+        )
+
+        plan = transition_completed(
+            item=work,
+            result=result,
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertEqual(plan.next_items[0].kind, WorkKind.REJECT_CANDIDATE)
+        self.assertEqual(
+            plan.next_items[0].payload["after_rejection"]["target"],
+            "implementation",
+        )
+
+    def test_promotion_uses_separate_safety_and_effect_gates(self) -> None:
+        """验证安全阈值允许小幅回撤，而 Reviewer 独立决定效果是否值得接受。"""
+
+        accepted = evaluate_promotion(
+            reviewer_recommendation="accept",
+            validation_summary={"passed": True},
+            incumbent_metrics=_metrics(accuracy=0.50, tokens=100),
+            candidate_metrics=_metrics(accuracy=0.49, tokens=110),
+            config=EvolutionControlConfig(),
+        )
+        reviewer_rejected = evaluate_promotion(
+            reviewer_recommendation="reject",
+            validation_summary={"passed": True},
+            incumbent_metrics=_metrics(accuracy=0.50, tokens=100),
+            candidate_metrics=_metrics(accuracy=0.60, tokens=110),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertTrue(accepted.safety_passed)
+        self.assertTrue(accepted.effect_passed)
+        self.assertTrue(accepted.passed)
+        self.assertTrue(reviewer_rejected.safety_passed)
+        self.assertFalse(reviewer_rejected.effect_passed)
+        self.assertFalse(reviewer_rejected.passed)
+
+    def test_promotion_safety_gate_blocks_invalid_or_regressed_candidate(
+        self,
+    ) -> None:
+        """验证 Reviewer accept 不能越过 validation 与严重 accuracy 回退。"""
+
+        decision = evaluate_promotion(
+            reviewer_recommendation="accept",
+            validation_summary={"passed": False},
+            incumbent_metrics=_metrics(accuracy=0.50, tokens=100),
+            candidate_metrics=_metrics(accuracy=0.45, tokens=100),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertFalse(decision.safety_passed)
+        self.assertTrue(decision.effect_passed)
+        self.assertFalse(decision.passed)
+        self.assertIn(
+            "candidate validation did not pass",
+            decision.safety_reasons,
+        )
+        self.assertTrue(
+            any(
+                reason.startswith(
+                    "accuracy regression exceeds the configured safety limit"
+                )
+                for reason in decision.safety_reasons
+            )
+        )
 
     async def test_recovers_persisted_effect_after_controller_interruption(
         self,
@@ -686,6 +942,196 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             "test cleanup"
         )
 
+    async def test_conformance_effect_runs_three_independent_reviews(
+        self,
+    ) -> None:
+        """验证每个 intervention example 完整运行三次并独立审阅。"""
+
+        experience_file = self.run_dir / "experience.jsonl"
+        experience_file.write_text(
+            json.dumps(
+                {
+                    "example_id": "example-1",
+                    "question": "Test question?",
+                    "answer": "answer",
+                    "metadata": {},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        mechanism_file = self.run_dir / "mechanism.json"
+        mechanism_file.write_text(
+            json.dumps(
+                {
+                    "goal": "Delay one premature final answer.",
+                    "phase_rules": [
+                        {
+                            "phase": "pre_final",
+                            "trigger_condition": "First final answer.",
+                            "decision_inputs": ["candidate_answer"],
+                            "decision_evaluator": "deterministic",
+                            "action": "Defer once.",
+                            "activation_budget": 1,
+                        }
+                    ],
+                    "behavioral_pseudocode": (
+                        "ON pre_final: DEFER once; then ACCEPT."
+                    ),
+                    "state_scope": "rollout-local",
+                    "fallback": "Accept later final answers.",
+                    "expected_behavior": "One visible deferral.",
+                    "evidence_refs": ["trial_001"],
+                }
+            ),
+            encoding="utf-8",
+        )
+        trial_file = self.run_dir / "trial_001" / "trial.json"
+        trial_file.parent.mkdir()
+        trial_file.write_text(
+            json.dumps(
+                {
+                    "input": {"example_id": "example-1"},
+                    "resource_artifacts": {
+                        "intervention_trial": {
+                            "phase_plan": [{"phase": "pre_final"}],
+                            "activation_counts": {"pre_final": 1},
+                            "context_changes": [],
+                            "phase_effects": [],
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        class ReplayBackend:
+            def rollout_candidate_examples(
+                self,
+                *,
+                output_file: Path,
+                **_: Any,
+            ) -> dict[str, Any]:
+                records = [
+                    {
+                        "example": {
+                            "example_id": "example-1",
+                            "question": "Test question?",
+                        },
+                        "replicate": {
+                            "replicate_id": f"r{index:03d}",
+                            "index": index,
+                        },
+                        "run": {
+                            "status": "completed",
+                            "trace": [],
+                        },
+                    }
+                    for index in range(3)
+                ]
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                output_file.write_text(
+                    "".join(
+                        json.dumps(record) + "\n"
+                        for record in records
+                    ),
+                    encoding="utf-8",
+                )
+                return {
+                    "requested_examples": 1,
+                    "requested_rollouts": 3,
+                    "processed_rollouts": 3,
+                    "runner_errors": 0,
+                }
+
+        class ConformanceRuntime:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, Any]] = []
+
+            async def run(self, **kwargs: Any) -> dict[str, Any]:
+                self.calls.append(kwargs)
+                role_input = kwargs["role_input"]
+                faithful = role_input["replicate_id"] == "r000"
+                return {
+                    "output": {
+                        "trial_refs": role_input["trial_refs"],
+                        "candidate_run_ref": (
+                            f"{role_input['example_id']}/"
+                            f"{role_input['replicate_id']}"
+                        ),
+                        "verdict": (
+                            "faithful" if faithful else "not_observed"
+                        ),
+                        "observed_phases": (
+                            ["pre_final"] if faithful else []
+                        ),
+                        "assessment": (
+                            "The mechanism was faithfully observed."
+                            if faithful
+                            else "The mechanism was not observed."
+                        ),
+                        "repair_obligation": (
+                            None
+                            if faithful
+                            else "Make the activation observable."
+                        ),
+                    },
+                    "usage": {"total_tokens": 5},
+                }
+
+        effects = LocalControlEffects(
+            store=self.store,
+            config=LocalControlEffectsConfig(
+                experience_file=experience_file,
+                env_file=Path(".env"),
+                judge_workers=3,
+                show_progress=False,
+            ),
+        )
+        effects.backend = ReplayBackend()  # type: ignore[assignment]
+        runtime = ConformanceRuntime()
+        effects.runtime = runtime  # type: ignore[assignment]
+        candidate = CandidateArtifact(
+            iteration_id="iteration-1",
+            parent_version="harness_v0001",
+            candidate_digest="digest",
+            compiler_log=self.run_dir / "compiler.json",
+            summary="test candidate",
+            validation_passed=True,
+            validation={"passed": True},
+        )
+        with patch.object(
+            effects,
+            "_candidate_artifact",
+            return_value=candidate,
+        ):
+            result = await effects.execute(
+                work=WorkItem(
+                    work_id="verify-conformance",
+                    kind=WorkKind.VERIFY_CONFORMANCE,
+                    subject_ref="generation:1",
+                    input_refs={
+                        "mechanism_file": str(mechanism_file.resolve()),
+                        "trial_001": str(trial_file.resolve()),
+                    },
+                    payload={"iteration_id": "iteration-1"},
+                ),
+                state=ControlState(
+                    current_version="harness_v0001",
+                    status="running",
+                ),
+                work_dir=self.run_dir / "conformance",
+            )
+
+        self.assertEqual(result.outcome["decision"], "pass")
+        self.assertEqual(len(runtime.calls), 3)
+        self.assertEqual(result.usage["total_tokens"], 15)
+        self.assertTrue(
+            Path(
+                result.artifact_refs["conformance_summary_artifact"]
+            ).is_file()
+        )
+
     async def test_review_evidence_uses_independent_trial_review_first(
         self,
     ) -> None:
@@ -899,6 +1345,10 @@ class RecoverableFailureEffects(HappyPathEffects):
 def _metrics(*, accuracy: float, tokens: int) -> dict[str, object]:
     return {
         "answers": {"accuracy": accuracy},
+        "execution": {
+            "completed_rate": 1.0,
+            "status_counts": {"completed": 1},
+        },
         "tokens": {"total_tokens": tokens},
     }
 

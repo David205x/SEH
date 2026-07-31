@@ -556,6 +556,57 @@ class CandidateReviewerInput(TeacherPayload):
     historical_experience: list[str] = Field(default_factory=list)
 
 
+ConformanceVerdict = Literal[
+    "faithful",
+    "implementation_mismatch",
+    "not_observed",
+    "runtime_error",
+    "inconclusive",
+]
+
+
+class ConformanceReviewerInput(TeacherPayload):
+    """Conformance Reviewer 的单条完整 Candidate rollout 审阅任务。"""
+
+    mechanism: MechanismSpec
+    trial_refs: list[str] = Field(min_length=1)
+    reference_observations: list[dict[str, Any]] = Field(min_length=1)
+    example_id: str = Field(min_length=1)
+    replicate_id: str = Field(min_length=1)
+    candidate_trajectory: dict[str, Any]
+
+
+class ConformanceFinding(TeacherPayload):
+    """Conformance Reviewer 对一条 Candidate rollout 的实现保真判断。"""
+
+    trial_refs: list[str] = Field(min_length=1)
+    candidate_run_ref: str = Field(min_length=1)
+    verdict: ConformanceVerdict
+    observed_phases: list[HookPhaseName] = Field(default_factory=list)
+    assessment: str = Field(min_length=1, max_length=1200)
+    repair_obligation: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_repair_obligation(self) -> "ConformanceFinding":
+        if len(self.observed_phases) != len(set(self.observed_phases)):
+            raise ValueError("observed_phases must not contain duplicates")
+        if self.verdict == "faithful":
+            if not self.observed_phases:
+                raise ValueError(
+                    "faithful conformance finding requires an observed phase"
+                )
+            if self.repair_obligation is not None:
+                raise ValueError(
+                    "faithful conformance finding must not request repair"
+                )
+        elif not self.repair_obligation:
+            raise ValueError(
+                f"{self.verdict} conformance finding requires "
+                "repair_obligation"
+            )
+        return self
+
+
 @dataclass(frozen=True)
 class TeacherRoleDefinition:
     """代码内固定的角色输入和输出协议。"""
@@ -632,6 +683,14 @@ _ROLE_DEFINITIONS = {
         output_contract_id="candidate_review",
         output_contract_version=2,
         output_type=CandidateReview,
+    ),
+    "conformance_reviewer": TeacherRoleDefinition(
+        role_id="conformance_reviewer",
+        version=1,
+        input_type=ConformanceReviewerInput,
+        output_contract_id="conformance_finding",
+        output_contract_version=1,
+        output_type=ConformanceFinding,
     ),
 }
 

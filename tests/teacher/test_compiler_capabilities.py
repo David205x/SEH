@@ -79,6 +79,92 @@ class CompilerCapabilityPacketTest(unittest.TestCase):
         self.assertIn("HookContext.call_model", symbols)
         self.assertIn("HookModelResponse.json_object", symbols)
 
+    def test_packet_maps_conversation_history_to_trace_contracts(self) -> None:
+        """验证常见 conversation_history 语义输入零查询获得 trace 契约。"""
+
+        packet = build_compiler_capability_packet(
+            _mechanism(
+                trigger_phase="pre_final",
+                decision_inputs=[
+                    "stage.final_decision",
+                    "conversation_history",
+                ],
+                required_capabilities=[],
+            )
+        )
+
+        symbols = {item["symbol"] for item in packet["contracts"]}
+        self.assertIn("HookContext.trace", symbols)
+        self.assertIn("TraceEvent", symbols)
+        phase_rule = packet["selection"]["phase_rules"][0]
+        self.assertEqual(
+            phase_rule["semantic_input_mappings"],
+            [
+                {
+                    "input": "conversation_history",
+                    "symbols": [
+                        "core.conversation_messages",
+                        "core.tool_interactions",
+                        "HookContext.trace",
+                        "TraceEvent",
+                    ],
+                }
+            ],
+        )
+        trace_event = next(
+            item
+            for item in packet["contracts"]
+            if item["symbol"] == "TraceEvent"
+        )
+        self.assertIn(
+            "TraceEvent.event_type",
+            {field["symbol"] for field in trace_event["fields"]},
+        )
+
+    def test_packet_maps_conversation_aliases_to_trace_contracts(self) -> None:
+        """验证常见历史消息与历史工具结果别名都映射到 trace。"""
+
+        packet = build_compiler_capability_packet(
+            _mechanism(
+                trigger_phase="post_tool",
+                decision_inputs=[
+                    "conversation_messages",
+                    "prior_tool_results",
+                    "stage.tool_result",
+                ],
+                required_capabilities=[],
+            )
+        )
+
+        symbols = {item["symbol"] for item in packet["contracts"]}
+        self.assertIn("HookContext.trace", symbols)
+        self.assertIn("TraceEvent", symbols)
+        mappings = packet["selection"]["phase_rules"][0][
+            "semantic_input_mappings"
+        ]
+        self.assertEqual(
+            mappings,
+            [
+                {
+                    "input": "conversation_messages",
+                    "symbols": [
+                        "core.conversation_messages",
+                        "core.tool_interactions",
+                        "HookContext.trace",
+                        "TraceEvent",
+                    ],
+                },
+                {
+                    "input": "prior_tool_results",
+                    "symbols": [
+                        "core.tool_interactions",
+                        "HookContext.trace",
+                        "TraceEvent",
+                    ],
+                },
+            ],
+        )
+
     def test_packet_preserves_semantic_actor_capabilities(self) -> None:
         """验证自然语言 Actor 能力不会被误判为缺失的框架 API。"""
 

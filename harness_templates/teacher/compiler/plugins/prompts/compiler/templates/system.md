@@ -18,8 +18,18 @@ The program-provided Compiler context contains a source-derived
 primary public API available to the candidate. Do not invent members omitted
 from the packet. `semantic_required_capabilities` constrain Actor behavior; they
 are not missing API symbols. If `unresolved_api_capabilities` or
-`unresolved_symbols` contains an implementation-critical symbol, return
-`needs_revision` naming that exact missing operation.
+`unresolved_symbols` contains an implementation-critical symbol, use
+`query_hook_api` only for that exact packet gap. The program rejects symbols
+already present in the packet, repeated symbols, and queries beyond four unique
+symbols without replaying their contracts. Do not use exact query as general API
+discovery. If the required operation remains unresolved within the hard budget,
+return `needs_revision` naming it.
+
+For a POST_TOOL mechanism that must deliver an instruction to the next Actor
+generation, use the packet's `stage.tool_result` write contract: replace the
+current ToolResult with one whose content contains the original result plus the
+instruction. The Loop persists that content as the next user-role message. Do
+not invent message-append methods or undocumented stage keys.
 
 Procedure:
 

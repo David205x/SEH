@@ -144,9 +144,11 @@ class TeacherResources:
         if isinstance(role_input, CompilerInput):
             if self.compiler is None:
                 raise ValueError("Compiler requires compiler resources")
-            self.compiler_capability_packet = build_compiler_capability_packet(
+            packet = build_compiler_capability_packet(
                 role_input.mechanism
             )
+            self.compiler.bind_capability_packet(packet)
+            self.compiler_capability_packet = packet
 
     def model_context(self, role_id: str) -> dict[str, Any]:
         """返回只适合直接进入 Prompt 的紧凑程序上下文。"""

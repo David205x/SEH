@@ -6,7 +6,7 @@
 
 本文档不规定代码模块、类名、持久化格式或完整状态机，也不要求角色之间的字段逐项对接。
 
-当前已独立实现并验证 `Failure Analyst`、`Hypothesis Researcher`、`Intervention Worker`、`Trial Reviewer`、`Evidence Reviewer`、`Mechanism Distiller`、`Compiler` 和 `Candidate Reviewer`，并由正式
+当前已独立实现并验证 `Failure Analyst`、`Hypothesis Researcher`、`Intervention Worker`、`Trial Reviewer`、`Evidence Reviewer`、`Mechanism Distiller`、`Compiler`、`Conformance Reviewer` 和 `Candidate Reviewer`，并由正式
 [Evolution Controller](evolution-controller.md) 装配为可恢复闭环。Teacher
 Judge 仍使用原有 evaluation 实现。角色实现与运行边界见
 [Teacher Runtime](teacher-runtime.md)。
@@ -337,7 +337,7 @@ Evidence Reviewer 保留原有输出协议：`revise` 和 `reject` 直接追加�
 **作用：将已校验的 MechanismSpec 实现为一个可装配、可验证的 Harness candidate。**
 
 本节只描述角色分工。当前实现的输入输出协议、内存 workspace、源码驱动 Hook API
-capability packet 和五个固定工具的完整定义见 [Compiler](compiler.md)。
+capability packet 和受限 exact query 的完整定义见 [Compiler](compiler.md)。
 
 职责：
 
@@ -356,8 +356,8 @@ capability packet 和五个固定工具的完整定义见 [Compiler](compiler.md
 | Parent Harness 标识与 fixed/mutable 约束 | 程序维护 + 设计规范 | 限定修改范围 | Prompt |
 | 上一轮编译或验证错误 | 程序维护 | 定向修复候选 | Prompt |
 | Candidate 文件目录、manifest 和组件源码 | 程序维护 | 理解现有实现 | Tool |
-| Authoring guide | 程序维护 + 设计规范 | 理解 Hook 生命周期与组合语义 | Tool |
-| 源码驱动 Hook API catalog | 程序维护 + 源码 | 查询公开签名、状态键、稳定性与形状 | Tool |
+| 源码驱动 capability packet | 程序维护 + 源码 | 一次性提供机制所需的 Hook 生命周期、公开签名、状态键与数据形状 | Prompt |
+| Packet 缺失符号 | 程序维护 + 源码 | 在硬预算内精确查询单个公开符号 | Tool |
 | 创建、编辑、删除和查看 diff 的能力 | 程序维护 | 构造原子候选 workspace | Tool |
 | 确定性静态、装配和 Hook contract 校验 | 程序维护 | 在提交前发现实现错误 | Tool |
 | Candidate submit | 程序维护 | 提交已通过本地检查的候选 | Tool |
@@ -377,10 +377,52 @@ capability packet 和五个固定工具的完整定义见 [Compiler](compiler.md
 - 将 `behavioral_pseudocode` 作为控制流与状态转移的权威来源。
 - 将每个 `phase_rules[].decision_evaluator` 作为该 phase 触发判断实现方式的
   权威来源，允许同一机制混合确定性规则和有界 Hook 小模型。
-- 使用 authoring guide 理解机制语义，再通过 API catalog 精确查询实际接口。
+- 优先使用 capability packet；只有 packet 无法解析符号时才执行受限 exact query。
 - 使用文件工具编辑完整文件，并查看相对 Parent 的完整 diff。
 - 运行确定性校验，根据结构化错误在同一 run 中持续修订。
 - 仅通过 submit 工具提交候选，不在最终输出中序列化完整文件。
+
+## Conformance Reviewer
+
+**作用：独立审阅一条完整 Candidate rollout，判断 Compiler 是否忠实实现了
+MechanismSpec。**
+
+职责：
+
+- 只判断实现保真度，不判断答案正确性或候选整体收益。
+- 核查 phase、decision inputs、动作、状态变化、激活预算和 fallback。
+- 区分忠实实现、实现偏差、未观察到触发、运行错误和证据不足。
+- 对非 faithful 结果给出不含问题、答案、实体和 query 的实现修订义务。
+- 不聚合其他 replicate，不决定下一角色或是否进入全量 evaluation。
+
+模型所需信息：
+
+| 信息 | 信息来源 | 用途 | 访问方式 |
+| --- | --- | --- | --- |
+| MechanismSpec | 模型生成 + 程序维护 | 确定实现应满足的 phase、动作和状态语义 | Prompt |
+| 对应 intervention trial 的动作摘要 | 模型生成 + 程序维护 | 了解被蒸馏证据实际观察到的局部行为 | Prompt |
+| 一条 Candidate 完整 rollout | 模型生成 + 程序维护 | 检查 Hook 触发和 Actor 可见效果 | Prompt |
+| example/replicate 与 trial 引用 | 程序维护 | 绑定唯一审阅对象并支持审计 | Prompt |
+
+结构化语义输出：
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `trial_refs` | `list[string]` | 当前 example 对应的 intervention trial 引用 |
+| `candidate_run_ref` | `string` | 当前唯一的 `example_id/replicate_id` |
+| `verdict` | `enum` | `faithful`、`implementation_mismatch`、`not_observed`、`runtime_error` 或 `inconclusive` |
+| `observed_phases` | `list[phase]` | 轨迹中实际观察到的机制 phase |
+| `assessment` | `string` | 轨迹与 MechanismSpec 一致或偏离的事实说明 |
+| `repair_obligation` | `string \| null` | 非 faithful 时返回的脱敏实现修订义务 |
+
+模型完成职责的方式：
+
+- 逐项对照 phase rule 和 behavioral pseudocode 检查单条完整轨迹。
+- 将“忠实执行但答案错误”仍判为 `faithful`，把任务效果留给后续评估。
+- 不调用工具、不读取其他 replay，也不形成全局 suite 结论。
+- 程序对每个 intervention example 运行 3 个 replicate 并独立调用本角色；
+  聚合规则要求每题至少一次 `faithful`，且不得出现 runtime error 或
+  implementation mismatch。
 
 ## Candidate Reviewer
 
@@ -400,7 +442,7 @@ capability packet 和五个固定工具的完整定义见 [Compiler](compiler.md
 | 信息 | 信息来源 | 用途 | 访问方式 |
 | --- | --- | --- | --- |
 | MechanismSpec 与预期行为 | 模型生成 + 程序维护 | 判断候选是否实现目标机制 | Prompt |
-| 确定性 validation 与 safety gate 摘要 | 程序维护 | 了解候选的基本合法性 | Prompt |
+| 确定性 validation 与 conformance 数值摘要 | 程序维护 | 了解候选的基本合法性和机制实现保真度 | Prompt |
 | Incumbent/candidate 聚合指标 | 模型生成 + 程序维护 | 比较收益、稳定性和成本 | Prompt |
 | Harness diff 与实现摘要 | 模型生成 + 程序维护 | 解释行为变化来源 | Tool |
 | 配对变化案例列表 | 模型生成 + 程序维护 | 查找改善、回归和不变样本 | Tool |

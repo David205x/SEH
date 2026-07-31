@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_conformance_reviewer_v2",
+  "role": {
+    "id": "conformance_reviewer",
+    "version": 1
+  },
+  "output_contract": {
+    "id": "conformance_finding",
+    "version": 1
+  },
+  "tools": [],
+  "prompt": {
+    "instance_id": "conformance_reviewer",
+    "entrypoint": "prompts/conformance_reviewer/plugin.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    },
+    "evolution_policy": "fixed"
+  }
+}

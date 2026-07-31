@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ from search_harness.evolution.types import CandidateArtifact
 from search_harness.teacher.contracts import (
     CandidateReview,
     CompilerResult,
+    ConformanceFinding,
     EvidenceReview,
     FailureDirection,
     InterventionHypothesis,
@@ -48,6 +50,13 @@ from search_harness.versioning import (
     ValidationReport,
 )
 
+from ..conformance import (
+    CONFORMANCE_REPLICATES,
+    ConformanceCase,
+    aggregate_conformance,
+    load_conformance_cases,
+    runtime_error_finding,
+)
 from .domain import ControlState, EffectResult, WorkItem, WorkKind
 
 
@@ -68,6 +77,7 @@ class LocalControlEffectsConfig:
     judge_workers: int = 8
     teacher_judge: bool = True
     show_progress: bool = True
+    candidate_error_streak_limit: int = 3
 
     def __post_init__(self) -> None:
         positive = {
@@ -76,6 +86,9 @@ class LocalControlEffectsConfig:
             "rollout_workers": self.rollout_workers,
             "rollouts_per_example": self.rollouts_per_example,
             "judge_workers": self.judge_workers,
+            "candidate_error_streak_limit": (
+                self.candidate_error_streak_limit
+            ),
         }
         for name, value in positive.items():
             if value < 1:
@@ -112,6 +125,9 @@ class LocalControlEffects:
                 judge_workers=config.judge_workers,
                 teacher_judge=config.teacher_judge,
                 show_progress=config.show_progress,
+                candidate_error_streak_limit=(
+                    config.candidate_error_streak_limit
+                ),
             ),
         )
 
@@ -543,20 +559,23 @@ class LocalControlEffects:
                     "controller_candidate_digest": candidate_digest,
                 },
             )
-            changed_files = _required_object(
-                candidate,
-                "changed_files",
+        else:
+            session = self.store.resume_iteration(existing.iteration_id)
+
+        changed_files = _required_object(
+            candidate,
+            "changed_files",
+        )
+        edits = [
+            FileEdit(
+                operation=("delete" if content is None else "write"),
+                path=path,
+                content=content,
             )
-            edits = [
-                FileEdit(
-                    operation=(
-                        "delete" if content is None else "write"
-                    ),
-                    path=path,
-                    content=content,
-                )
-                for path, content in changed_files.items()
-            ]
+            for path, content in changed_files.items()
+            if content is not None or session.exists(path)
+        ]
+        if session.revision == 0:
             if not edits:
                 session.reject("Compiler submitted an empty transaction.")
                 validation = {
@@ -573,8 +592,6 @@ class LocalControlEffects:
                     artifact_refs={},
                 )
             session.apply_patch(edits)
-        else:
-            session = self.store.resume_iteration(existing.iteration_id)
 
         if session.digest != candidate_digest:
             raise ValueError(
@@ -634,6 +651,207 @@ class LocalControlEffects:
             prefix="candidate_",
         )
 
+    async def _execute_verify_conformance(
+        self,
+        *,
+        work: WorkItem,
+        state: ControlState,
+        work_dir: Path,
+    ) -> EffectResult:
+        mechanism = MechanismSpec.model_validate(
+            _read_json(_ref_path(work, "mechanism_file"))
+        )
+        cases = load_conformance_cases(
+            experience_file=self.config.experience_file,
+            trial_files=_trial_paths(work),
+        )
+        candidate = self._candidate_artifact(work, state)
+        rollout_file = work_dir / "candidate_replays.jsonl"
+        rollout_summary = await asyncio.to_thread(
+            self.backend.rollout_candidate_examples,
+            candidate=candidate,
+            examples=tuple(case.example for case in cases),
+            experience_file=self.config.experience_file,
+            output_file=rollout_file,
+            rollouts_per_example=CONFORMANCE_REPLICATES,
+        )
+        records = _read_jsonl(rollout_file)
+        indexed_records = _index_rollout_records(records)
+        semaphore = asyncio.Semaphore(self.config.judge_workers)
+
+        async def review_record(
+            case: ConformanceCase,
+            replicate_id: str,
+            record: dict[str, Any],
+            finding_index: int,
+        ) -> tuple[ConformanceFinding, Path, int]:
+            runner_error = record.get("runner_error")
+            if isinstance(runner_error, dict):
+                finding = runtime_error_finding(
+                    case=case,
+                    replicate_id=replicate_id,
+                    error=(
+                        f"{runner_error.get('type', 'RunnerError')}: "
+                        f"{runner_error.get('message', '')}"
+                    ),
+                )
+                artifact = {
+                    "runtime": "deterministic_runner_error",
+                    "output": finding.model_dump(mode="json"),
+                    "usage": {"total_tokens": 0},
+                }
+            else:
+                async with semaphore:
+                    artifact = await self.runtime.run(
+                        template_root=_template(
+                            "conformance_reviewer"
+                        ),
+                        role_input={
+                            "mechanism": mechanism.model_dump(mode="json"),
+                            "trial_refs": list(case.trial_refs),
+                            "reference_observations": list(
+                                case.reference_observations
+                            ),
+                            "example_id": case.example.example_id,
+                            "replicate_id": replicate_id,
+                            "candidate_trajectory": (
+                                _conformance_trajectory(record)
+                            ),
+                        },
+                        resource_config=TeacherResourceConfig(),
+                    )
+                finding = ConformanceFinding.model_validate(
+                    artifact.get("output")
+                )
+                expected_run_ref = (
+                    f"{case.example.example_id}/{replicate_id}"
+                )
+                if finding.candidate_run_ref != expected_run_ref:
+                    raise ValueError(
+                        "Conformance Reviewer returned the wrong "
+                        f"candidate_run_ref: "
+                        f"{finding.candidate_run_ref} != "
+                        f"{expected_run_ref}"
+                    )
+                if finding.trial_refs != list(case.trial_refs):
+                    raise ValueError(
+                        "Conformance Reviewer changed its assigned "
+                        "trial_refs"
+                    )
+                allowed_phases = {
+                    rule.phase for rule in mechanism.phase_rules
+                }
+                unexpected_phases = (
+                    set(finding.observed_phases) - allowed_phases
+                )
+                if unexpected_phases:
+                    relevant_phases = [
+                        phase
+                        for phase in finding.observed_phases
+                        if phase in allowed_phases
+                    ]
+                    finding_payload = finding.model_dump(mode="json")
+                    finding_payload["observed_phases"] = relevant_phases
+                    if (
+                        finding.verdict == "faithful"
+                        and not relevant_phases
+                    ):
+                        finding_payload.update(
+                            {
+                                "verdict": "inconclusive",
+                                "assessment": (
+                                    "The review named only phases outside "
+                                    "the supplied MechanismSpec, so it did "
+                                    "not establish implementation fidelity."
+                                ),
+                                "repair_obligation": (
+                                    "Make the mechanism's declared phase "
+                                    "activation observable in the complete "
+                                    "Candidate rollout."
+                                ),
+                            }
+                        )
+                    finding = ConformanceFinding.model_validate(
+                        finding_payload
+                    )
+            path = _write_json(
+                work_dir
+                / "findings"
+                / f"finding_{finding_index:03d}.json",
+                artifact,
+            )
+            usage = artifact.get("usage")
+            tokens = (
+                usage.get("total_tokens", 0)
+                if isinstance(usage, dict)
+                else 0
+            )
+            return finding, path, _non_negative_int(tokens)
+
+        jobs = []
+        finding_index = 0
+        for case in cases:
+            for replicate_index in range(CONFORMANCE_REPLICATES):
+                finding_index += 1
+                replicate_id = f"r{replicate_index:03d}"
+                key = (case.example.example_id, replicate_id)
+                record = indexed_records.get(key)
+                if record is None:
+                    record = {
+                        "runner_error": {
+                            "type": "MissingReplay",
+                            "message": (
+                                "Candidate replay batch ended before this "
+                                "required replicate was written."
+                            ),
+                        }
+                    }
+                jobs.append(
+                    review_record(
+                        case,
+                        replicate_id,
+                        record,
+                        finding_index,
+                    )
+                )
+        reviewed = await asyncio.gather(*jobs)
+        findings = [item[0] for item in reviewed]
+        finding_paths = [item[1] for item in reviewed]
+        summary = aggregate_conformance(
+            cases=cases,
+            findings=findings,
+            finding_refs=[str(path) for path in finding_paths],
+        )
+        summary_payload = {
+            **summary.to_dict(),
+            "rollout": rollout_summary,
+        }
+        summary_path = _write_json(
+            work_dir / "summary.json",
+            summary_payload,
+        )
+        refs = {
+            "conformance_rollout_file": str(rollout_file.resolve()),
+            "conformance_summary_artifact": str(summary_path),
+            **{
+                f"conformance_finding_{index:03d}": str(path)
+                for index, path in enumerate(finding_paths, start=1)
+            },
+        }
+        return EffectResult(
+            outcome={
+                "decision": summary.decision,
+                "summary": summary.to_dict(),
+            },
+            artifact_refs=refs,
+            usage={
+                "total_tokens": (
+                    sum(item[2] for item in reviewed)
+                    + _rollout_total_tokens(records)
+                )
+            },
+        )
+
     async def _execute_review_candidate(
         self,
         *,
@@ -652,6 +870,12 @@ class LocalControlEffects:
             "compiler_validation": _required_payload_object(
                 work,
                 "validation_summary",
+            ),
+            "mechanism_conformance": _conformance_review_summary(
+                _required_payload_object(
+                    work,
+                    "conformance_summary",
+                )
             ),
             "incumbent_metrics": _required_payload_object(
                 work,
@@ -776,24 +1000,46 @@ class LocalControlEffects:
         if summary is None:
             raise KeyError(f"unknown candidate iteration: {iteration_id}")
         if summary.status == "pending":
-            review = _required_payload_object(work, "candidate_review")
-            gate = _required_payload_object(work, "promotion_gate")
-            reasons = gate.get("reasons")
-            reason = (
-                "; ".join(str(value) for value in reasons)
-                if isinstance(reasons, list) and reasons
-                else _required_string(review, "reason")
-            )
-            self.store.resume_iteration(iteration_id).reject(
-                reason,
-                evaluation={
+            conformance = work.payload.get("conformance_summary")
+            if (
+                isinstance(conformance, dict)
+                and "candidate_review" not in work.payload
+            ):
+                feedback = conformance.get("compiler_feedback")
+                reasons = (
+                    [str(value) for value in feedback if str(value).strip()]
+                    if isinstance(feedback, list)
+                    else []
+                )
+                reason = (
+                    "; ".join(reasons)
+                    if reasons
+                    else "Mechanism conformance replay failed."
+                )
+                evaluation = {"mechanism_conformance": conformance}
+            else:
+                review = _required_payload_object(
+                    work,
+                    "candidate_review",
+                )
+                gate = _required_payload_object(work, "promotion_gate")
+                reasons = gate.get("reasons")
+                reason = (
+                    "; ".join(str(value) for value in reasons)
+                    if isinstance(reasons, list) and reasons
+                    else _required_string(review, "reason")
+                )
+                evaluation = {
                     "metrics": _required_payload_object(
                         work,
                         "candidate_metrics",
                     ),
                     "candidate_review": review,
                     "promotion_gate": gate,
-                },
+                }
+            self.store.resume_iteration(iteration_id).reject(
+                reason,
+                evaluation=evaluation,
             )
         elif summary.status == "accepted":
             raise RuntimeError(
@@ -1043,6 +1289,112 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"JSON artifact must be an object: {path}")
     return value
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    records = []
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
+        if not line.strip():
+            continue
+        value = json.loads(line)
+        if not isinstance(value, dict):
+            raise TypeError(
+                f"JSONL record must be an object: {path}:{line_number}"
+            )
+        records.append(value)
+    return records
+
+
+def _index_rollout_records(
+    records: list[dict[str, Any]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    indexed = {}
+    for record in records:
+        example = record.get("example")
+        replicate = record.get("replicate")
+        if not isinstance(example, dict) or not isinstance(replicate, dict):
+            raise ValueError("conformance rollout lacks example or replicate")
+        key = (
+            str(example.get("example_id")),
+            str(replicate.get("replicate_id")),
+        )
+        if key in indexed:
+            raise ValueError(f"duplicate conformance rollout: {key}")
+        indexed[key] = record
+    return indexed
+
+
+def _conformance_trajectory(record: dict[str, Any]) -> dict[str, Any]:
+    example = record.get("example")
+    example = example if isinstance(example, dict) else {}
+    return {
+        "example": {
+            "example_id": example.get("example_id"),
+            "question": example.get("question"),
+        },
+        "replicate": record.get("replicate"),
+        "harness": record.get("harness"),
+        "run": record.get("run"),
+        "runner_error": record.get("runner_error"),
+    }
+
+
+def _rollout_total_tokens(records: list[dict[str, Any]]) -> int:
+    total = 0
+    for record in records:
+        run = record.get("run")
+        if not isinstance(run, dict):
+            continue
+        trace = run.get("trace")
+        if not isinstance(trace, list):
+            continue
+        for event in trace:
+            if not isinstance(event, dict) or event.get("event_type") not in {
+                "model_output",
+                "hook_model_output",
+            }:
+                continue
+            payload = event.get("payload")
+            payload = payload if isinstance(payload, dict) else {}
+            metadata = payload.get("metadata")
+            metadata = metadata if isinstance(metadata, dict) else {}
+            usage = metadata.get("usage")
+            usage = usage if isinstance(usage, dict) else {}
+            value = usage.get("total_tokens")
+            if isinstance(value, int) and not isinstance(value, bool):
+                total += max(0, value)
+                continue
+            prompt = usage.get(
+                "prompt_tokens",
+                usage.get("prompt_eval_count", 0),
+            )
+            completion = usage.get(
+                "completion_tokens",
+                usage.get("eval_count", 0),
+            )
+            total += _non_negative_int(prompt)
+            total += _non_negative_int(completion)
+    return total
+
+
+def _conformance_review_summary(
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    per_example = summary.get("per_example")
+    per_example = per_example if isinstance(per_example, dict) else {}
+    passed = sum(
+        isinstance(value, dict) and value.get("passed") is True
+        for value in per_example.values()
+    )
+    return {
+        "decision": summary.get("decision"),
+        "finding_counts": summary.get("finding_counts"),
+        "example_count": len(per_example),
+        "passed_example_count": passed,
+    }
 
 
 def _write_json(path: Path, value: dict[str, Any]) -> Path:

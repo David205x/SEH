@@ -702,12 +702,12 @@ def _query_hook_api(resources: TeacherResources) -> CallableTool:
         symbol: Annotated[
             str,
             ToolArg(
-                "Exact public symbol, member, or state key, for example "
-                "ToolResult.metadata, HookContext.call_model, or stage.tool_result."
+                "One exact public symbol absent from capability_packet. "
+                "At most four unique symbols may be queried in one Compiler run."
             ),
         ],
     ) -> ToolResult:
-        """Read a source-derived signature, type, stability, and shape contract."""
+        """Resolve one packet gap under the Compiler's hard query budget."""
 
         return _json_result(
             "query_hook_api",

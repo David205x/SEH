@@ -37,6 +37,8 @@ class DatasetRunSummary:
     runner_errors: int
     requested_rollouts: int | None = None
     rollouts_per_example: int = 1
+    stopped_early: bool = False
+    stop_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,7 @@ def run_examples(
     max_workers: int = 1,
     rollouts_per_example: int = 1,
     base_seed: int | None = None,
+    max_consecutive_identical_errors: int | None = None,
 ) -> DatasetRunSummary:
     """Run up to ``limit`` examples and append one complete record per line."""
 
@@ -97,6 +100,13 @@ def run_examples(
         raise ValueError("rollouts_per_example must be positive")
     if rollouts_per_example > 1 and base_seed is None:
         raise ValueError("repeated rollouts require a configured base_seed")
+    if (
+        max_consecutive_identical_errors is not None
+        and max_consecutive_identical_errors < 1
+    ):
+        raise ValueError(
+            "max_consecutive_identical_errors must be positive when configured"
+        )
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     selected_examples = list(islice(examples, limit))
@@ -113,6 +123,9 @@ def run_examples(
     ]
     processed = 0
     runner_errors = 0
+    consecutive_error_count = 0
+    previous_error_fingerprint: tuple[str, str] | None = None
+    stop_reason: str | None = None
     with tqdm(
         total=len(work_items),
         desc="Rollouts",
@@ -135,10 +148,35 @@ def run_examples(
                 on_complete=lambda _: progress.update(1),
             )
             for record in records:
-                if "runner_error" in record:
+                runner_error = record.get("runner_error")
+                if isinstance(runner_error, dict):
                     runner_errors += 1
+                    fingerprint = (
+                        str(runner_error.get("type", "")),
+                        str(runner_error.get("message", "")),
+                    )
+                    if fingerprint == previous_error_fingerprint:
+                        consecutive_error_count += 1
+                    else:
+                        previous_error_fingerprint = fingerprint
+                        consecutive_error_count = 1
+                else:
+                    previous_error_fingerprint = None
+                    consecutive_error_count = 0
                 _write_record(file, record)
                 processed += 1
+                if (
+                    max_consecutive_identical_errors is not None
+                    and consecutive_error_count
+                    >= max_consecutive_identical_errors
+                ):
+                    stop_reason = (
+                        "consecutive identical runner error limit reached: "
+                        f"{consecutive_error_count}; "
+                        f"{previous_error_fingerprint[0]}: "
+                        f"{previous_error_fingerprint[1]}"
+                    )
+                    break
 
     return DatasetRunSummary(
         output_file=output_file,
@@ -147,6 +185,8 @@ def run_examples(
         runner_errors=runner_errors,
         requested_rollouts=len(work_items),
         rollouts_per_example=rollouts_per_example,
+        stopped_early=stop_reason is not None,
+        stop_reason=stop_reason,
     )
 
 

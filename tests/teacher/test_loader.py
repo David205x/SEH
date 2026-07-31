@@ -22,7 +22,7 @@ TEMPLATE_ROOT = PROJECT_ROOT / "harness_templates" / "teacher"
 
 class TeacherTemplateLoaderTest(unittest.TestCase):
     def test_loads_all_initial_role_templates(self) -> None:
-        """验证八个 Teacher 角色均从目录解析出正确协议和工具集合。"""
+        """验证九个 Teacher 角色均从目录解析出正确协议和工具集合。"""
 
         evaluation = EvaluationEvidenceStore(
             report_dir=Path("report"),
@@ -51,6 +51,7 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
             "intervention_worker": "InterventionWorkerResult",
             "compiler": "CompilerResult",
             "candidate_reviewer": "CandidateReview",
+            "conformance_reviewer": "ConformanceFinding",
         }
         for role_id, output_name in expected.items():
             with self.subTest(role_id=role_id):
@@ -64,8 +65,9 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
                 if role_id == "compiler":
                     tool_names = {tool.name for tool in spec.tools.tools}
                     self.assertIn("finalize_candidate", tool_names)
+                    self.assertIn("query_hook_api", tool_names)
                     self.assertNotIn("list_hook_api_symbols", tool_names)
-                    self.assertNotIn("query_hook_api", tool_names)
+                    self.assertNotIn("get_hook_authoring_guide", tool_names)
 
     def test_manifest_rejects_extensions(self) -> None:
         """验证 Teacher template 不会静默忽略未实现的 extension 声明。"""

@@ -444,14 +444,23 @@ _CORE_POLICIES: dict[str, _StatePolicy] = {
         "core",
         "experimental",
         "open",
-        "Serialized completed tool call/result pairs.",
+        (
+            "Serialized completed pairs with shape "
+            "{'tool_call': {'name': str, 'arguments': dict}, "
+            "'tool_result': {'name': str, 'content': str}}. "
+            "At POST_TOOL this excludes the current stage call/result."
+        ),
     ),
     "core.conversation_messages": _StatePolicy(
         "list[dict[str, str]]",
         "core",
         "experimental",
         "open",
-        "Serialized follow-up messages retained for later prompts.",
+        (
+            "Serialized follow-up messages with role/content fields retained "
+            "for later prompts. At POST_TOOL this includes prior deferred "
+            "feedback but excludes the current result."
+        ),
     ),
     "core.hook_state": _StatePolicy(
         "dict[str, Any]",
