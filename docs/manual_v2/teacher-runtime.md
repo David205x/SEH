@@ -157,7 +157,9 @@ Controller 默认使用全部局部审阅重新执行一次全局判断。
 
 ## 当前边界
 
-- v2 Runtime 尚未替换 `search_harness.adapter` 中仍被旧 evolution runner 使用的角色。
+- Intervention Worker 的 prefix 重建、Hook bridge、跨 phase transcript 和 branch
+  trial 位于 `search_harness.teacher._intervention`，属于 Teacher 私有实现，不是
+  公共兼容接口。
 - Teacher Judge 尚未迁移到该 Runtime。
 - Compiler 当前门禁包括 manifest、fixed 边界、Python 语法、禁止动态属性探测、Harness 装配和 Hook 合约检查；standalone v2 尚未执行数据集 rollout。
 - Candidate Reviewer 输出 promotion 建议，但不接受、拒绝或写入 Harness checkpoint。

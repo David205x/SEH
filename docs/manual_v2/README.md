@@ -6,7 +6,7 @@
 - [Teacher Runtime](teacher-runtime.md)：Teacher 角色模板、协议绑定和可替换运行后端。
 - [证据驱动 Evolution](evidence-driven-evolution.md)：能力画像、评估契约、证据义务和 iteration 产物。
 - [Evolution Controller](evolution-controller.md)：八角色正式闭环、事件议程、恢复、门禁和运行入口。
-- [V1 实现清理计划](v1-implementation-cleanup-plan.md)：只保留 V2 时的依赖迁移、删除范围、风险和验收标准；当前尚未执行。
+- [V1 实现清理记录](v1-implementation-cleanup-plan.md)：V1 归档基线、删除范围、语义脱钩和验收结果。
 - [Evolution Controller 闭环验证](../design/evolution-controller-v2-validation.md)：真实大规模运行、恢复场景、候选拒绝与验证边界。
 - [Compiler](compiler.md)：新版 Compiler 的输入输出、内存候选事务和完整工具协议。
 - [Mechanism Conformance Replay](mechanism-conformance-replay.md)：Compiler 后、全量评估前的机制实现保真度回放草案。

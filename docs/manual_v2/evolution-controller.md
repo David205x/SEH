@@ -2,9 +2,9 @@
 
 ## 当前状态
 
-`search_harness.evolution.control` 是 v2 九角色的正式闭环入口。它与旧版
-`search_harness.evolution.runner.EvolutionRunner` 并存；旧入口没有被删除，也
-不会被新 Controller 调用。
+`search_harness.evolution.control` 是九角色正式闭环的唯一 Evolution 入口。
+旧 Runner、Backend 和根 `python -m search_harness.evolution` 入口已经删除；
+项目不提供 V1 兼容转发。
 
 实现模块：
 
@@ -16,6 +16,7 @@
 | `transitions.py` | 每个 WorkKind 的局部转移与修订路由。 |
 | `controller.py` | 回放、恢复、执行一个待办和提交事件。 |
 | `effects.py` | 九角色、rollout/evaluation 和 Version Store 的本地实现。 |
+| `evaluation.py` | accepted/candidate rollout、HotpotQA evaluation 和 conformance 子集 rollout。 |
 | `cli.py` | 新建和恢复运行。 |
 
 设计理由和协议字段见
@@ -62,8 +63,8 @@ WorkItem：Controller 先为尚未审阅的 trial 运行 Trial Reviewer，再运
 Evidence Reviewer。Intervention Worker 使用专用 `InterventionRoleRuntime`；
 其他八个角色使用通用 `NativeChatTeacherRuntime`。
 
-incumbent/candidate rollout 与 HotpotQA evaluation 复用现有
-`LocalEvolutionBackend`。候选评审后，Controller 通过
+incumbent/candidate rollout 与 HotpotQA evaluation 由 Controller 私有的
+`LocalEvaluationBackend` 执行，只暴露闭环实际需要的三种评估操作。候选评审后，Controller 通过
 `HarnessVersionStore.IterationSession` 完成 accept/reject；接受后若仍有
 generation 预算，则以新版本重新开始 incumbent 评估。
 

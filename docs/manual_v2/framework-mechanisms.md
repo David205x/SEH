@@ -25,8 +25,8 @@ Compiler 编写 Hook 时需要同时知道两类信息：
 3. 同一目录为公开项补充稳定性、形状和必要语义说明；
 4. Compiler 通过分页发现与精确查询工具按需读取，不把整份说明塞入 system prompt。
 
-这套设计只接入新版 `search_harness.teacher` Compiler。旧版
-`search_harness.adapter.compiler` 不属于该接口的维护范围。
+这套设计只接入 `search_harness.teacher` Compiler。已删除的 V1 Compiler 不属于
+当前接口或兼容范围。
 
 ## 公开白名单
 
