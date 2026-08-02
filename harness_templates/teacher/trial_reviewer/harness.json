@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_trial_reviewer_v1",
+  "tools": [
+    {
+      "instance_id": "get_trial_evidence",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_trial_evidence"
+      }
+    }
+  ],
+  "prompt": {
+    "instance_id": "trial_reviewer",
+    "entrypoint": "components/prompts/trial_reviewer/component.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "components/outputs/role_contract/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

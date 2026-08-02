@@ -1,8 +1,8 @@
-"""Run a paired probe of whether soft intervention can improve Actor behavior.
+"""Run a paired probe of whether soft intervention can improve Student behavior.
 
 The script deliberately separates three concerns:
 
-1. ``prepare`` exposes Actor-visible prefixes without golden answers.
+1. ``prepare`` exposes Student-visible prefixes without golden answers.
 2. ``run`` executes a no-op control and a Worker-authored treatment.
 3. ``review`` joins hidden evaluation evidence after both branches finish.
 """
@@ -18,16 +18,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from search_harness.teacher._intervention.prefix import (
+from search_harness.evolution.research.intervention.prefix import (
     build_prefix_timeline,
     load_rollout_record,
 )
 from search_harness.evaluation import EvaluationCase, HotpotQAEvaluator
-from search_harness.teacher.contracts import (
+from search_harness.evolution.research.roles.contracts import (
     InterventionHypothesis,
     InterventionWorkerInput,
 )
-from search_harness.teacher.role_resources import (
+from search_harness.evolution.research.resources.stores import (
     InterventionBranchStore,
     InterventionResourceConfig,
 )
@@ -51,9 +51,9 @@ class PrepareRequest(BaseModel):
     hypothesis: InterventionHypothesis
     trial_objective: str = Field(min_length=1)
     rollout_file: Path
-    actor_plugins_root: Path
+    student_template_root: Path
     env_file: Path = Path(".env")
-    actor_max_steps: int = Field(default=8, ge=1)
+    student_max_steps: int = Field(default=8, ge=1)
     control_mode: Literal["rerun", "source"] = "rerun"
     cases: list[ProbeCase] = Field(min_length=1)
     prohibited_content: list[str] = Field(default_factory=list)
@@ -169,9 +169,9 @@ def prepare_worker_brief(request_file: Path, output_dir: Path) -> Path:
         store = InterventionBranchStore(
             InterventionResourceConfig(
                 rollout_file=request.rollout_file,
-                actor_plugins_root=request.actor_plugins_root,
+                student_template_root=request.student_template_root,
                 env_file=request.env_file,
-                actor_max_steps=request.actor_max_steps,
+                student_max_steps=request.student_max_steps,
             )
         )
         store.bind(task)
@@ -183,7 +183,7 @@ def prepare_worker_brief(request_file: Path, output_dir: Path) -> Path:
                 "prefix_id": prefix_id,
                 "boundary": boundary,
                 "question": prefix["question"],
-                "actor_visible_model_input": prefix["model_input"],
+                "student_visible_model_input": prefix["model_input"],
                 "active_stage": prefix["active_stage"],
             }
         )
@@ -199,7 +199,7 @@ def prepare_worker_brief(request_file: Path, output_dir: Path) -> Path:
         "trial_objective": request.trial_objective,
         "prohibited_content": request.prohibited_content,
         "worker_instructions": [
-            "Use only the question and Actor-visible prefix evidence.",
+            "Use only the question and Student-visible prefix evidence.",
             "Do not provide an answer, answer-equivalent fact, or ready-made query.",
             "Choose one supported context action per case.",
             "Keep case-specific wording limited to identifying visible evidence gaps.",
@@ -216,13 +216,13 @@ def prepare_worker_brief(request_file: Path, output_dir: Path) -> Path:
             "defer_final_answer": (
                 "At a pre_final prefix, reject the current answer once with feedback."
             ),
-            "no_op": "Leave the Actor-visible prefix unchanged.",
+            "no_op": "Leave the Student-visible prefix unchanged.",
         },
         "resources": {
             "rollout_file": str(request.rollout_file.resolve()),
-            "actor_plugins_root": str(request.actor_plugins_root.resolve()),
+            "student_template_root": str(request.student_template_root.resolve()),
             "env_file": str(request.env_file.resolve()),
-            "actor_max_steps": request.actor_max_steps,
+            "student_max_steps": request.student_max_steps,
             "control_mode": request.control_mode,
         },
         "cases": cases,
@@ -281,9 +281,9 @@ def run_paired_experiment(
         )
         config = InterventionResourceConfig(
             rollout_file=Path(str(resources["rollout_file"])),
-            actor_plugins_root=Path(str(resources["actor_plugins_root"])),
+            student_template_root=Path(str(resources["student_template_root"])),
             env_file=Path(str(resources["env_file"])),
-            actor_max_steps=int(resources["actor_max_steps"]),
+            student_max_steps=int(resources["student_max_steps"]),
         )
         control_mode = str(resources.get("control_mode") or "rerun")
         if control_mode == "rerun":

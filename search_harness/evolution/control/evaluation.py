@@ -13,10 +13,16 @@ from search_harness.evaluation import (
     evaluate_rollout_file,
     write_evaluation_report,
 )
-from search_harness.models import OpenAICompatibleConfig, OpenAICompatibleTextModel
-from search_harness.runners.run_actor_once import build_loop
-from search_harness.runners.run_dataset import open_harness_source, run_examples
-from search_harness.versioning import HarnessVersionStore
+from search_harness.evaluation.rollouts import (
+    open_harness_source,
+    run_examples,
+)
+from search_harness.integrations.openai_compatible import (
+    OpenAICompatibleConfig,
+    OpenAICompatibleModel,
+)
+from search_harness.runners.run_agent_once import run_agent_once
+from search_harness.evolution.versioning import TemplateVersionStore
 
 from ..experience import file_digest, load_experience_set
 
@@ -34,7 +40,7 @@ class EvaluationArtifact:
 class CandidateArtifact:
     """Pending candidate data needed by controller-side evaluation."""
 
-    iteration_id: str
+    candidate_attempt_id: str
     parent_version: str
     candidate_digest: str
     compiler_log: Path
@@ -46,11 +52,11 @@ class CandidateArtifact:
 
 @dataclass(frozen=True)
 class LocalEvaluationConfig:
-    """Actor rollout and judge settings used by controller effects."""
+    """Student rollout and judge settings used by controller effects."""
 
     env_file: Path = Path(".env")
-    actor_model_role: str = "student"
-    actor_max_steps: int = 20
+    student_model_role: str = "student"
+    student_max_steps: int = 20
     rollout_workers: int = 2
     rollouts_per_example: int = 1
     judge_workers: int = 8
@@ -60,7 +66,7 @@ class LocalEvaluationConfig:
 
     def __post_init__(self) -> None:
         positive = {
-            "actor_max_steps": self.actor_max_steps,
+            "student_max_steps": self.student_max_steps,
             "rollout_workers": self.rollout_workers,
             "rollouts_per_example": self.rollouts_per_example,
             "judge_workers": self.judge_workers,
@@ -77,7 +83,7 @@ class LocalEvaluationBackend:
     def __init__(
         self,
         *,
-        store: HarnessVersionStore,
+        store: TemplateVersionStore,
         config: LocalEvaluationConfig,
     ) -> None:
         self.store = store
@@ -94,7 +100,7 @@ class LocalEvaluationBackend:
             experience_file=experience_file,
             output_dir=output_dir,
             version_id=version_id,
-            iteration_id=None,
+            candidate_attempt_id=None,
             max_consecutive_identical_errors=None,
         )
 
@@ -109,7 +115,7 @@ class LocalEvaluationBackend:
             experience_file=experience_file,
             output_dir=output_dir,
             version_id=None,
-            iteration_id=candidate.iteration_id,
+            candidate_attempt_id=candidate.candidate_attempt_id,
             max_consecutive_identical_errors=(
                 self.config.candidate_error_streak_limit
             ),
@@ -129,13 +135,13 @@ class LocalEvaluationBackend:
         if not examples:
             raise ValueError("candidate conformance examples must not be empty")
         with open_harness_source(
-            checkpoint_store=self.store.root,
-            iteration_id=candidate.iteration_id,
+            version_store=self.store.root,
+            candidate_attempt_id=candidate.candidate_attempt_id,
             env_file=self.config.env_file,
-        ) as (plugins_root, source):
+        ) as (template_root, source):
             model = OpenAICompatibleConfig.from_env(
                 env_file=self.config.env_file,
-                prefix=self.config.actor_model_role.upper(),
+                prefix=self.config.student_model_role.upper(),
             )
             provenance = {
                 "schema_version": 1,
@@ -148,7 +154,7 @@ class LocalEvaluationBackend:
                     },
                 },
                 "model": {
-                    "role": self.config.actor_model_role,
+                    "role": self.config.student_model_role,
                     **model.provenance(),
                 },
                 "harness": source.to_dict(),
@@ -160,11 +166,12 @@ class LocalEvaluationBackend:
             }
             summary = run_examples(
                 examples=examples,
-                loop_factory=lambda seed: build_loop(
+                run_agent=lambda seed, question: run_agent_once(
+                    question,
                     env_file=self.config.env_file,
-                    model_role=self.config.actor_model_role,
-                    plugins_root=plugins_root,
-                    max_steps=self.config.actor_max_steps,
+                    model_role=self.config.student_model_role,
+                    template_root=template_root,
+                    max_steps=self.config.student_max_steps,
                     seed=seed,
                 ),
                 output_file=output_file,
@@ -194,7 +201,7 @@ class LocalEvaluationBackend:
         experience_file: Path,
         output_dir: Path,
         version_id: str | None,
-        iteration_id: str | None,
+        candidate_attempt_id: str | None,
         max_consecutive_identical_errors: int | None,
     ) -> EvaluationArtifact:
         examples = load_experience_set(experience_file)
@@ -203,14 +210,14 @@ class LocalEvaluationBackend:
             / f"{output_dir.name.removesuffix('_report')}_rollouts.jsonl"
         )
         with open_harness_source(
-            checkpoint_store=self.store.root,
+            version_store=self.store.root,
             harness_version=version_id,
-            iteration_id=iteration_id,
+            candidate_attempt_id=candidate_attempt_id,
             env_file=self.config.env_file,
-        ) as (plugins_root, source):
+        ) as (template_root, source):
             model = OpenAICompatibleConfig.from_env(
                 env_file=self.config.env_file,
-                prefix=self.config.actor_model_role.upper(),
+                prefix=self.config.student_model_role.upper(),
             )
             provenance = {
                 "schema_version": 1,
@@ -220,7 +227,7 @@ class LocalEvaluationBackend:
                     "selection": {"limit": len(examples), "order": "fixed"},
                 },
                 "model": {
-                    "role": self.config.actor_model_role,
+                    "role": self.config.student_model_role,
                     **model.provenance(),
                 },
                 "harness": source.to_dict(),
@@ -235,11 +242,12 @@ class LocalEvaluationBackend:
             }
             run_examples(
                 examples=examples,
-                loop_factory=lambda seed: build_loop(
+                run_agent=lambda seed, question: run_agent_once(
+                    question,
                     env_file=self.config.env_file,
-                    model_role=self.config.actor_model_role,
-                    plugins_root=plugins_root,
-                    max_steps=self.config.actor_max_steps,
+                    model_role=self.config.student_model_role,
+                    template_root=template_root,
+                    max_steps=self.config.student_max_steps,
                     seed=seed,
                 ),
                 output_file=rollout_file,
@@ -259,7 +267,7 @@ class LocalEvaluationBackend:
         judge_factory = None
         if self.config.teacher_judge:
             judge_factory = lambda: TeacherBinaryJudge(
-                OpenAICompatibleTextModel.from_env(
+                OpenAICompatibleModel.from_env(
                     self.config.env_file,
                     prefix="TEACHER",
                 ),

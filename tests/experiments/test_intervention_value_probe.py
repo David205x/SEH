@@ -45,12 +45,11 @@ class InterventionValueProbeTest(unittest.TestCase):
                 "hypothesis": _hypothesis(),
                 "trial_objective": "Test one evidence-gap message.",
                 "rollout_file": str(rollout_file),
-                "actor_plugins_root": str(
+                "student_template_root": str(
                     PROJECT_ROOT
                     / "harness_templates"
-                    / "actor"
+                    / "student"
                     / "baseline"
-                    / "plugins"
                 ),
                 "env_file": str(PROJECT_ROOT / ".env"),
                 "cases": [{"example_id": "example-1", "replicate_id": "r000"}],
@@ -77,9 +76,9 @@ class InterventionValueProbeTest(unittest.TestCase):
                 "prohibited_content": [],
                 "resources": {
                     "rollout_file": "unused.jsonl",
-                    "actor_plugins_root": "unused",
+                    "student_template_root": "unused",
                     "env_file": ".env",
-                    "actor_max_steps": 4,
+                    "student_max_steps": 4,
                 },
                 "cases": [
                     {
@@ -101,7 +100,7 @@ class InterventionValueProbeTest(unittest.TestCase):
                         "replicate_id": "r000",
                         "action": "append_user_message",
                         "content": "Resolve the remaining visible evidence gap.",
-                        "rationale": "Tests whether the Actor continues searching.",
+                        "rationale": "Tests whether the Student continues searching.",
                     }
                 ],
             },
@@ -180,15 +179,14 @@ class InterventionValueProbeTest(unittest.TestCase):
                 "prohibited_content": [],
                 "resources": {
                     "rollout_file": str(rollout_file),
-                    "actor_plugins_root": str(
+                    "student_template_root": str(
                         PROJECT_ROOT
                         / "harness_templates"
-                        / "actor"
+                        / "student"
                         / "baseline"
-                        / "plugins"
                     ),
                     "env_file": str(PROJECT_ROOT / ".env"),
-                    "actor_max_steps": 4,
+                    "student_max_steps": 4,
                     "control_mode": "source",
                 },
                 "cases": [
@@ -245,12 +243,24 @@ class InterventionValueProbeTest(unittest.TestCase):
         self.assertEqual(control["tool_calls"], 0)
 
 
-def _hypothesis() -> dict[str, str]:
+def _hypothesis() -> dict:
     return {
-        "trigger": "After partial search evidence.",
-        "intervention": "Point out the remaining evidence gap.",
-        "expected_effect": "The Actor performs another retrieval.",
-        "falsifier": "The Actor finalizes without resolving the gap.",
+        "fork_phase": "post_tool",
+        "phase_plan": [
+            {
+                "phase": "post_tool",
+                "activation_condition": "After partial search evidence.",
+                "instruction": "Point out the remaining evidence gap.",
+                "expected_effect": "The Student performs another retrieval.",
+                "max_activations": 1,
+            }
+        ],
+        "evaluation": {
+            "primary_signal": "The next Student action is retrieval.",
+            "success_condition": "The Student performs another retrieval.",
+            "falsifier": "The Student finalizes without resolving the gap.",
+            "secondary_metrics": [],
+        },
         "applicability": "Multi-hop questions with partial evidence.",
     }
 

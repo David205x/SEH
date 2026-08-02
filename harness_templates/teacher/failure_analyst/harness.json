@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_failure_analyst_v1",
+  "tools": [
+    {
+      "instance_id": "list_evaluation_cases",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "list_evaluation_cases"}
+    },
+    {
+      "instance_id": "list_evaluation_cases_by_cost",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "list_evaluation_cases_by_cost"}
+    },
+    {
+      "instance_id": "get_cost_summary",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "get_cost_summary"}
+    },
+    {
+      "instance_id": "get_evaluation_case",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "get_evaluation_case"}
+    },
+    {
+      "instance_id": "get_student_trajectory",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "get_student_trajectory"}
+    },
+    {
+      "instance_id": "get_harness_manifest",
+      "entrypoint": "components/tools/runtime/component.py:build",
+      "config": {"kind": "get_harness_manifest"}
+    }
+  ],
+  "prompt": {
+    "instance_id": "failure_analyst",
+    "entrypoint": "components/prompts/failure_analyst/component.py:build",
+    "config": {
+      "instructions": "templates/system.md",
+      "user_template": "templates/user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "components/outputs/role_contract/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

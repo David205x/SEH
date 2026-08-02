@@ -10,14 +10,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from search_harness.core import (
+from search_harness.framework import (
     ChatMessage,
     ModelInput,
     ParsedOutput,
     ParsedOutputKind,
     TaggedOutputParser,
 )
-from search_harness.models import OpenAICompatibleConfig, OpenAICompatibleTextModel
+from search_harness.integrations.openai_compatible import (
+    OpenAICompatibleConfig,
+    OpenAICompatibleModel,
+)
 
 
 ACTION_PROTOCOL = """Available tool:
@@ -138,7 +141,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         raise ValueError("repeats must be positive")
     output_file = args.output_file or _default_output_file()
     config = OpenAICompatibleConfig.from_env(args.env_file, prefix="STUDENT")
-    model = OpenAICompatibleTextModel(
+    model = OpenAICompatibleModel(
         replace(
             config,
             max_tokens=args.max_tokens,
@@ -182,7 +185,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 
 def _run_case(
     *,
-    model: OpenAICompatibleTextModel,
+    model: OpenAICompatibleModel,
     parser: TaggedOutputParser,
     condition: str,
     system_prompt: str,

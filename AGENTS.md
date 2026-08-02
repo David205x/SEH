@@ -4,7 +4,11 @@
 
 本文档规定编码 Agent 在本仓库中开发、修改和验证代码时必须遵守的规则。
 
-项目文档位于 `docs/`：`docs/design/` 记录研究设计、思路和实验方案，部分内容可能先于当前代码；`docs/manual_v2/` 记录当前版本的工程原则、稳定接口与代码说明。`docs/manual_v1/` 只保留旧版本实现说明。`docs/design.md` 是早期综合设计参考。
+项目文档位于 `docs/`：`docs/architecture/`、`docs/reference/` 和 `docs/guides/`
+是当前文档骨架；`docs/design/` 记录研究设计、决策过程和实验方案，其中历史专题可能
+早于当前代码并使用旧术语；`docs/manual_v1/` 与 `docs/manual_v2/` 都是历史版本档案。
+在新的编码指南正文完成前，`docs/manual_v2/python_style.md` 继续作为明确例外提供当前
+Python 代码风格规范。`docs/design.md` 是早期综合设计参考。
 
 除非任务明确要求，编码 Agent 应优先进行范围最小、可验证、可回滚的修改，避免提前实现尚未确定的架构。
 
@@ -25,20 +29,21 @@
 ## 文档与决策来源
 
 - `AGENTS.md` 规定编码 Agent 的工作方式、工程约束和验证要求。
-- `design.md` 是早期综合设计参考；当前确认后的研究专题设计以 `docs/design/` 为准。
-- `docs/design/` 记录研究架构、实验流程和设计决策。
-- `docs/manual_v2/` 记录当前工程接口、代码结构与维护说明。
-- `docs/manual_v1/` 记录旧版本实现，不作为新增代码的依据。
+- `CONTEXT.md` 记录当前统一术语，`docs/adr/` 记录已经生效的架构决策。
+- `docs/design/post-removal-normalization.md` 记录 V1 删除后的已确认架构和迁移验收。
+- `docs/design/` 的其余文件记录研究架构、实验流程与历史设计。
+- `docs/manual_v1/` 与 `docs/manual_v2/` 记录历史版本实现，不作为新增接口的依据；
+  `docs/manual_v2/python_style.md` 的代码风格规范除外。
 - 代码表示当前实现状态，但代码现状不自动等同于正确设计。
 
 执行任务时，按以下优先级理解要求：
 
 1. 用户在当前任务中的明确要求；
 2. `AGENTS.md` 中的工程规范；
-3. `docs/manual_v2/` 中已确认的工程接口与当前实现说明；
-4. `docs/design/` 中已经确认的具体设计；
-5. `design.md` 中的总体设计；
-6. 当前代码实现。
+3. `CONTEXT.md` 与 `docs/adr/` 中已经确认的术语和决策；
+4. `docs/design/post-removal-normalization.md` 等活动专题中的已确认设计；
+5. 当前代码实现；
+6. `docs/manual_v1/`、`docs/manual_v2/`、其他历史设计文档和 `design.md`。
 
 如果文档之间存在实质冲突，不得静默选择或自行扩大任务范围；应指出冲突，并采用范围最小、可回滚的处理方式。
 

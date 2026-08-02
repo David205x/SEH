@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
 
-from search_harness.models import OpenAICompatibleTextModel
+from search_harness.integrations.openai_compatible import OpenAICompatibleModel
 from search_harness.paths import COMPONENT_RUNS_ROOT, new_component_run_dir
 
 from .hotpotqa import HotpotQAEvaluator
@@ -13,13 +14,16 @@ from .judge import TeacherBinaryJudge
 from .report import evaluate_rollout_file, write_evaluation_report
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="python -m search_harness evaluate",
+        description=__doc__,
+    )
     parser.add_argument("input_file", type=Path, help="UTF-8 rollout JSONL file.")
     parser.add_argument(
         "--output-dir",
         type=Path,
-        help="Report directory; default: Actor run evaluation or a new evaluator run.",
+        help="Report directory; default: Student run evaluation or a new evaluator run.",
     )
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
     parser.add_argument(
@@ -33,13 +37,17 @@ def main() -> None:
         default=8,
         help="Maximum concurrent TEACHER_* judgments; default: 8.",
     )
-    args = parser.parse_args()
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    args = parse_args(argv)
 
     evaluator = HotpotQAEvaluator()
     judge_factory = None
     if args.teacher_judge:
         judge_factory = lambda: TeacherBinaryJudge(
-            OpenAICompatibleTextModel.from_env(
+            OpenAICompatibleModel.from_env(
                 args.env_file, prefix="TEACHER"
             ),
             evaluator,
@@ -56,15 +64,11 @@ def main() -> None:
 
 
 def _default_output_dir(input_file: Path) -> Path:
-    """将 Actor 评估就地聚合，其余输入放入独立 Evaluator run。"""
+    """将 Student 评估就地聚合，其余输入放入独立 Evaluator run。"""
 
-    actor_runs_root = (COMPONENT_RUNS_ROOT / "actor").resolve()
+    student_runs_root = (COMPONENT_RUNS_ROOT / "student").resolve()
     try:
-        input_file.resolve().relative_to(actor_runs_root)
+        input_file.resolve().relative_to(student_runs_root)
     except ValueError:
         return new_component_run_dir("evaluator") / "evaluation"
     return input_file.parent / "evaluation"
-
-
-if __name__ == "__main__":
-    main()

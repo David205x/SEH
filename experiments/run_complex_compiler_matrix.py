@@ -22,18 +22,18 @@ COMPLEX_ROOT = STUDY_ROOT / "complex_optimization_study"
 RUNTIME_ROOT = STUDY_ROOT / "runtime_optimization_study"
 
 TEMPLATES = {
-    "canonical": PROJECT_ROOT / "harness_templates" / "teacher" / "compiler" / "plugins",
+    "canonical": PROJECT_ROOT / "harness_templates" / "teacher" / "compiler",
     "production_prompt": (
-        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler" / "plugins"
+        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler"
     ),
     "production_prompt_v2": (
-        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler" / "plugins"
+        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler"
     ),
     "production_finalizer": (
-        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler" / "plugins"
+        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler"
     ),
     "production_packet": (
-        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler" / "plugins"
+        PROJECT_ROOT / "harness_templates" / "teacher" / "compiler"
     ),
     "lean": STUDY_ROOT / "cost_study" / "lean_plugins",
     "mechanical": RUNTIME_ROOT / "mechanical_plugins",
@@ -145,7 +145,7 @@ def _run_job(job: MatrixJob) -> int:
     command = [
         sys.executable,
         "-m",
-        "search_harness.teacher",
+        "search_harness.evolution.research.cli",
         "--template_root",
         str(job.template_root),
         "--request_file",

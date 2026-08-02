@@ -1,6 +1,11 @@
-# Manual v2
+# Manual v2（历史档案）
 
-本目录记录当前版本的工程原则和稳定接口。`docs/manual_v1/` 仅用于追溯旧实现，新增代码以本目录为准。
+本目录原样保留 Post-removal Normalization 之前的 V2 工程说明，用于核实历史接口和
+迁移来源，不代表当前活动架构与统一术语。当前术语以仓库根目录 `CONTEXT.md` 为准，
+持久化和边界决策以 `docs/adr/` 为准，重构结果见
+`docs/design/post-removal-normalization.md`。各专题正文不因归档而改写。
+
+在新的编码指南正文完成前，`python_style.md` 继续作为当前代码风格规范使用。
 
 - [Teacher 角色定义](teacher-roles.md)：Teacher 控制面的职责、模型输入与语义输出。
 - [Teacher Runtime](teacher-runtime.md)：Teacher 角色模板、协议绑定和可替换运行后端。

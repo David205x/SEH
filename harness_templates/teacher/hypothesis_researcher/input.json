@@ -1,11 +1,11 @@
 {
   "input": {
     "problem_direction": {
-      "pattern": "The Actor makes one initial search, retrieves partial context, then stops. It does not execute a targeted follow-up search to resolve the missing answer value. Instead it falls back on incorrect prior knowledge, makes unsupported inferences from partial context, or prematurely concludes insufficient evidence without searching for all entities or disambiguating candidates.",
-      "applicability": "Bridge and comparison tasks where the initial retrieval provides relevant context but not the exact answer. The Actor has at least one unused tool call available but does not use it to fill the identified information gap.",
+      "pattern": "The Student makes one initial search, retrieves partial context, then stops. It does not execute a targeted follow-up search to resolve the missing answer value. Instead it falls back on incorrect prior knowledge, makes unsupported inferences from partial context, or prematurely concludes insufficient evidence without searching for all entities or disambiguating candidates.",
+      "applicability": "Bridge and comparison tasks where the initial retrieval provides relevant context but not the exact answer. The Student has at least one unused tool call available but does not use it to fill the identified information gap.",
       "caveats": [
         "This diagnosis covers six inspected stable-failure trajectories; unstable cases were not independently verified for this pattern.",
-        "System-level constraints may contribute to early termination rather than Actor initiative alone, though the observed runs ended before exhausting their step budgets.",
+        "System-level constraints may contribute to early termination rather than Student initiative alone, though the observed runs ended before exhausting their step budgets.",
         "The diagnosis does not establish whether parametric memory is systematically wrong or merely uncalibrated to corpus content."
       ],
       "evidence_refs": [
@@ -19,7 +19,7 @@
   "resources": {
     "report_dir": "D:/_Project/Agent/search_harness/runs/experiments/evolution/exp_05/iterations/0001/incumbent_report",
     "rollout_file": "D:/_Project/Agent/search_harness/runs/experiments/evolution/exp_05/iterations/0001/incumbent_rollouts.jsonl",
-    "actor_plugins_root": "D:/_Project/Agent/search_harness/harness_templates/actor/baseline/plugins",
+    "student_template_root": "D:/_Project/Agent/search_harness/harness_templates/student/baseline",
     "trial_files": []
   }
 }

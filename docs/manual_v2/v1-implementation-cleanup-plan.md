@@ -5,6 +5,18 @@
 **状态：已于 2026-07-31 完成。** 主分支只保留 V2 Active Implementation，
 `archive/v1-final` 保存 V1 最后一个完整可运行版本。
 
+### Historical cleanup vocabulary
+
+以下用语只描述已经完成的 V1 清理工作，不属于项目当前领域模型：
+
+- **V2 Active Implementation**：清理完成时主分支唯一保留的可执行 Teacher 角色、Evolution Controller、模板、测试与命令入口。
+- **V1 Historical Archive**：只用于追溯旧设计与历史行为的 V1 文档，以及作为完整 run 保留的一份实验记录；不得成为当前运行时依赖。
+- **V1 Archive Branch**：指向 V1 仍可完整运行的最后基线提交，只用于恢复和查阅，不接受后续功能维护。
+- **Semantic Detachment**：只重建 V2 当时实际依赖的行为语义，使其不再依赖 V1 实现，而不预先决定最终接口和目录。
+- **Post-removal Normalization**：V1 实现删除后统一当前项目接口、名称、架构和根命令的阶段。
+- **V2 Cleanup Baseline**：V1 移除前用于固化可运行 V2 状态的独立提交。
+- **V1 Removal Gate**：清理阶段使用的定向测试、导入检查、残留扫描、完整剩余测试及最小 V2 Controller 闭环门禁。
+
 实际归档与提交：
 
 - V1 archive branch：`archive/v1-final` → `63c094c`；

@@ -16,8 +16,8 @@ OUTPUT_ROOT = (
     / "mechanism_compilation_validation_01"
     / "complex_optimization_study"
 )
-PARENT_PLUGINS = (
-    PROJECT_ROOT / "harness_checkpoints" / "search_actor" / "plugins"
+PARENT_TEMPLATE_ROOT = (
+    PROJECT_ROOT / "harness_templates" / "student" / "baseline"
 )
 
 
@@ -51,7 +51,7 @@ def _request(
         },
         "resources": {
             "compiler": {
-                "parent_plugins_root": str(PARENT_PLUGINS),
+                "parent_template_root": str(PARENT_TEMPLATE_ROOT),
                 "env_file": str(PROJECT_ROOT / ".env"),
             }
         },
@@ -85,7 +85,7 @@ def _post_tool_rewrite() -> dict[str, Any]:
                 "or rewrite_count is already 2, return without changes. Otherwise "
                 "create a new ToolResult with the same name and a copied metadata "
                 "mapping. Preserve the original content exactly, append one static "
-                "instruction asking the Actor to identify the unresolved entity "
+                "instruction asking the Student to identify the unresolved entity "
                 "and relation before its next action, and add metadata recording "
                 "that this Hook applied and the new activation number. Replace "
                 "stage.tool_result with that object, then increment rewrite_count."
@@ -164,7 +164,7 @@ def _post_prompt_context() -> dict[str, Any]:
                 "If consumed is true, return without changes. Read stage.model_input "
                 "and require a ModelInput. Construct a new ordered message list "
                 "containing every existing message exactly once, followed by one "
-                "user ChatMessage that asks the Actor to identify missing evidence "
+                "user ChatMessage that asks the Student to identify missing evidence "
                 "before choosing between search and a final answer. Build a new "
                 "ModelInput from that list, replace stage.model_input, then set "
                 "consumed to true."
@@ -202,7 +202,7 @@ def _post_prompt_context() -> dict[str, Any]:
                 "appended message role and content",
             ],
             "known_limits": [
-                "The Actor may ignore the appended planning instruction."
+                "The Student may ignore the appended planning instruction."
             ],
         },
         [
@@ -318,15 +318,15 @@ def _pre_final_semantic() -> dict[str, Any]:
     return _request(
         {
             "goal": (
-                "Give the Actor one additional chance to gather direct evidence "
+                "Give the Student one additional chance to gather direct evidence "
                 "before accepting its first proposed final answer."
             ),
             "trigger_phase": "pre_final",
             "trigger_condition": (
-                "The Actor proposes its first final answer in the rollout."
+                "The Student proposes its first final answer in the rollout."
             ),
             "decision_inputs": [
-                "Actor final-answer candidate",
+                "Student final-answer candidate",
                 "rollout-local deferral-used flag",
             ],
             "action": (
@@ -338,7 +338,7 @@ def _pre_final_semantic() -> dict[str, Any]:
                 "At pre_final, if deferred_once is true, preserve the accepted "
                 "candidate and stop. Otherwise set deferred_once to true and "
                 "defer with a static instruction. The instruction delegates to "
-                "the Actor: identify the unresolved relation from its visible "
+                "the Student: identify the unresolved relation from its visible "
                 "context, perform one evidence-oriented search if needed, and "
                 "answer only from direct evidence. Never include a case entity, "
                 "answer, or ready-made query."
@@ -356,14 +356,14 @@ def _pre_final_semantic() -> dict[str, Any]:
             "evidence_refs": ["complex_probe/pre_final_semantic"],
             "activation_budget": 1,
             "required_capabilities": [
-                "Actor can follow a generic continuation instruction",
-                "Actor can use its configured search tool",
-                "Actor can inspect question and visible evidence",
-                "Actor can continue after a deferred final answer",
+                "Student can follow a generic continuation instruction",
+                "Student can use its configured search tool",
+                "Student can inspect question and visible evidence",
+                "Student can continue after a deferred final answer",
             ],
             "prohibited_behaviors": [
                 "Do not inject a golden answer or case-specific entity.",
-                "Do not formulate the Actor's concrete search query.",
+                "Do not formulate the Student's concrete search query.",
                 "Do not call a model or tool from the Hook.",
                 "Do not defer more than once.",
             ],
@@ -373,7 +373,7 @@ def _pre_final_semantic() -> dict[str, Any]:
                 "deferred feedback",
             ],
             "known_limits": [
-                "The Actor may ignore the feedback or choose the wrong relation."
+                "The Student may ignore the feedback or choose the wrong relation."
             ],
         },
         [

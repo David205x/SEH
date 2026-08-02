@@ -16,7 +16,7 @@ from typing import Any
 from tqdm import tqdm
 
 from search_harness.datasets.identity import stable_example_id
-from search_harness.runtime import ordered_parallel_map
+from search_harness._internal import ordered_parallel_map
 
 from .types import (
     EvaluationCase,
@@ -247,10 +247,12 @@ def _trace_token_usage(trace: object) -> dict[str, int]:
             "hook_model_output",
         }:
             continue
-        namespace = "hook" if event.get("event_type") == "hook_model_output" else "actor"
+        namespace = "hook" if event.get("event_type") == "hook_model_output" else "student"
         payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
         metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
-        usage = metadata.get("usage") if isinstance(metadata.get("usage"), dict) else {}
+        usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else None
+        if usage is None:
+            usage = metadata.get("usage") if isinstance(metadata.get("usage"), dict) else {}
         input_tokens = usage.get("prompt_tokens", usage.get("prompt_eval_count"))
         output_tokens = usage.get("completion_tokens", usage.get("eval_count"))
         total_tokens = usage.get("total_tokens")
@@ -265,7 +267,7 @@ def _trace_token_usage(trace: object) -> dict[str, int]:
             totals[f"{namespace}_total_tokens"] += total_tokens
     if "total_tokens" not in totals and ("input_tokens" in totals or "output_tokens" in totals):
         totals["total_tokens"] = totals["input_tokens"] + totals["output_tokens"]
-    for namespace in ("actor", "hook"):
+    for namespace in ("student", "hook"):
         total_key = f"{namespace}_total_tokens"
         input_key = f"{namespace}_input_tokens"
         output_key = f"{namespace}_output_tokens"
@@ -346,9 +348,9 @@ def _aggregate_metrics(
             "input_tokens": token_totals.get("input_tokens"),
             "output_tokens": token_totals.get("output_tokens"),
             "total_tokens": token_totals.get("total_tokens"),
-            "actor_input_tokens": token_totals.get("actor_input_tokens"),
-            "actor_output_tokens": token_totals.get("actor_output_tokens"),
-            "actor_total_tokens": token_totals.get("actor_total_tokens"),
+            "student_input_tokens": token_totals.get("student_input_tokens"),
+            "student_output_tokens": token_totals.get("student_output_tokens"),
+            "student_total_tokens": token_totals.get("student_total_tokens"),
             "hook_input_tokens": token_totals.get("hook_input_tokens"),
             "hook_output_tokens": token_totals.get("hook_output_tokens"),
             "hook_total_tokens": token_totals.get("hook_total_tokens"),

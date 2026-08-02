@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Annotated
 from unittest import TestCase
 
-from search_harness.core import ToolResult
-from search_harness.framework.tooling import CallableTool, ToolArg, ToolSet, tool
+from search_harness.framework import ToolResult
+from search_harness.framework.tools import CallableTool, ToolArg, ToolSet, tool
 
 
 @tool(name="echo")

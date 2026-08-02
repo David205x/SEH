@@ -12,7 +12,7 @@ from uuid import uuid4
 
 from search_harness.datasets import DatasetConfig, create_dataset_loader
 from search_harness.evolution.experience import materialize_experience_set
-from search_harness.versioning import HarnessVersionStore
+from search_harness.evolution.versioning import TemplateVersionStore
 
 from .controller import EvolutionController
 from .domain import ControlOutcome, EvolutionControlConfig
@@ -20,26 +20,29 @@ from .effects import LocalControlEffects, LocalControlEffectsConfig
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="python -m search_harness evolve",
+        description=__doc__,
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
-    run = commands.add_parser("run", help="Start a new controller run.")
-    run.add_argument("--run-dir", type=Path, required=True)
-    run.add_argument("--checkpoint-store", type=Path, required=True)
-    run.add_argument("--dataset-path", type=Path)
-    run.add_argument("--dataset-format")
-    run.add_argument("--limit", type=int, default=20)
-    run.add_argument("--max-generations", type=int, default=1)
-    run.add_argument("--max-trials-per-hypothesis", type=int, default=4)
-    run.add_argument("--max-trial-assignments", type=int, default=12)
-    run.add_argument("--max-hypothesis-revisions", type=int, default=2)
-    run.add_argument("--max-mechanism-revisions", type=int, default=2)
-    run.add_argument("--max-compiler-revisions", type=int, default=2)
-    run.add_argument("--max-candidate-revisions", type=int, default=2)
-    run.add_argument("--max-work-retries", type=int, default=1)
-    run.add_argument("--max-work-items", type=int, default=80)
-    run.add_argument("--max-total-tokens", type=int)
-    run.add_argument(
+    start = commands.add_parser("start", help="Start a new controller run.")
+    start.add_argument("--run-dir", type=Path, required=True)
+    start.add_argument("--version-store", type=Path, required=True)
+    start.add_argument("--dataset-path", type=Path)
+    start.add_argument("--dataset-format")
+    start.add_argument("--limit", type=int, default=20)
+    start.add_argument("--max-generations", type=int, default=1)
+    start.add_argument("--max-trials-per-hypothesis", type=int, default=4)
+    start.add_argument("--max-trial-assignments", type=int, default=12)
+    start.add_argument("--max-hypothesis-revisions", type=int, default=2)
+    start.add_argument("--max-mechanism-revisions", type=int, default=2)
+    start.add_argument("--max-compiler-revisions", type=int, default=2)
+    start.add_argument("--max-candidate-revisions", type=int, default=2)
+    start.add_argument("--max-work-retries", type=int, default=1)
+    start.add_argument("--max-work-items", type=int, default=80)
+    start.add_argument("--max-total-tokens", type=int)
+    start.add_argument(
         "--min-accuracy-delta",
         type=float,
         default=-0.02,
@@ -48,8 +51,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "effect acceptance remains the Candidate Reviewer's decision."
         ),
     )
-    run.add_argument("--max-total-token-ratio", type=float, default=3.0)
-    _add_effect_arguments(run)
+    start.add_argument("--max-total-token-ratio", type=float, default=3.0)
+    _add_effect_arguments(start)
 
     resume = commands.add_parser(
         "resume",
@@ -65,7 +68,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     outcome = (
         asyncio.run(_start(args))
-        if args.command == "run"
+        if args.command == "start"
         else asyncio.run(_resume(args))
     )
     print(
@@ -85,7 +88,7 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         raise FileExistsError(
             f"Evolution Controller run already exists: {run_dir}"
         )
-    store = HarnessVersionStore(args.checkpoint_store)
+    store = TemplateVersionStore(args.version_store)
     versions = store.list_versions()
     if not versions:
         raise RuntimeError(
@@ -126,7 +129,7 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
     effects_config = LocalControlEffectsConfig(
         experience_file=experience_file,
         env_file=args.env_file,
-        actor_max_steps=args.actor_max_steps,
+        student_max_steps=args.student_max_steps,
         teacher_max_turns=args.teacher_max_turns,
         rollout_workers=args.rollout_workers,
         rollouts_per_example=args.rollouts_per_example,
@@ -136,10 +139,10 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         candidate_error_streak_limit=args.candidate_error_streak_limit,
     )
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_id": uuid4().hex,
-        "checkpoint_store": str(store.root),
-        "checkpoint_store_id": store.checkpoint_store_id,
+        "version_store": str(store.root),
+        "version_store_id": store.version_store_id,
         "initial_version": versions[-1].version_id,
         "control_config": asdict(control_config),
         "effects_config": _effects_dict(effects_config),
@@ -172,7 +175,7 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
 
 async def _resume(args: argparse.Namespace) -> ControlOutcome:
     run_dir = args.run_dir.resolve()
-    raw = _read_json(run_dir / "run.json")
+    raw = _read_run_payload(run_dir / "run.json")
     control_config = EvolutionControlConfig(
         **_required_object(raw, "control_config")
     )
@@ -192,9 +195,15 @@ async def _resume(args: argparse.Namespace) -> ControlOutcome:
             ),
         }
     )
-    store = HarnessVersionStore(
-        Path(_required_string(raw, "checkpoint_store"))
+    store = TemplateVersionStore(
+        Path(_required_string(raw, "version_store"))
     )
+    expected_store_id = _required_string(raw, "version_store_id")
+    if store.version_store_id != expected_store_id:
+        raise ValueError(
+            "Evolution Run version_store_id does not match Version Store: "
+            f"{expected_store_id} != {store.version_store_id}"
+        )
     controller = EvolutionController(
         run_dir=run_dir,
         effects=LocalControlEffects(
@@ -208,7 +217,7 @@ async def _resume(args: argparse.Namespace) -> ControlOutcome:
 
 def _add_effect_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
-    parser.add_argument("--actor-max-steps", type=int, default=20)
+    parser.add_argument("--student-max-steps", type=int, default=20)
     parser.add_argument("--teacher-max-turns", type=int, default=20)
     parser.add_argument("--rollout-workers", type=int, default=2)
     parser.add_argument("--rollouts-per-example", type=int, default=1)
@@ -241,6 +250,28 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _read_run_payload(path: Path) -> dict[str, Any]:
+    """Read current Run Artifact schema or migrate one legacy v1 payload."""
+
+    raw = _read_json(path)
+    schema_version = raw.get("schema_version")
+    if schema_version == 2:
+        _required_string(raw, "version_store")
+        _required_string(raw, "version_store_id")
+        return raw
+    if schema_version == 1:
+        legacy_store = _required_string(raw, "checkpoint_store")
+        legacy_store_id = _required_string(raw, "checkpoint_store_id")
+        return {
+            **raw,
+            "version_store": legacy_store,
+            "version_store_id": legacy_store_id,
+        }
+    raise ValueError(
+        f"unsupported Evolution Run schema_version: {schema_version}"
+    )
+
+
 def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -264,7 +295,3 @@ def _required_string(value: dict[str, Any], name: str) -> str:
     if not isinstance(item, str) or not item.strip():
         raise TypeError(f"{name} must be a non-empty string")
     return item
-
-
-if __name__ == "__main__":
-    main()

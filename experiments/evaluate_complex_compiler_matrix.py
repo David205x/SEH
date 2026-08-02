@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from search_harness.core import (
+from search_harness.framework import (
     AgentState,
     ChatMessage,
     FinalDecision,
@@ -22,10 +22,13 @@ from search_harness.core import (
     ToolCall,
     ToolResult,
 )
-from search_harness.core.trace import InMemoryTraceRecorder
-from search_harness.registry import build_harness
-from search_harness.versioning import CandidateWorkspace, HarnessSnapshot
-from search_harness.versioning.validation import stage_files
+from search_harness.framework import InMemoryTrajectoryRecorder
+from search_harness.framework.harness import (
+    BaseHook,
+    assemble_harness_components,
+)
+from search_harness.evolution.versioning import CandidateWorkspace, HarnessSnapshot
+from search_harness.evolution.versioning.validation import stage_files
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -37,8 +40,8 @@ STUDY_ROOT = (
     / "mechanism_compilation_validation_01"
     / "complex_optimization_study"
 )
-PARENT_PLUGINS = (
-    PROJECT_ROOT / "harness_checkpoints" / "search_actor" / "plugins"
+PARENT_TEMPLATE_ROOT = (
+    PROJECT_ROOT / "harness_templates" / "student" / "baseline"
 )
 SCENARIOS = (
     "post_tool_rewrite",
@@ -161,28 +164,44 @@ def _semantic_smoke(
     changed_files: dict[str, str | None],
     scenario: str,
 ) -> None:
-    parent = HarnessSnapshot.from_directory(PARENT_PLUGINS, version_id="parent")
+    parent = HarnessSnapshot.from_directory(
+        PARENT_TEMPLATE_ROOT,
+        version_id="parent",
+    )
     workspace = CandidateWorkspace(parent)
     for path, content in changed_files.items():
         if content is None:
             workspace.delete(path)
         else:
             workspace.write_text(path, content)
-    with stage_files(workspace.materialized_files()) as plugins_root:
-        harness = build_harness(
-            plugins_root,
+    with stage_files(workspace.materialized_files()) as template_root:
+        assembled = assemble_harness_components(
+            template_root,
             env_file=PROJECT_ROOT / ".env",
         )
+        hooks = _extension_hooks(assembled.extensions)
         if scenario == "post_tool_rewrite":
-            _smoke_post_tool_rewrite(harness.hooks.hooks)
+            _smoke_post_tool_rewrite(hooks)
         elif scenario == "post_prompt_context":
-            _smoke_post_prompt_context(harness.hooks.hooks)
+            _smoke_post_prompt_context(hooks)
         elif scenario == "hook_model_refinement":
-            _smoke_hook_model_refinement(harness.hooks.hooks)
+            _smoke_hook_model_refinement(hooks)
         elif scenario == "pre_final_semantic":
-            _smoke_pre_final_semantic(harness.hooks.hooks)
+            _smoke_pre_final_semantic(hooks)
         else:
             raise ValueError(f"unknown scenario: {scenario}")
+
+
+def _extension_hooks(extension_bindings: tuple[Any, ...]) -> tuple[BaseHook, ...]:
+    hooks: list[BaseHook] = []
+    for binding in extension_bindings:
+        for component in binding.components:
+            if not isinstance(component, BaseHook):
+                raise TypeError(
+                    f"Extension '{binding.instance_id}' returned a non-Hook"
+                )
+            hooks.append(component)
+    return tuple(hooks)
 
 
 def _smoke_post_tool_rewrite(hooks: tuple[Any, ...]) -> None:
@@ -376,7 +395,7 @@ def _run_phase(
         phase,
         state=state,
         store=store,
-        trace=InMemoryTraceRecorder(),
+        trajectory=InMemoryTrajectoryRecorder(),
         stage_values=stage_values,
     )
 

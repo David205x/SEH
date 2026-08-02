@@ -4,21 +4,31 @@ from pathlib import Path
 from typing import Annotated
 from unittest import TestCase
 
-from search_harness.core import AgentState, ToolResult
-from search_harness.framework.tooling import CallableTool, ToolArg, ToolSet, tool
-from search_harness.registry import ComponentSpec, EvolutionPolicy, PluginContext
-from search_harness.registry.plugin_importer import load_factory
+from search_harness.framework import AgentState, ToolResult
+from search_harness.framework.harness import (
+    ComponentDeclaration,
+    ComponentFactoryContext,
+    ComponentLoader,
+)
+from search_harness.framework.tools import CallableTool, ToolArg, ToolSet, tool
 
 
-BASELINE_PLUGINS_ROOT = Path(__file__).parents[2] / "harness_templates" / "actor" / "baseline" / "plugins"
-PROMPT_ENTRYPOINT = "prompts/simple_search/plugin.py:build"
+BASELINE_TEMPLATE_ROOT = (
+    Path(__file__).parents[2] / "harness_templates" / "student" / "baseline"
+)
+PROMPT_ENTRYPOINT = "components/prompts/simple_search/component.py:build"
 
 
 class SimpleSearchPromptTest(TestCase):
     def test_loads_default_system_prompt_from_resource(self) -> None:
         """Verifies the loads default system prompt from resource contract."""
         prompt = (
-            BASELINE_PLUGINS_ROOT / "prompts" / "simple_search" / "templates" / "system.md"
+            BASELINE_TEMPLATE_ROOT
+            / "components"
+            / "prompts"
+            / "simple_search"
+            / "templates"
+            / "system.md"
         ).read_text(encoding="utf-8")
 
         self.assertIn("<tool_call>", prompt)
@@ -56,11 +66,14 @@ def _search_tools() -> ToolSet:
 
 
 def _build_prompt(tools: ToolSet):
-    spec = ComponentSpec(
+    spec = ComponentDeclaration(
         instance_id="simple_search",
         entrypoint=PROMPT_ENTRYPOINT,
         config={},
-        evolution_policy=EvolutionPolicy.FIXED,
     )
-    factory = load_factory(BASELINE_PLUGINS_ROOT, spec)
-    return factory({}, PluginContext(plugins_root=BASELINE_PLUGINS_ROOT), tools)
+    factory = ComponentLoader(BASELINE_TEMPLATE_ROOT).load_factory(spec)
+    return factory(
+        {},
+        ComponentFactoryContext(template_root=BASELINE_TEMPLATE_ROOT),
+        tools,
+    )

@@ -53,7 +53,7 @@ def main() -> None:
 
 
 def discover_rollout_files(paths: list[Path]) -> list[Path]:
-    """Discover Actor rollout JSONL and Intervention branch artifacts."""
+    """Discover Student rollout JSONL and Intervention branch artifacts."""
 
     files: set[Path] = set()
     for path in paths:

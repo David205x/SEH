@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from search_harness.core import BaseHook, HookContext, HookPhase, ToolCall
+from search_harness.framework import BaseHook, HookContext, HookPhase, ToolCall
 
 
 class SearchQueryEditorHook(BaseHook):

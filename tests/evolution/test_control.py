@@ -33,9 +33,9 @@ from search_harness.evolution.control.transitions import (
     transition_completed,
 )
 from search_harness.evolution.control.evaluation import CandidateArtifact
-from search_harness.versioning import (
+from search_harness.evolution.versioning import (
     FileEdit,
-    HarnessVersionStore,
+    TemplateVersionStore,
 )
 
 
@@ -144,7 +144,7 @@ class HappyPathEffects:
             return EffectResult(
                 outcome={
                     "status": "valid",
-                    "iteration_id": "iteration-1",
+                    "candidate_attempt_id": "candidate_attempt-1",
                     "candidate_digest": "candidate-digest",
                     "validation": {"passed": True},
                 },
@@ -201,7 +201,7 @@ class HappyPathEffects:
             return EffectResult(
                 outcome={
                     "version_id": "harness_v0002",
-                    "iteration_id": "iteration-1",
+                    "candidate_attempt_id": "candidate_attempt-1",
                     "candidate_digest": "candidate-digest",
                 }
             )
@@ -216,7 +216,7 @@ class ReviewPipelineRuntime:
 
     async def run(self, **kwargs: Any) -> dict[str, Any]:
         self.calls.append(kwargs)
-        role = kwargs["template_root"].parent.name
+        role = kwargs["role_id"]
         if role == "trial_reviewer":
             output = {
                 "trial_ref": kwargs["role_input"]["trial_ref"],
@@ -243,6 +243,78 @@ class ReviewPipelineRuntime:
             "output": output,
             "usage": {"total_tokens": 5},
         }
+
+
+class LegacyControlArtifactTest(unittest.TestCase):
+    def test_reads_legacy_attempt_names_without_rewriting_file(self) -> None:
+        root = SCRATCH_ROOT / f"legacy-{uuid4().hex}"
+        journal_path = root / "events.jsonl"
+        artifact_store = ControlArtifactStore(root / "artifacts")
+        try:
+            journal_path.parent.mkdir(parents=True, exist_ok=True)
+            legacy_events = [
+                {
+                    "sequence": 1,
+                    "event_type": "run_started",
+                    "payload": {
+                        "run_id": "legacy-run",
+                        "initial_version": "harness_v0001",
+                    },
+                    "created_at": "2026-01-01T00:00:00+00:00",
+                },
+                {
+                    "sequence": 2,
+                    "event_type": "work_scheduled",
+                    "payload": {
+                        "work": {
+                            "work_id": "legacy-work",
+                            "kind": "verify_conformance",
+                            "subject_ref": "legacy-subject",
+                            "payload": {"iteration_id": "iteration_legacy"},
+                        }
+                    },
+                    "created_at": "2026-01-01T00:00:01+00:00",
+                },
+            ]
+            journal_path.write_text(
+                "".join(
+                    json.dumps(event, ensure_ascii=False) + "\n"
+                    for event in legacy_events
+                ),
+                encoding="utf-8",
+            )
+            effect_path = artifact_store.effect_path("legacy-work")
+            effect_path.parent.mkdir(parents=True, exist_ok=True)
+            effect_path.write_text(
+                json.dumps(
+                    {
+                        "outcome": {"iteration_id": "iteration_legacy"},
+                        "artifact_refs": {},
+                        "usage": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            events = ControlJournal(journal_path).read()
+            effect = artifact_store.load_effect("legacy-work")
+
+            work = events[1].payload["work"]
+            self.assertEqual(
+                work["payload"]["candidate_attempt_id"],
+                "iteration_legacy",
+            )
+            self.assertEqual(
+                effect.outcome["candidate_attempt_id"],
+                "iteration_legacy",
+            )
+            self.assertIn(
+                "iteration_id",
+                journal_path.read_text(encoding="utf-8"),
+            )
+        finally:
+            if root.exists():
+                shutil.rmtree(root)
 
 
 class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
@@ -354,7 +426,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 ),
                 "validation_summary": {"passed": True},
                 "candidate_revision": 0,
-                "iteration_id": "iteration-1",
+                "candidate_attempt_id": "candidate_attempt-1",
             },
         )
         review_result = EffectResult(
@@ -380,7 +452,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             result=EffectResult(
                 outcome={
                     "status": "rejected",
-                    "iteration_id": "iteration-1",
+                    "candidate_attempt_id": "candidate_attempt-1",
                 }
             ),
             config=EvolutionControlConfig(),
@@ -420,7 +492,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                     tokens=100,
                 ),
                 "validation_summary": {"passed": True},
-                "iteration_id": "iteration-1",
+                "candidate_attempt_id": "candidate_attempt-1",
             },
         )
         review_result = EffectResult(
@@ -445,7 +517,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             result=EffectResult(
                 outcome={
                     "status": "rejected",
-                    "iteration_id": "iteration-1",
+                    "candidate_attempt_id": "candidate_attempt-1",
                 }
             ),
             config=EvolutionControlConfig(),
@@ -491,7 +563,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 "trial_001": "trial.json",
             },
             payload={
-                "iteration_id": "iteration-1",
+                "candidate_attempt_id": "candidate_attempt-1",
                 "candidate_revision": 0,
             },
         )
@@ -526,7 +598,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             result=EffectResult(
                 outcome={
                     "status": "rejected",
-                    "iteration_id": "iteration-1",
+                    "candidate_attempt_id": "candidate_attempt-1",
                 }
             ),
             config=EvolutionControlConfig(),
@@ -553,7 +625,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 work_id="verify-conformance-pass",
                 kind=WorkKind.VERIFY_CONFORMANCE,
                 subject_ref="generation:1",
-                payload={"iteration_id": "iteration-1"},
+                payload={"candidate_attempt_id": "candidate_attempt-1"},
             ),
             result=EffectResult(
                 outcome={
@@ -622,7 +694,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 ),
                 "candidate_metrics": candidate,
                 "validation_summary": {"passed": True},
-                "iteration_id": "iteration-1",
+                "candidate_attempt_id": "candidate_attempt-1",
             },
         )
         result = EffectResult(
@@ -631,7 +703,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                     "recommendation": "revise",
                     "observed_effect": "All sampled rollouts failed.",
                     "reason": "The Hook accessed an invalid trace field.",
-                    "next_obligation": "Use TraceEvent.event_type.",
+                    "next_obligation": "Use TrajectoryEvent.event_type.",
                     "revision_target": "implementation",
                 }
             }
@@ -792,10 +864,8 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         SCRATCH_ROOT.mkdir(parents=True, exist_ok=True)
         self.run_dir = SCRATCH_ROOT / uuid4().hex
-        self.store = HarnessVersionStore(self.run_dir / "checkpoint")
-        baseline = (
-            Path("harness_templates/actor/baseline/plugins").resolve()
-        )
+        self.store = TemplateVersionStore(self.run_dir / "version_store")
+        baseline = Path("harness_templates/student/baseline").resolve()
         self.store.initialize(baseline)
 
     def tearDown(self) -> None:
@@ -806,13 +876,64 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         if resolved.exists():
             _remove_scratch(resolved)
 
+    async def test_failure_analyst_uses_shared_teacher_assembly(self) -> None:
+        """正式 Controller 路由显式绑定 Role 并使用新 Template Root。"""
+
+        class RecordingRuntime:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, Any]] = []
+
+            async def run(self, **kwargs: Any) -> dict[str, Any]:
+                self.calls.append(kwargs)
+                return {
+                    "output": {
+                        "pattern": "The Student finalizes after one retrieval.",
+                        "applicability": "Evidence requires a second retrieval.",
+                        "caveats": ["Prevalence is not established."],
+                        "evidence_refs": ["example-1/r000", "example-2/r000"],
+                    },
+                    "usage": {"total_tokens": 10},
+                }
+
+        effects = LocalControlEffects(
+            store=self.store,
+            config=LocalControlEffectsConfig(
+                experience_file=self.run_dir / "experience.jsonl",
+                show_progress=False,
+            ),
+        )
+        runtime = RecordingRuntime()
+        effects.role_runner = runtime  # type: ignore[assignment]
+
+        await effects.execute(
+            work=WorkItem(
+                work_id="analyze-shared-assembly",
+                kind=WorkKind.ANALYZE_FAILURE,
+                subject_ref="generation:1",
+                input_refs={
+                    "report_dir": str(self.run_dir / "report"),
+                    "rollout_file": str(self.run_dir / "rollouts.jsonl"),
+                },
+            ),
+            state=ControlState(
+                current_version="harness_v0001",
+                status="running",
+            ),
+            work_dir=self.run_dir / "analysis",
+        )
+
+        call = runtime.calls[0]
+        self.assertEqual(call["template_root"].name, "failure_analyst")
+        self.assertEqual(call["role_id"], "failure_analyst")
+        self.assertEqual(call["role_version"], 1)
+
     async def test_stage_candidate_is_idempotent_by_candidate_digest(
         self,
     ) -> None:
         """验证控制器重试不会为同一 Compiler 候选遗留重复 pending 事务。"""
 
         manifest = json.loads(
-            (self.store.plugins_dir / "harness.json").read_text(
+            (self.store.template_dir / "harness.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -820,19 +941,24 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             {
                 "instance_id": "controller_test_hook",
                 "entrypoint": (
-                    "extensions/controller_test_hook/plugin.py:build"
+                    "components/extensions/controller_test_hook/component.py:build"
                 ),
                 "config": {},
-                "evolution_policy": "mutable",
             }
         )
+        policy = json.loads(
+            (self.store.template_dir / "evolution.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        policy["components"]["controller_test_hook"] = "mutable"
         changed_files = {
-            "extensions/controller_test_hook/plugin.py": (
+            "components/extensions/controller_test_hook/component.py": (
                 "from __future__ import annotations\n"
                 "\n"
                 "from typing import Any\n"
                 "\n"
-                "from search_harness.core import BaseHook, HookContext, "
+                "from search_harness.framework import BaseHook, HookContext, "
                 "HookPhase\n"
                 "\n"
                 "\n"
@@ -856,6 +982,9 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             ),
             "harness.json": (
                 json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+            ),
+            "evolution.json": (
+                json.dumps(policy, ensure_ascii=False, indent=2) + "\n"
             ),
         }
         workspace = self.store.open_workspace("harness_v0001")
@@ -929,17 +1058,197 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(first_result.outcome["status"], "valid")
         self.assertEqual(
-            first_result.outcome["iteration_id"],
-            second_result.outcome["iteration_id"],
+            first_result.outcome["candidate_attempt_id"],
+            second_result.outcome["candidate_attempt_id"],
         )
         pending = [
             item
-            for item in self.store.list_iterations()
+            for item in self.store.list_candidate_attempts()
             if item.status == "pending"
         ]
         self.assertEqual(len(pending), 1)
-        self.store.resume_iteration(pending[0].iteration_id).reject(
+        self.store.resume_candidate_attempt(pending[0].candidate_attempt_id).reject(
             "test cleanup"
+        )
+
+    async def test_candidate_version_effects_promote_and_reject(
+        self,
+    ) -> None:
+        """Candidate Version effects preserve accept and reject transactions."""
+
+        attempt = self.store.start_candidate_attempt(
+            parent_version="harness_v0001"
+        )
+        manifest = json.loads(
+            (self.store.template_dir / "harness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        manifest["extensions"].append(
+            {
+                "instance_id": "promotion_test_hook",
+                "entrypoint": (
+                    "components/extensions/promotion_test_hook/"
+                    "component.py:build"
+                ),
+                "config": {},
+            }
+        )
+        policy = json.loads(
+            (self.store.template_dir / "evolution.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        policy["components"]["promotion_test_hook"] = "mutable"
+        attempt.apply_patch(
+            [
+                FileEdit(
+                    "write",
+                    "components/extensions/promotion_test_hook/component.py",
+                    (
+                        "from search_harness.framework import "
+                        "BaseHook, HookPhase\n\n"
+                        "class PromotionTestHook(BaseHook):\n"
+                        "    def __init__(self):\n"
+                        "        super().__init__(\n"
+                        "            hook_id='promotion_test_hook',\n"
+                        "            phases=frozenset({HookPhase.POST_PROMPT}),\n"
+                        "        )\n\n"
+                        "    def handle(self, context):\n"
+                        "        return None\n\n"
+                        "def build(config, context):\n"
+                        "    return PromotionTestHook()\n"
+                    ),
+                ),
+                FileEdit(
+                    "write",
+                    "harness.json",
+                    json.dumps(manifest, ensure_ascii=False, indent=2)
+                    + "\n",
+                ),
+                FileEdit(
+                    "write",
+                    "evolution.json",
+                    json.dumps(policy, ensure_ascii=False, indent=2)
+                    + "\n",
+                ),
+            ]
+        )
+        validation = attempt.validate(env_file=Path(".env"))
+        self.assertTrue(validation.passed, validation.errors)
+
+        compiler_artifact = self.run_dir / "compiler-promote.json"
+        compiler_artifact.write_text(
+            json.dumps(
+                {
+                    "output": {
+                        "decision": "submitted",
+                        "candidate_ref": "candidate-promote",
+                        "implementation_summary": "Mechanical test edit.",
+                        "unresolved_risk": None,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        effects = LocalControlEffects(
+            store=self.store,
+            config=LocalControlEffectsConfig(
+                experience_file=self.run_dir / "experience.jsonl",
+                show_progress=False,
+            ),
+        )
+        promoted = await effects.execute(
+            work=WorkItem(
+                work_id="promote-candidate",
+                kind=WorkKind.PROMOTE_CANDIDATE,
+                subject_ref="generation:1",
+                input_refs={
+                    "compiler_artifact": str(
+                        compiler_artifact.resolve()
+                    )
+                },
+                payload={
+                    "candidate_attempt_id": attempt.candidate_attempt_id,
+                    "candidate_metrics": {"accuracy": 0.8},
+                    "candidate_review": {
+                        "recommendation": "accept",
+                    },
+                    "promotion_gate": {"passed": True},
+                },
+            ),
+            state=ControlState(
+                current_version="harness_v0001",
+                status="running",
+            ),
+            work_dir=self.run_dir / "promotion",
+        )
+        self.assertEqual(promoted.outcome["version_id"], "harness_v0002")
+        promoted_retry = await effects.execute(
+            work=WorkItem(
+                work_id="promote-candidate-retry",
+                kind=WorkKind.PROMOTE_CANDIDATE,
+                subject_ref="generation:1",
+                payload={"candidate_attempt_id": attempt.candidate_attempt_id},
+                attempt=2,
+            ),
+            state=ControlState(
+                current_version="harness_v0002",
+                status="running",
+            ),
+            work_dir=self.run_dir / "promotion-retry",
+        )
+        self.assertEqual(promoted_retry.outcome, promoted.outcome)
+
+        rejected_attempt = self.store.start_candidate_attempt(
+            parent_version="harness_v0002"
+        )
+        rejected = await effects.execute(
+            work=WorkItem(
+                work_id="reject-candidate",
+                kind=WorkKind.REJECT_CANDIDATE,
+                subject_ref="generation:2",
+                payload={
+                    "candidate_attempt_id": rejected_attempt.candidate_attempt_id,
+                    "candidate_metrics": {"accuracy": 0.7},
+                    "candidate_review": {
+                        "reason": "Candidate regressed.",
+                    },
+                    "promotion_gate": {
+                        "passed": False,
+                        "reasons": ["Accuracy floor failed."],
+                    },
+                },
+            ),
+            state=ControlState(
+                current_version="harness_v0002",
+                status="running",
+            ),
+            work_dir=self.run_dir / "rejection",
+        )
+        self.assertEqual(rejected.outcome["status"], "rejected")
+        rejected_retry = await effects.execute(
+            work=WorkItem(
+                work_id="reject-candidate-retry",
+                kind=WorkKind.REJECT_CANDIDATE,
+                subject_ref="generation:2",
+                payload={"candidate_attempt_id": rejected_attempt.candidate_attempt_id},
+                attempt=2,
+            ),
+            state=ControlState(
+                current_version="harness_v0002",
+                status="running",
+            ),
+            work_dir=self.run_dir / "rejection-retry",
+        )
+        self.assertEqual(rejected_retry.outcome, rejected.outcome)
+        summaries = {
+            item.candidate_attempt_id: item
+            for item in self.store.list_candidate_attempts()
+        }
+        self.assertEqual(
+            summaries[rejected_attempt.candidate_attempt_id].status,
+            "rejected",
         )
 
     async def test_conformance_effect_runs_three_independent_reviews(
@@ -1090,9 +1399,9 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         )
         effects.backend = ReplayBackend()  # type: ignore[assignment]
         runtime = ConformanceRuntime()
-        effects.runtime = runtime  # type: ignore[assignment]
+        effects.role_runner = runtime  # type: ignore[assignment]
         candidate = CandidateArtifact(
-            iteration_id="iteration-1",
+            candidate_attempt_id="candidate_attempt-1",
             parent_version="harness_v0001",
             candidate_digest="digest",
             compiler_log=self.run_dir / "compiler.json",
@@ -1114,7 +1423,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                         "mechanism_file": str(mechanism_file.resolve()),
                         "trial_001": str(trial_file.resolve()),
                     },
-                    payload={"iteration_id": "iteration-1"},
+                    payload={"candidate_attempt_id": "candidate_attempt-1"},
                 ),
                 state=ControlState(
                     current_version="harness_v0001",
@@ -1143,8 +1452,8 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "phase": "post_tool",
                     "activation_condition": "Partial evidence is visible.",
-                    "instruction": "Ask the Actor to inspect the gap.",
-                    "expected_effect": "The Actor searches again.",
+                    "instruction": "Ask the Student to inspect the gap.",
+                    "expected_effect": "The Student searches again.",
                     "max_activations": 1,
                 }
             ],
@@ -1213,7 +1522,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             ),
         )
         runtime = ReviewPipelineRuntime()
-        effects.runtime = runtime  # type: ignore[assignment]
+        effects.role_runner = runtime  # type: ignore[assignment]
         result = await effects.execute(
             work=WorkItem(
                 work_id="review-pipeline",
@@ -1233,7 +1542,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(runtime.calls), 2)
         self.assertEqual(
-            runtime.calls[0]["template_root"].parent.name,
+            runtime.calls[0]["template_root"].name,
             "trial_reviewer",
         )
         self.assertEqual(

@@ -9,4 +9,10 @@ __pycache__/
 demo/
 harness_checkpoints/
 research/
+!search_harness/evolution/research/
+!search_harness/evolution/research/**
+!tests/evolution/research/
+!tests/evolution/research/**
+__pycache__/
+*.py[cod]
 runs/

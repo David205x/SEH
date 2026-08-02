@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "harness_id": "baseline_search",
+  "components": {
+    "search": "fixed",
+    "simple_search": "fixed",
+    "tagged_output": "fixed"
+  }
+}

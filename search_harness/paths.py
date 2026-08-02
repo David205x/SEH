@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 HARNESS_TEMPLATES_ROOT = Path("harness_templates")
-ACTOR_TEMPLATE_ROOT = HARNESS_TEMPLATES_ROOT / "actor" / "baseline" / "plugins"
+STUDENT_TEMPLATE_ROOT = HARNESS_TEMPLATES_ROOT / "student" / "baseline"
 HARNESS_CHECKPOINTS_ROOT = Path("harness_checkpoints")
-DEFAULT_CHECKPOINT_STORE = HARNESS_CHECKPOINTS_ROOT / "search_actor"
+DEFAULT_CHECKPOINT_STORE = HARNESS_CHECKPOINTS_ROOT / "search_student"
 RUNS_ROOT = Path("runs")
 COMPONENT_RUNS_ROOT = RUNS_ROOT / "components"
 

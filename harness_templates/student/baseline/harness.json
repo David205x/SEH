@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "baseline_search",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "components/tools/retriever_search/component.py:build",
+      "config": {}
+    }
+  ],
+  "prompt": {
+    "instance_id": "simple_search",
+    "entrypoint": "components/prompts/simple_search/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "tagged_output",
+    "entrypoint": "components/outputs/tagged_output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

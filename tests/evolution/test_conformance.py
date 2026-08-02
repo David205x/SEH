@@ -8,11 +8,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from search_harness.datasets import DatasetExample
-from search_harness.evolution.conformance import (
+from search_harness.evolution.research.conformance import (
     ConformanceCase,
     aggregate_conformance,
 )
-from search_harness.teacher.contracts import ConformanceFinding
+from search_harness.evolution.research.roles.contracts import ConformanceFinding
 
 
 SCRATCH_ROOT = Path("runs/components/conformance_tests")

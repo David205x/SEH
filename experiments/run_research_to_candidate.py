@@ -23,7 +23,7 @@ from search_harness.evolution.control.effects import (
     LocalControlEffectsConfig,
 )
 from search_harness.evolution.control.journal import ControlJournal
-from search_harness.versioning import HarnessVersionStore
+from search_harness.evolution.versioning import TemplateVersionStore
 
 
 def _parse_args() -> argparse.Namespace:
@@ -34,13 +34,13 @@ def _parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument("--run-dir", type=Path, required=True)
-    parser.add_argument("--checkpoint-store", type=Path, required=True)
+    parser.add_argument("--version-store", type=Path, required=True)
     parser.add_argument("--experience-file", type=Path, required=True)
     parser.add_argument("--incumbent-rollout-file", type=Path, required=True)
     parser.add_argument("--incumbent-report-dir", type=Path, required=True)
     parser.add_argument("--failure-artifact", type=Path, required=True)
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
-    parser.add_argument("--actor-max-steps", type=int, default=30)
+    parser.add_argument("--student-max-steps", type=int, default=30)
     parser.add_argument("--teacher-max-turns", type=int, default=50)
     parser.add_argument("--rollout-workers", type=int, default=6)
     parser.add_argument("--judge-workers", type=int, default=8)
@@ -111,7 +111,7 @@ def _control_config(max_work_items: int) -> EvolutionControlConfig:
 
 async def _run(args: argparse.Namespace) -> None:
     run_dir = args.run_dir.resolve()
-    store = HarnessVersionStore(args.checkpoint_store.resolve())
+    store = TemplateVersionStore(args.version_store.resolve())
     journal = ControlJournal(run_dir / "events.jsonl")
     if run_dir.exists():
         raw_run = _read_object(run_dir / "run.json")
@@ -153,7 +153,7 @@ async def _run(args: argparse.Namespace) -> None:
         effects_config = LocalControlEffectsConfig(
             experience_file=copied["experience_file"],
             env_file=args.env_file.resolve(),
-            actor_max_steps=args.actor_max_steps,
+            student_max_steps=args.student_max_steps,
             teacher_max_turns=args.teacher_max_turns,
             rollout_workers=args.rollout_workers,
             rollouts_per_example=3,
@@ -166,10 +166,11 @@ async def _run(args: argparse.Namespace) -> None:
         _write_object(
             run_dir / "run.json",
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "run_id": run_id,
                 "start_mode": "researcher_from_existing_failure",
-                "checkpoint_store": str(args.checkpoint_store.resolve()),
+                "version_store": str(args.version_store.resolve()),
+                "version_store_id": store.version_store_id,
                 "initial_version": initial_version,
                 "control_config": asdict(control_config),
                 "effects_config": {
@@ -256,8 +257,8 @@ async def _run(args: argparse.Namespace) -> None:
                     run_dir / "ready.json",
                     {
                         "status": "ready_for_evaluation",
-                        "candidate_iteration_id": next_work.payload.get(
-                            "iteration_id"
+                        "candidate_attempt_id": next_work.payload.get(
+                            "candidate_attempt_id"
                         ),
                         "candidate_digest": next_work.payload.get(
                             "candidate_digest"
@@ -270,7 +271,8 @@ async def _run(args: argparse.Namespace) -> None:
                 )
                 print(
                     "[driver] READY_FOR_EVALUATION "
-                    f"iteration={next_work.payload.get('iteration_id')}",
+                    "candidate_attempt_id="
+                    f"{next_work.payload.get('candidate_attempt_id')}",
                     flush=True,
                 )
                 return

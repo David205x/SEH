@@ -7,12 +7,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from search_harness.registry import ComponentSpec, EvolutionPolicy, PluginContext
-from search_harness.registry.plugin_importer import load_factory
+from search_harness.framework.harness import (
+    ComponentDeclaration,
+    ComponentFactoryContext,
+    ComponentLoader,
+)
 
 
-BASELINE_PLUGINS_ROOT = Path(__file__).parents[2] / "harness_templates" / "actor" / "baseline" / "plugins"
-RETRIEVER_ENTRYPOINT = "tools/retriever_search/plugin.py:build"
+BASELINE_TEMPLATE_ROOT = (
+    Path(__file__).parents[2] / "harness_templates" / "student" / "baseline"
+)
+RETRIEVER_ENTRYPOINT = "components/tools/retriever_search/component.py:build"
 
 
 class RetrieverSearchToolTest(TestCase):
@@ -123,16 +128,18 @@ class RetrieverSearchToolTest(TestCase):
 
 
 def _build_retriever(config: dict[str, object], env_file: Path | None = None):
-    spec = ComponentSpec(
+    spec = ComponentDeclaration(
         instance_id="search",
         entrypoint=RETRIEVER_ENTRYPOINT,
         config=dict(config),
-        evolution_policy=EvolutionPolicy.FIXED,
     )
-    factory = load_factory(BASELINE_PLUGINS_ROOT, spec)
+    factory = ComponentLoader(BASELINE_TEMPLATE_ROOT).load_factory(spec)
     return factory(
         dict(config),
-        PluginContext(plugins_root=BASELINE_PLUGINS_ROOT, env_file=env_file),
+        ComponentFactoryContext(
+            template_root=BASELINE_TEMPLATE_ROOT,
+            env_file=env_file,
+        ),
     )
 
 

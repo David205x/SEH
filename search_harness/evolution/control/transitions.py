@@ -371,9 +371,9 @@ class _CompletedTransition:
             raise ValueError(f"unknown candidate stage status: {status}")
         payload.update(
             {
-                "iteration_id": _required_string(
+                "candidate_attempt_id": _required_string(
                     self.result.outcome,
-                    "iteration_id",
+                    "candidate_attempt_id",
                 ),
                 "candidate_digest": _required_string(
                     self.result.outcome,
@@ -552,7 +552,7 @@ class _CompletedTransition:
                 "candidate_",
                 "conformance_",
                 "compiler_artifact",
-                "iteration_",
+                "candidate_attempt_",
             ),
         )
         payload = _context(self.item)

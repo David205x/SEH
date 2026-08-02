@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import re
 
-from search_harness.core import ChatMessage, ModelInput
-from search_harness.models import OpenAICompatibleTextModel
+from search_harness.framework import ChatMessage, ModelInput
+from search_harness.framework.agent import ModelResponse
+from search_harness.integrations.openai_compatible import OpenAICompatibleModel
 
 from .types import EvaluationCase, TaskEvaluator, TeacherJudgment
 
@@ -16,9 +17,9 @@ _SYSTEM_PROMPT = "You are a precise offline evaluator. Follow the requested JSON
 
 
 class TeacherBinaryJudge:
-    """Call a teacher model without exposing actor traces or harness internals."""
+    """Call a teacher model without exposing Student trajectories or harness internals."""
 
-    def __init__(self, model: OpenAICompatibleTextModel, task_evaluator: TaskEvaluator) -> None:
+    def __init__(self, model: OpenAICompatibleModel, task_evaluator: TaskEvaluator) -> None:
         self._model = model
         self._task_evaluator = task_evaluator
 
@@ -33,22 +34,23 @@ class TeacherBinaryJudge:
             ]
         )
         try:
-            raw_output = self._model.generate(model_input)
+            response = self._model.generate(model_input)
         except Exception as exc:
             return TeacherJudgment(score=None, error=f"{type(exc).__name__}: {exc}")
 
+        raw_output = response.raw_output
         score = _parse_score(raw_output)
         if score is None:
             return TeacherJudgment(
                 score=None,
                 raw_output=raw_output,
                 error="teacher output did not contain an exact binary score JSON object",
-                metadata=self._model.get_last_generation_metadata(),
+                metadata=_response_metadata(response),
             )
         return TeacherJudgment(
             score=score,
             raw_output=raw_output,
-            metadata=self._model.get_last_generation_metadata(),
+            metadata=_response_metadata(response),
         )
 
 
@@ -60,3 +62,10 @@ def _parse_score(raw_output: str) -> int | None:
         return int(match.group(1)) if match else None
     score = payload.get("score") if isinstance(payload, dict) else None
     return score if score in {0, 1} else None
+
+
+def _response_metadata(response: ModelResponse) -> dict[str, object]:
+    metadata = dict(response.metadata)
+    if response.usage:
+        metadata["usage"] = dict(response.usage)
+    return metadata

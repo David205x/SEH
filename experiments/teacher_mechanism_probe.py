@@ -10,8 +10,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from search_harness.core import ChatMessage, ModelInput
-from search_harness.models import OpenAICompatibleConfig, OpenAICompatibleTextModel
+from search_harness.framework import ChatMessage, ModelInput
+from search_harness.integrations.openai_compatible import (
+    OpenAICompatibleConfig,
+    OpenAICompatibleModel,
+)
 
 
 SYSTEM = """You are a senior research architect studying an evolvable agent Harness.
@@ -25,7 +28,7 @@ CURRENT_EVIDENCE = """Observed candidate review:
 - The parent scored 60 correct out of 100 records; the candidate scored 64.
 - Paired review found 10 candidate-only-correct, 9 parent-only-correct, and 4
   transitions involving unresolved parent judgments.
-- Mean tool calls rose from 1.08 to 1.19 and total Actor tokens rose about 20.6%.
+- Mean tool calls rose from 1.08 to 1.19 and total Student tokens rose about 20.6%.
 - The only patch replaced a short post-tool reminder with four static search
   guidelines injected as a user message after every tool result.
 - The guidelines increased multi-query behavior but were followed inconsistently.
@@ -69,7 +72,7 @@ conditional evidence-sufficiency or referent-disambiguation judgments.
 
 COMPILER_AUTONOMY = """Compiler contract:
 - Treat proposals as behavioral intent rather than prescribed source code.
-- Prefer the smallest auditable intervention that fits mutable plugin boundaries.
+- Prefer the smallest auditable intervention that fits mutable Component boundaries.
 - It may implement deterministic Hooks, context transformations, or a bounded
   model-assisted Hook. Model-assisted Hooks must declare an allowed profile,
   construct a bounded ModelInput, parse a structured response, and define failure
@@ -92,7 +95,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     output_file = args.output_file or _default_output_file()
     config = OpenAICompatibleConfig.from_env(args.env_file, prefix="TEACHER")
-    model = OpenAICompatibleTextModel(
+    model = OpenAICompatibleModel(
         replace(
             config,
             timeout=args.timeout,
@@ -175,7 +178,7 @@ from the implementation mechanism you cannot assume.
 
 Act as the Compiler. The behavioral proposal is: after a retrieval, intervene only
 when deciding whether evidence is sufficient or a named referent is ambiguous;
-produce compact guidance for the next Actor step. Select and specify the mechanism,
+produce compact guidance for the next Student step. Select and specify the mechanism,
 its context contract, output schema, state transitions, fallback, and trace evidence.
 """,
     )
@@ -226,7 +229,7 @@ paired evaluation that could falsify your design.
                 ChatMessage(
                     role="user",
                     content="""Adversarial review: an extra inference call may cost more than
-the failed prompt and may repeat the Actor's mistake. Identify which parts of your
+the failed prompt and may repeat the Student's mistake. Identify which parts of your
 design must be deterministic, when the semantic call is allowed, the maximum context
 it receives, and a cheaper fallback candidate. Revise the recommendation if the
 model-assisted step is not justified.""",
@@ -295,7 +298,7 @@ mechanism-class failures and preserve room for deterministic solutions.
 
 
 def _run(
-    model: OpenAICompatibleTextModel,
+    model: OpenAICompatibleModel,
     artifact: dict[str, Any],
     output_file: Path,
     experiment_id: str,
@@ -314,7 +317,7 @@ def _run(
 
 
 def _run_dialogue(
-    model: OpenAICompatibleTextModel,
+    model: OpenAICompatibleModel,
     artifact: dict[str, Any],
     output_file: Path,
     experiment_id: str,

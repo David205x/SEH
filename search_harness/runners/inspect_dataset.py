@@ -1,4 +1,4 @@
-"""Inspect dataset loading without running an actor."""
+"""Inspect dataset loading without running a Student Agent."""
 
 from __future__ import annotations
 
@@ -40,7 +40,3 @@ def main() -> None:
     print(f"loaded {len(examples)} example(s)")
     for example in examples:
         print(json.dumps(example.to_dict(), ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()

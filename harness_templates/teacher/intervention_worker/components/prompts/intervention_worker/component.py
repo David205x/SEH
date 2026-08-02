@@ -1,0 +1,19 @@
+"""Intervention Worker Prompt Component。"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from search_harness.framework.tools import ToolSet
+from search_harness.evolution.research.roles.prompting import load_prompt_spec
+from search_harness.evolution.research.roles.spec import TeacherPromptSpec
+
+
+def build(
+    config: dict[str, Any],
+    context: Any,
+    tools: ToolSet,
+) -> TeacherPromptSpec:
+    del context, tools
+    return load_prompt_spec(Path(__file__).resolve().parent, config)

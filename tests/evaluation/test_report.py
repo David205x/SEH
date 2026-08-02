@@ -24,14 +24,14 @@ class _Judge:
 
 
 class EvaluationReportTest(TestCase):
-    def test_default_output_keeps_actor_artifacts_together(self) -> None:
-        """Verifies Actor rollout evaluation remains inside the same component run."""
+    def test_default_output_keeps_student_artifacts_together(self) -> None:
+        """Verifies Student rollout evaluation remains inside the same component run."""
 
-        rollout = Path("runs/components/actor/example/rollout.jsonl")
+        rollout = Path("runs/components/student/example/rollout.jsonl")
 
         self.assertEqual(
             _default_output_dir(rollout),
-            Path("runs/components/actor/example/evaluation"),
+            Path("runs/components/student/example/evaluation"),
         )
 
     def test_default_output_isolates_external_evaluator_runs(self) -> None:
@@ -69,7 +69,7 @@ class EvaluationReportTest(TestCase):
         self.assertEqual(report["metrics"]["answers"]["teacher_judged_count"], 1)
         self.assertEqual(report["rollouts"][1]["score_source"], "teacher")
         self.assertEqual(report["metrics"]["tokens"]["total_tokens"], 14)
-        self.assertEqual(report["metrics"]["tokens"]["actor_total_tokens"], 14)
+        self.assertEqual(report["metrics"]["tokens"]["student_total_tokens"], 14)
 
     def test_reports_hook_model_tokens_separately(self) -> None:
         """Verifies the reports hook model tokens separately contract."""
@@ -99,7 +99,7 @@ class EvaluationReportTest(TestCase):
 
         tokens = report["metrics"]["tokens"]
         self.assertEqual(tokens["total_tokens"], 14)
-        self.assertEqual(tokens["actor_total_tokens"], 7)
+        self.assertEqual(tokens["student_total_tokens"], 7)
         self.assertEqual(tokens["hook_total_tokens"], 7)
 
     def test_writes_summary_and_per_example_records(self) -> None:

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Annotated
 from unittest import TestCase
 
-from search_harness.core import (
+from search_harness.framework import (
     AgentState,
     ChatMessage,
     HookModelRequest,
@@ -15,11 +17,9 @@ from search_harness.core import (
     ToolCall,
     ToolResult,
 )
-from search_harness.core.trace import InMemoryTraceRecorder
-from search_harness.framework.tooling import CallableTool, ToolArg, ToolSet, tool
-from search_harness.registry import ComponentSpec, EvolutionPolicy, PluginContext
-from search_harness.registry.manifest import load_manifest
-from search_harness.registry.plugin_importer import load_factory
+from search_harness.framework import InMemoryTrajectoryRecorder
+from search_harness.framework.harness import ComponentDeclaration, ComponentLoader
+from search_harness.framework.tools import CallableTool, ToolArg, ToolSet, tool
 
 
 TEMPLATES_ROOT = (
@@ -44,8 +44,8 @@ class SearchO1TemplateTest(TestCase):
     def test_manifests_define_the_two_expected_harnesses(self) -> None:
         """Verifies the templates expose agentic search and Search-o1 variants."""
 
-        rag = load_manifest(RAG_ROOT)
-        o1 = load_manifest(O1_ROOT)
+        rag = _load_template_asset(RAG_ROOT)
+        o1 = _load_template_asset(O1_ROOT)
 
         self.assertEqual(rag.harness_id, "search_o1_run_rag_agent")
         self.assertEqual(rag.extensions, ())
@@ -77,7 +77,7 @@ class SearchO1TemplateTest(TestCase):
             self.assertIn("`search`", system)
 
     def test_reason_in_documents_replaces_the_search_observation(self) -> None:
-        """Verifies Search-o1 refines passages before the next Actor turn."""
+        """Verifies Search-o1 refines passages before the next Student turn."""
 
         hook = _build_reason_in_documents_hook()
         backend = _RecordingHookModelBackend(
@@ -94,13 +94,13 @@ class SearchO1TemplateTest(TestCase):
             ChatMessage(role="assistant", content="Earlier reasoning.")
         )
         store = pipeline.begin_run(state)
-        trace = InMemoryTraceRecorder()
+        trace = InMemoryTrajectoryRecorder()
 
         values = pipeline.run_phase(
             HookPhase.POST_TOOL,
             state=state,
             store=store,
-            trace=trace,
+            trajectory=trace,
             stage_values={
                 "tool_call": ToolCall(
                     name="search",
@@ -135,7 +135,7 @@ class HookShowcaseTemplateTest(TestCase):
     def test_showcase_registers_three_ordered_hooks(self) -> None:
         """Verifies monitoring, editing, and injection are separate components."""
 
-        manifest = load_manifest(SHOWCASE_ROOT)
+        manifest = _load_template_asset(SHOWCASE_ROOT)
 
         self.assertEqual(
             [extension.instance_id for extension in manifest.extensions],
@@ -153,19 +153,19 @@ class HookShowcaseTemplateTest(TestCase):
         pipeline = HookPipeline(hooks)
         state = AgentState(question="Find the bridge entity.", max_steps=3)
         store = pipeline.begin_run(state)
-        trace = InMemoryTraceRecorder()
+        trace = InMemoryTrajectoryRecorder()
 
         pipeline.run_phase(
             HookPhase.PRE_PROMPT,
             state=state,
             store=store,
-            trace=trace,
+            trajectory=trace,
         )
         pre_tool = pipeline.run_phase(
             HookPhase.PRE_TOOL,
             state=state,
             store=store,
-            trace=trace,
+            trajectory=trace,
             stage_values={
                 "tool_call": ToolCall(
                     name="search",
@@ -178,7 +178,7 @@ class HookShowcaseTemplateTest(TestCase):
             HookPhase.POST_TOOL,
             state=state,
             store=store,
-            trace=trace,
+            trajectory=trace,
             stage_values={
                 "tool_call": edited_call,
                 "tool_result": ToolResult(
@@ -191,7 +191,7 @@ class HookShowcaseTemplateTest(TestCase):
             HookPhase.POST_PROMPT,
             state=state,
             store=store,
-            trace=trace,
+            trajectory=trace,
             stage_values={
                 "model_input": ModelInput.from_messages(
                     [
@@ -237,16 +237,15 @@ def _search(
 
 
 def _build_prompt(root: Path, entrypoint: str):
-    spec = ComponentSpec(
+    spec = ComponentDeclaration(
         instance_id="prompt",
         entrypoint=entrypoint,
         config={},
-        evolution_policy=EvolutionPolicy.FIXED,
     )
-    factory = load_factory(root, spec)
+    factory = ComponentLoader(root).load_factory(spec)
     return factory(
         {},
-        PluginContext(plugins_root=root),
+        SimpleNamespace(plugins_root=root),
         ToolSet([CallableTool.from_callable(_search)]),
     )
 
@@ -254,23 +253,39 @@ def _build_prompt(root: Path, entrypoint: str):
 def _build_reason_in_documents_hook():
     entrypoint = "extensions/reason_in_documents/plugin.py:build"
     config = {"max_history_chars": 8000, "max_document_chars": 16000}
-    spec = ComponentSpec(
+    spec = ComponentDeclaration(
         instance_id="reason_in_documents",
         entrypoint=entrypoint,
         config=config,
-        evolution_policy=EvolutionPolicy.FIXED,
     )
-    factory = load_factory(O1_ROOT, spec)
-    return factory(config, PluginContext(plugins_root=O1_ROOT))
+    factory = ComponentLoader(O1_ROOT).load_factory(spec)
+    return factory(config, SimpleNamespace(plugins_root=O1_ROOT))
 
 
 def _build_manifest_hooks(root: Path):
-    manifest = load_manifest(root)
+    manifest = _load_template_asset(root)
     hooks = []
     for spec in manifest.extensions:
-        factory = load_factory(root, spec)
-        produced = factory(dict(spec.config), PluginContext(plugins_root=root))
+        factory = ComponentLoader(root).load_factory(spec)
+        produced = factory(dict(spec.config), SimpleNamespace(plugins_root=root))
         hooks.extend(
             [produced] if not isinstance(produced, (tuple, list)) else produced
         )
     return tuple(hooks)
+
+
+def _load_template_asset(root: Path) -> SimpleNamespace:
+    raw = json.loads((root / "harness.json").read_text(encoding="utf-8"))
+    extensions = tuple(
+        ComponentDeclaration(
+            instance_id=item["instance_id"],
+            entrypoint=item["entrypoint"],
+            config=item.get("config", {}),
+            enabled=item.get("enabled", True),
+        )
+        for item in raw.get("extensions", [])
+    )
+    return SimpleNamespace(
+        harness_id=raw["harness_id"],
+        extensions=extensions,
+    )

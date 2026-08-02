@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from search_harness.runtime import get_env_value, read_env_file
+from search_harness._internal import get_env_value, read_env_file
 
 from .hotpot_filtered import FilteredHotpotJsonlLoader
 from .protocols import DatasetLoader

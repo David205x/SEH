@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from search_harness.teacher.compiler_capabilities import (
+from search_harness.evolution.research.mechanism.capabilities import (
     build_compiler_capability_packet,
 )
-from search_harness.teacher.contracts import MechanismSpec
+from search_harness.evolution.research.roles.contracts import MechanismSpec
 
 
 def build_capability_packet(mechanism: dict[str, Any]) -> dict[str, Any]:

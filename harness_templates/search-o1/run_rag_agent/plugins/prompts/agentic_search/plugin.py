@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
-from search_harness.core import AgentState, ChatMessage, ModelInput
-from search_harness.framework.prompting.renderers import render_tagged_tool_section
-from search_harness.framework.tooling import ToolDefinition, ToolSet
+from search_harness.framework import AgentState, ChatMessage, ModelInput
+from search_harness.framework.prompting import render_tagged_tool_section
+from search_harness.framework.tools import ToolDefinition, ToolSet
 
 
 DEFAULT_TEMPLATE = "templates/system.md"

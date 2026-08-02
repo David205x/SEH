@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from search_harness.core import BaseHook, HookContext, HookPhase, StateRef
+from search_harness.framework import BaseHook, HookContext, HookPhase, StateRef
 
 
 PHASE_COUNTS = "extension.lifecycle_monitor.phase_counts"
