@@ -11,10 +11,15 @@ from typing import Any, Sequence
 from uuid import uuid4
 
 from search_harness.datasets import DatasetConfig, create_dataset_loader
+from search_harness._internal import (
+    evolution_control_values,
+    evolution_effect_values,
+    read_runtime_config,
+)
 from search_harness.evolution.experience import materialize_experience_set
 from search_harness.evolution.versioning import TemplateVersionStore
 
-from .controller import EvolutionController
+from .controller import ControlProjection, EvolutionController
 from .domain import ControlOutcome, EvolutionControlConfig
 from .effects import LocalControlEffects, LocalControlEffectsConfig
 
@@ -32,26 +37,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     start.add_argument("--dataset-path", type=Path)
     start.add_argument("--dataset-format")
     start.add_argument("--limit", type=int, default=20)
-    start.add_argument("--max-generations", type=int, default=1)
-    start.add_argument("--max-trials-per-hypothesis", type=int, default=4)
-    start.add_argument("--max-trial-assignments", type=int, default=12)
-    start.add_argument("--max-hypothesis-revisions", type=int, default=2)
-    start.add_argument("--max-mechanism-revisions", type=int, default=2)
-    start.add_argument("--max-compiler-revisions", type=int, default=2)
-    start.add_argument("--max-candidate-revisions", type=int, default=2)
-    start.add_argument("--max-work-retries", type=int, default=1)
-    start.add_argument("--max-work-items", type=int, default=80)
-    start.add_argument("--max-total-tokens", type=int)
-    start.add_argument(
-        "--min-accuracy-delta",
-        type=float,
-        default=-0.02,
-        help=(
-            "Deterministic safety floor for candidate accuracy delta; "
-            "effect acceptance remains the Candidate Reviewer's decision."
-        ),
-    )
-    start.add_argument("--max-total-token-ratio", type=float, default=3.0)
     _add_effect_arguments(start)
 
     resume = commands.add_parser(
@@ -88,6 +73,11 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         raise FileExistsError(
             f"Evolution Controller run already exists: {run_dir}"
         )
+    runtime = read_runtime_config(env_file=args.env_file)
+    control_config = EvolutionControlConfig(
+        **evolution_control_values(runtime)
+    )
+    effect_values = evolution_effect_values(runtime)
     store = TemplateVersionStore(args.version_store)
     versions = store.list_versions()
     if not versions:
@@ -112,31 +102,12 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         experience_file,
         limit=args.limit,
     )
-    control_config = EvolutionControlConfig(
-        max_generations=args.max_generations,
-        max_trials_per_hypothesis=args.max_trials_per_hypothesis,
-        max_trial_assignments=args.max_trial_assignments,
-        max_hypothesis_revisions=args.max_hypothesis_revisions,
-        max_mechanism_revisions=args.max_mechanism_revisions,
-        max_compiler_revisions=args.max_compiler_revisions,
-        max_candidate_revisions=args.max_candidate_revisions,
-        max_work_retries=args.max_work_retries,
-        max_work_items=args.max_work_items,
-        max_total_tokens=args.max_total_tokens,
-        min_accuracy_delta=args.min_accuracy_delta,
-        max_total_token_ratio=args.max_total_token_ratio,
-    )
     effects_config = LocalControlEffectsConfig(
         experience_file=experience_file,
         env_file=args.env_file,
-        student_max_steps=args.student_max_steps,
-        teacher_max_turns=args.teacher_max_turns,
-        rollout_workers=args.rollout_workers,
-        rollouts_per_example=args.rollouts_per_example,
-        judge_workers=args.judge_workers,
+        **effect_values,
         teacher_judge=not args.no_teacher_judge,
         show_progress=not args.no_progress,
-        candidate_error_streak_limit=args.candidate_error_streak_limit,
     )
     payload = {
         "schema_version": 2,
@@ -165,6 +136,10 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
             config=effects_config,
         ),
         config=control_config,
+        projections=_automatic_projections(
+            run_dir=run_dir,
+            env_file=effects_config.env_file,
+        ),
     )
     controller.initialize(
         run_id=payload["run_id"],
@@ -211,26 +186,32 @@ async def _resume(args: argparse.Namespace) -> ControlOutcome:
             config=effects_config,
         ),
         config=control_config,
+        projections=_automatic_projections(
+            run_dir=run_dir,
+            env_file=effects_config.env_file,
+        ),
     )
     return await controller.run()
 
 
+def _automatic_projections(
+    *,
+    run_dir: Path,
+    env_file: Path,
+) -> tuple[ControlProjection, ...]:
+    """Compose non-decision Run projections enabled by runtime config."""
+
+    from evolution_observer.timeline import timeline_projection_from_runtime
+
+    timeline = timeline_projection_from_runtime(
+        run_dir=run_dir,
+        env_file=env_file,
+    )
+    return (timeline,) if timeline is not None else ()
+
+
 def _add_effect_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
-    parser.add_argument("--student-max-steps", type=int, default=20)
-    parser.add_argument("--teacher-max-turns", type=int, default=20)
-    parser.add_argument("--rollout-workers", type=int, default=2)
-    parser.add_argument("--rollouts-per-example", type=int, default=1)
-    parser.add_argument("--judge-workers", type=int, default=8)
-    parser.add_argument(
-        "--candidate-error-streak-limit",
-        type=int,
-        default=3,
-        help=(
-            "Stop candidate rollout after this many consecutive identical "
-            "runner errors; default: 3."
-        ),
-    )
     parser.add_argument("--no-teacher-judge", action="store_true")
     parser.add_argument("--no-progress", action="store_true")
 

@@ -227,6 +227,91 @@ class AgentLoopTest(TestCase):
             messages,
         )
 
+    def test_parser_uses_json_boundary_for_nested_tool_call_tags(self) -> None:
+        """验证工具参数中的闭合标签不会截断外层工具调用。"""
+
+        replacement = (
+            "Keep these Student action formats exactly:\n"
+            '<tool_call>{"name":"search","arguments":{}}</tool_call>\n'
+            "<final_answer>...</final_answer>"
+        )
+        payload = {
+            "name": "apply_context_patch",
+            "arguments": {
+                "operations": [
+                    {
+                        "operation": "replace",
+                        "block_id": 1,
+                        "content": replacement,
+                    }
+                ]
+            },
+        }
+        raw_output = f"<tool_call>{json.dumps(payload)}</tool_call>"
+
+        parsed = TaggedOutputParser().parse(raw_output)
+
+        self.assertIs(parsed.kind, ParsedOutputKind.TOOL_CALL)
+        self.assertEqual(parsed.tool_call.name, "apply_context_patch")
+        self.assertEqual(
+            parsed.tool_call.arguments["operations"][0]["content"],
+            replacement,
+        )
+
+    def test_parser_ignores_action_tag_literals_before_tool_json(self) -> None:
+        """验证分析文字提及 action 标签时仍定位后续真实工具块。"""
+
+        replacement = (
+            "Keep <tool_call>{...}</tool_call> and "
+            "<final_answer>...</final_answer>."
+        )
+        payload = {
+            "name": "apply_context_patch",
+            "arguments": {
+                "operations": [
+                    {
+                        "operation": "replace",
+                        "block_id": 1,
+                        "content": replacement,
+                    }
+                ]
+            },
+        }
+        raw_output = (
+            "Preserve the exact `<tool_call>`/`<final_answer>` formats.\n"
+            f"<tool_call>{json.dumps(payload)}</tool_call>"
+        )
+
+        parsed = TaggedOutputParser().parse(raw_output)
+
+        self.assertIs(parsed.kind, ParsedOutputKind.TOOL_CALL)
+        self.assertEqual(
+            parsed.tool_call.arguments["operations"][0]["content"],
+            replacement,
+        )
+
+    def test_parser_rejects_content_between_tool_json_and_closing_tag(self) -> None:
+        """验证 JSON 对象结束后、闭合标签前不允许额外内容。"""
+
+        parsed = TaggedOutputParser().parse(
+            '<tool_call>{"name":"search","arguments":{}} trailing'
+            "</tool_call>"
+        )
+
+        self.assertIs(parsed.kind, ParsedOutputKind.INVALID)
+        self.assertIn("not valid JSON", parsed.error)
+
+    def test_parser_still_rejects_multiple_top_level_tool_calls(self) -> None:
+        """验证 JSON 感知边界不会吞并后续顶层工具调用。"""
+
+        parsed = TaggedOutputParser().parse(
+            '<tool_call>{"name":"search","arguments":{}}</tool_call>'
+            '<tool_call>{"name":"search","arguments":{}}</tool_call>'
+        )
+
+        self.assertIs(parsed.kind, ParsedOutputKind.INVALID)
+        self.assertEqual(parsed.error, "output contains multiple tool_call blocks")
+
     def test_agent_loop_stops_when_max_steps_reached(self) -> None:
         """Verifies the agent loop stops when max steps reached contract."""
         model = SequentialModel(

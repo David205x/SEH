@@ -130,7 +130,7 @@ class CandidateWorkspaceTest(TestCase):
             with self.assertRaisesRegex(RuntimeError, "abort"):
                 with workspace.transaction():
                     workspace.write_text(
-                        "components/extensions/example/component.py",
+                        "extensions/example/component.py",
                         "value = 1\n",
                     )
                     workspace.write_text("harness.json", "{}")
@@ -166,18 +166,18 @@ class CandidateWorkspaceTest(TestCase):
                     (
                         FileEdit(
                             "write",
-                            "components/extensions/new/helper.py",
+                            "extensions/new/helper.py",
                             "VALUE = 1\n",
                         ),
                         FileEdit(
                             "delete",
-                            "components/extensions/missing/component.py",
+                            "extensions/missing/component.py",
                         ),
                     )
                 )
 
             self.assertFalse(
-                workspace.exists("components/extensions/new/helper.py")
+                workspace.exists("extensions/new/helper.py")
             )
             self.assertEqual(workspace.changed_paths, ())
 
@@ -250,11 +250,11 @@ class TemplateVersionStoreTest(TestCase):
         self.assertEqual(second.parent_version, first.version_id)
         self.assertEqual(dict(second.evaluation), {"accuracy": 0.5})
         self.assertNotIn(
-            Path("components/extensions/added_hook/component.py").as_posix(),
+            Path("extensions/added_hook/component.py").as_posix(),
             {str(path) for path in old_snapshot.files},
         )
         self.assertIn(
-            "components/extensions/added_hook/component.py",
+            "extensions/added_hook/component.py",
             {str(path) for path in new_snapshot.files},
         )
         self.assertEqual(
@@ -275,7 +275,7 @@ class TemplateVersionStoreTest(TestCase):
 
             fixed_edit = store.open_workspace(first.version_id)
             fixed_edit.write_text(
-                "components/prompts/base/component.py",
+                "prompt/component.py",
                 "broken = True\n",
             )
             fixed_report = store.validate(fixed_edit)
@@ -286,14 +286,14 @@ class TemplateVersionStoreTest(TestCase):
                 {
                     "instance_id": "forbidden",
                     "entrypoint": (
-                        "components/extensions/forbidden/component.py:build"
+                        "extensions/forbidden/component.py:build"
                     ),
                     "enabled": False,
                     "config": {},
                 }
             )
             new_fixed.write_text(
-                "components/extensions/forbidden/component.py",
+                "extensions/forbidden/component.py",
                 "def build(config, context):\n    return ()\n",
             )
             new_fixed.write_text("harness.json", json.dumps(manifest))
@@ -490,7 +490,7 @@ class CandidateAttemptJournalTest(TestCase):
                 (
                     FileEdit(
                         "write",
-                        "components/extensions/legacy-note.txt",
+                        "extensions/legacy-note.txt",
                         "legacy\n",
                     ),
                 )
@@ -507,7 +507,7 @@ class CandidateAttemptJournalTest(TestCase):
         self.assertEqual(current_event["candidate_attempt_id"], legacy_id)
         self.assertNotIn("iteration_id", current_event)
         self.assertTrue(
-            resumed.exists("components/extensions/legacy-note.txt")
+            resumed.exists("extensions/legacy-note.txt")
         )
 
     def test_reads_legacy_version_record_attempt_id(self) -> None:
@@ -552,7 +552,7 @@ class CandidateAttemptJournalTest(TestCase):
             self.assertIn(
                 "AddedHook",
                 resumed.read_text(
-                    "components/extensions/added_hook/hook_impl.py"
+                    "extensions/added_hook/hook_impl.py"
                 ),
             )
             report = resumed.validate()
@@ -576,7 +576,7 @@ class CandidateAttemptJournalTest(TestCase):
                 (
                     FileEdit(
                         "write",
-                        "components/extensions/note.txt",
+                        "extensions/note.txt",
                         "candidate\n",
                     ),
                 )
@@ -610,7 +610,7 @@ class CandidateAttemptJournalTest(TestCase):
                         (
                             FileEdit(
                                 "write",
-                                "components/extensions/note.txt",
+                                "extensions/note.txt",
                                 "candidate\n",
                             ),
                         )
@@ -619,16 +619,16 @@ class CandidateAttemptJournalTest(TestCase):
             summary = store.list_candidate_attempts()[0]
 
         self.assertEqual(attempt.digest, parent_digest)
-        self.assertFalse(attempt.exists("components/extensions/note.txt"))
+        self.assertFalse(attempt.exists("extensions/note.txt"))
         self.assertEqual(summary.patch_count, 0)
 
 
 def _make_template_root(base: Path) -> Path:
     root = base / "template-source"
-    prompt_dir = root / "components" / "prompts" / "base"
+    prompt_dir = root / "prompt"
     prompt_dir.mkdir(parents=True)
     (prompt_dir / "component.py").write_text(PROMPT_COMPONENT, encoding="utf-8")
-    output_dir = root / "components" / "outputs" / "tagged"
+    output_dir = root / "output"
     output_dir.mkdir(parents=True)
     (output_dir / "component.py").write_text(OUTPUT_COMPONENT, encoding="utf-8")
     manifest = {
@@ -637,12 +637,12 @@ def _make_template_root(base: Path) -> Path:
         "tools": [],
         "prompt": {
             "instance_id": "base_prompt",
-            "entrypoint": "components/prompts/base/component.py:build",
+            "entrypoint": "prompt/component.py:build",
             "config": {},
         },
         "output": {
             "instance_id": "tagged_output",
-            "entrypoint": "components/outputs/tagged/component.py:build",
+            "entrypoint": "output/component.py:build",
             "config": {},
         },
         "extensions": [],

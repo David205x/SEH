@@ -106,6 +106,55 @@ class OpenAICompatibleModelTest(TestCase):
             config = OpenAICompatibleConfig.from_env(env_file=env_file)
 
         self.assertFalse(config.ollama_think)
+        self.assertIsNone(config.thinking_mode)
+
+    def test_maps_deepseek_thinking_mode_from_env_file(self) -> None:
+        """DeepSeek thinking mode becomes an optional request extension."""
+
+        with TemporaryDirectory() as tmpdir:
+            env_file = Path(tmpdir) / ".env"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "TEACHER_BASE_URL=https://api.deepseek.com",
+                        "TEACHER_MODEL_ID=teacher-test",
+                        "TEACHER_THINKING_MODE=disabled",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = OpenAICompatibleConfig.from_env(
+                env_file=env_file,
+                prefix="TEACHER",
+            )
+
+        self.assertEqual(config.thinking_mode, "disabled")
+        self.assertIsNone(config.ollama_think)
+
+    def test_does_not_send_thinking_extension_to_unknown_provider(self) -> None:
+        """Unknown OpenAI-compatible endpoints receive only standard fields."""
+
+        with TemporaryDirectory() as tmpdir:
+            env_file = Path(tmpdir) / ".env"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "TEACHER_BASE_URL=https://provider.example/v1",
+                        "TEACHER_MODEL_ID=teacher-test",
+                        "TEACHER_THINKING_MODE=disabled",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = OpenAICompatibleConfig.from_env(
+                env_file=env_file,
+                prefix="TEACHER",
+            )
+
+        self.assertIsNone(config.thinking_mode)
+        self.assertIsNone(config.ollama_think)
 
     def test_posts_chat_completion_request_and_returns_text(self) -> None:
         """Verifies the posts chat completion request and returns text contract."""

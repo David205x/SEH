@@ -46,11 +46,14 @@ from search_harness.evolution.versioning import (
 
 from ..mechanism.review import review_compiler_candidate
 from ..roles.contracts import InterventionWorkerInput
-from ..mechanism.hook_api import list_hook_api_symbols, query_hook_api
+from ..mechanism.hook_api import (
+    list_hook_api_symbols,
+    query_hook_api_reference,
+)
 from ..mechanism.hook_authoring import get_hook_authoring_guide
 
 
-COMPILER_EXACT_QUERY_BUDGET = 4
+COMPILER_EXACT_QUERY_BUDGET = 12
 
 
 class InterventionResourceConfig(BaseModel):
@@ -71,6 +74,7 @@ class CompilerResourceConfig(BaseModel):
 
     parent_template_root: Path
     env_file: Path = Path(".env")
+    continuation_candidate_file: Path | None = None
 
 
 class CandidateReviewResourceConfig(BaseModel):
@@ -297,7 +301,10 @@ class CompilerWorkspaceStore:
     last_validation: dict[str, Any] | None = None
     submitted: dict[str, dict[str, Any]] = field(default_factory=dict)
     packet_symbols: frozenset[str] | None = None
+    packet_topics: frozenset[str] | None = None
     queried_symbols: set[str] = field(default_factory=set)
+    prior_queried_symbols: frozenset[str] = frozenset()
+    continuation: dict[str, Any] | None = None
 
     @classmethod
     def load(cls, config: CompilerResourceConfig) -> "CompilerWorkspaceStore":
@@ -305,7 +312,63 @@ class CompilerWorkspaceStore:
             config.parent_template_root,
             version_id="parent",
         )
-        return cls(config=config, workspace=CandidateWorkspace(parent))
+        workspace = CandidateWorkspace(parent)
+        continuation = None
+        prior_queried_symbols: frozenset[str] = frozenset()
+        if config.continuation_candidate_file is not None:
+            candidate = _read_json(config.continuation_candidate_file)
+            parent_digest = candidate.get("parent_digest")
+            if parent_digest != parent.digest:
+                raise ValueError(
+                    "Compiler continuation parent digest does not match "
+                    "the current Accepted Template"
+                )
+            changed_files = candidate.get("changed_files")
+            if not isinstance(changed_files, dict) or not changed_files:
+                raise ValueError(
+                    "Compiler continuation must contain changed_files"
+                )
+            with workspace.transaction():
+                for path, content in changed_files.items():
+                    if not isinstance(path, str):
+                        raise TypeError(
+                            "Compiler continuation paths must be strings"
+                        )
+                    if content is None:
+                        workspace.delete(path)
+                    elif isinstance(content, str):
+                        workspace.write_text(path, content)
+                    else:
+                        raise TypeError(
+                            "Compiler continuation file content must be a "
+                            "string or null"
+                        )
+            candidate_digest = candidate.get("candidate_digest")
+            if candidate_digest != workspace.digest:
+                raise ValueError(
+                    "Compiler continuation candidate digest does not match "
+                    "its materialized workspace"
+                )
+            queried = candidate.get("queried_symbols", [])
+            if not isinstance(queried, list) or not all(
+                isinstance(item, str) and item.strip() for item in queried
+            ):
+                raise TypeError(
+                    "Compiler continuation queried_symbols must be strings"
+                )
+            prior_queried_symbols = frozenset(queried)
+            continuation = {
+                "candidate_digest": workspace.digest,
+                "changed_paths": [str(path) for path in workspace.changed_paths],
+                "summary": candidate.get("summary"),
+                "queried_symbols": sorted(prior_queried_symbols),
+            }
+        return cls(
+            config=config,
+            workspace=workspace,
+            prior_queried_symbols=prior_queried_symbols,
+            continuation=continuation,
+        )
 
     def initial_context(self) -> dict[str, Any]:
         manifest = json.loads(self.workspace.read_text("harness.json"))
@@ -316,9 +379,14 @@ class CompilerWorkspaceStore:
             "harness_id": manifest.get("harness_id"),
             "file_count": len(self.workspace.parent.files),
             "fixed_components": _fixed_component_ids(manifest, policy),
+            "continuation": self.continuation,
             "exact_api_query": {
                 "unique_symbol_budget": COMPILER_EXACT_QUERY_BUDGET,
-                "scope": "symbols absent from capability_packet only",
+                "scope": (
+                    "Runtime Input Topics, exact public symbols, and unknown-query "
+                    "suggestions; only successfully resolved symbols absent from the "
+                    "capability_packet consume budget"
+                ),
             },
         }
 
@@ -329,6 +397,12 @@ class CompilerWorkspaceStore:
         if not isinstance(contracts, list):
             raise TypeError("Compiler capability packet contracts must be an array")
         self.packet_symbols = frozenset(_contract_symbols(contracts))
+        documents = packet.get("runtime_input_documents", [])
+        self.packet_topics = frozenset(
+            str(item["runtime_input_id"])
+            for item in documents
+            if isinstance(item, dict) and item.get("runtime_input_id")
+        )
         self.queried_symbols.clear()
 
     def list_files(self) -> dict[str, Any]:
@@ -363,7 +437,7 @@ class CompilerWorkspaceStore:
         )
 
     def query_hook_api(self, symbol: str) -> dict[str, Any]:
-        """在 packet 缺口和唯一符号预算内查询一个公开契约。"""
+        """查询 Runtime Input Topic 或公开 symbol，并为未知项返回建议。"""
 
         if self.packet_symbols is None:
             raise RuntimeError(
@@ -371,32 +445,59 @@ class CompilerWorkspaceStore:
             )
         normalized = symbol.strip()
         if not normalized:
-            return _query_rejection("", "empty_symbol")
-        if normalized in self.packet_symbols:
-            return _query_rejection(normalized, "already_in_packet")
-        if normalized in self.queried_symbols:
-            return _query_rejection(normalized, "already_queried")
-        if len(self.queried_symbols) >= COMPILER_EXACT_QUERY_BUDGET:
-            return _query_rejection(normalized, "query_budget_exhausted")
-
-        self.queried_symbols.add(normalized)
-        remaining = COMPILER_EXACT_QUERY_BUDGET - len(
-            self.queried_symbols
-        )
-        try:
-            contract = query_hook_api(normalized)
-        except ValueError:
+            return {"status": "rejected", "reason": "empty_query"}
+        result = query_hook_api_reference(normalized)
+        if result.get("status") != "resolved":
             return {
-                "status": "rejected",
-                "reason": "unknown_symbol",
-                "symbol": normalized,
-                "remaining_unique_queries": remaining,
+                **result,
+                "remaining_unique_queries": (
+                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                ),
             }
+        if result.get("query_kind") == "runtime_input_topic":
+            return {
+                **result,
+                "source": (
+                    "capability_packet"
+                    if self.packet_topics is not None
+                    and normalized in self.packet_topics
+                    else "runtime_input_registry"
+                ),
+                "remaining_unique_queries": (
+                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                ),
+            }
+        if normalized in self.packet_symbols:
+            return {
+                **result,
+                "source": "capability_packet",
+                "remaining_unique_queries": (
+                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                ),
+            }
+        if normalized in self.prior_queried_symbols:
+            return {
+                **result,
+                "source": "continuation_query",
+                "remaining_unique_queries": (
+                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                ),
+            }
+        if normalized not in self.queried_symbols:
+            if len(self.queried_symbols) >= COMPILER_EXACT_QUERY_BUDGET:
+                return {
+                    "status": "rejected",
+                    "reason": "query_budget_exhausted",
+                    "query": normalized,
+                    "remaining_unique_queries": 0,
+                }
+            self.queried_symbols.add(normalized)
         return {
-            "status": "resolved",
-            "symbol": normalized,
-            "remaining_unique_queries": remaining,
-            "contract": contract,
+            **result,
+            "source": "exact_query",
+            "remaining_unique_queries": (
+                COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+            ),
         }
 
     def write_file(self, *, path: str, content: str) -> dict[str, Any]:
@@ -484,6 +585,9 @@ class CompilerWorkspaceStore:
                 )
                 for path in self.workspace.changed_paths
             },
+            "queried_symbols": sorted(
+                self.prior_queried_symbols | self.queried_symbols
+            ),
         }
         return {
             "candidate_ref": candidate_ref,

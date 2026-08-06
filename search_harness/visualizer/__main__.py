@@ -15,11 +15,11 @@ from .server import serve
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--actor-runs-dir",
-        dest="actor_runs_dir",
+        "--student-runs-dir",
+        dest="student_runs_dir",
         type=Path,
-        default=COMPONENT_RUNS_ROOT / "actor",
-        help="Directory containing standalone Actor runs.",
+        default=COMPONENT_RUNS_ROOT / "student",
+        help="Directory containing standalone Student runs.",
     )
     parser.add_argument(
         "--evaluation-runs-dir",
@@ -48,7 +48,7 @@ def main() -> None:
     serve(
         host=args.host,
         port=args.port,
-        actor_runs_dir=args.actor_runs_dir,
+        student_runs_dir=args.student_runs_dir,
         evaluation_runs_dir=args.evaluation_runs_dir,
         checkpoint_store=args.checkpoint_store,
         env_file=args.env_file,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from pathlib import Path
 from typing import Protocol
 
@@ -35,6 +37,13 @@ class ControlEffects(Protocol):
     ) -> EffectResult: ...
 
 
+class ControlProjection(Protocol):
+    """A derived Run view updated after durable Journal commits."""
+
+    def update(self) -> None:
+        """Reconcile the projection with the committed Control Journal."""
+
+
 class EvolutionController:
     """Replay an event journal, execute one agenda item, and persist transitions."""
 
@@ -44,10 +53,12 @@ class EvolutionController:
         run_dir: Path,
         effects: ControlEffects,
         config: EvolutionControlConfig,
+        projections: tuple[ControlProjection, ...] = (),
     ) -> None:
         self.run_dir = run_dir.resolve()
         self.effects = effects
         self.config = config
+        self.projections = tuple(projections)
         self.journal = ControlJournal(self.run_dir / "events.jsonl")
         self.artifacts = ControlArtifactStore(self.run_dir / "artifacts")
 
@@ -64,7 +75,7 @@ class EvolutionController:
                 f"Evolution Controller run already exists: {self.run_dir}"
             )
         first = initial_work(run_id=run_id, version_id=initial_version)
-        self.journal.append_many(
+        self._append_many(
             [
                 (
                     "run_started",
@@ -80,6 +91,7 @@ class EvolutionController:
     async def run(self) -> ControlOutcome:
         """Execute or resume the agenda until completion, pause, or error budget."""
 
+        self._update_projections()
         state = self._state()
         if state.status == "new":
             raise RuntimeError("Evolution Controller run is not initialized")
@@ -108,7 +120,7 @@ class EvolutionController:
                         )
                     )
             entries.append(("run_resumed", {}))
-            self.journal.append_many(entries)
+            self._append_many(entries)
 
         self._recover_interrupted_work()
         while True:
@@ -119,12 +131,12 @@ class EvolutionController:
 
             reason = stop_reason(state, self.config)
             if reason is not None:
-                self.journal.append("run_paused", {"reason": reason})
+                self._append("run_paused", {"reason": reason})
                 return self._outcome(self._state())
 
             queued = state.queued
             if not queued:
-                self.journal.append(
+                self._append(
                     "run_completed",
                     {"reason": "Controller agenda drained."},
                 )
@@ -132,7 +144,7 @@ class EvolutionController:
 
             record = queued[0]
             work = record.item
-            self.journal.append("work_started", {"work_id": work.work_id})
+            self._append("work_started", {"work_id": work.work_id})
             try:
                 result = await self.effects.execute(
                     work=work,
@@ -144,15 +156,27 @@ class EvolutionController:
                     result,
                 )
             except Exception as exc:
-                self.journal.append(
+                failure_ref = _persist_role_failure(
+                    self.artifacts.work_dir(work.work_id),
+                    exc,
+                )
+                failure_payload: dict[str, object] = {}
+                if failure_ref is not None:
+                    failure_payload["failure_artifact"] = str(failure_ref)
+                failure_stage = _exception_failure_stage(exc)
+                if failure_stage is not None:
+                    failure_payload["failure_stage"] = failure_stage
+                self._append(
                     "work_failed",
                     {
                         "work_id": work.work_id,
                         "error": f"{type(exc).__name__}: {exc}",
+                        "total_tokens": _exception_total_tokens(exc),
+                        **failure_payload,
                     },
                 )
                 continue
-            self.journal.append(
+            self._append(
                 "work_completed",
                 {
                     "work_id": work.work_id,
@@ -167,7 +191,7 @@ class EvolutionController:
             work_id = record.item.work_id
             if self.artifacts.has_effect(work_id):
                 result = self.artifacts.load_effect(work_id)
-                self.journal.append(
+                self._append(
                     "work_completed",
                     {
                         "work_id": work_id,
@@ -178,7 +202,7 @@ class EvolutionController:
                     },
                 )
             else:
-                self.journal.append(
+                self._append(
                     "work_failed",
                     {
                         "work_id": work_id,
@@ -257,7 +281,30 @@ class EvolutionController:
                     {"work_id": item.work_id},
                 )
             )
-            self.journal.append_many(entries)
+            self._append_many(entries)
+
+    def _append(self, event_type: str, payload: dict[str, object]) -> None:
+        self.journal.append(event_type, payload)
+        self._update_projections()
+
+    def _append_many(
+        self,
+        entries: list[tuple[str, dict[str, object]]],
+    ) -> None:
+        self.journal.append_many(entries)
+        self._update_projections()
+
+    def _update_projections(self) -> None:
+        for projection in self.projections:
+            try:
+                projection.update()
+            except (OSError, RuntimeError, TypeError, ValueError) as exc:
+                logging.getLogger(__name__).warning(
+                    "Evolution Run projection %s update failed: %s: %s",
+                    type(projection).__name__,
+                    type(exc).__name__,
+                    exc,
+                )
 
     def _state(self) -> ControlState:
         return project_events(self.journal.read())
@@ -275,3 +322,40 @@ class EvolutionController:
             completed_work_count=state.completed_work_count,
             total_tokens=state.total_tokens,
         )
+
+
+def _persist_role_failure(work_dir: Path, exc: Exception) -> Path | None:
+    artifact = getattr(exc, "failure_artifact", None)
+    if not isinstance(artifact, dict):
+        return None
+    role = artifact.get("role")
+    role_id = role.get("id") if isinstance(role, dict) else None
+    safe_role_id = role_id if isinstance(role_id, str) and role_id else "teacher"
+    path = work_dir / f"{safe_role_id}.failed.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(artifact, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path.resolve()
+
+
+def _exception_total_tokens(exc: Exception) -> int:
+    artifact = getattr(exc, "failure_artifact", None)
+    if not isinstance(artifact, dict):
+        return 0
+    usage = artifact.get("usage")
+    if not isinstance(usage, dict):
+        return 0
+    value = usage.get("total_tokens", 0)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        return 0
+    return value
+
+
+def _exception_failure_stage(exc: Exception) -> str | None:
+    artifact = getattr(exc, "failure_artifact", None)
+    if not isinstance(artifact, dict):
+        return None
+    stage = artifact.get("stage")
+    return stage if isinstance(stage, str) and stage else None

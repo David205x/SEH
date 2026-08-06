@@ -15,11 +15,15 @@ from openai.types.chat.chat_completion_message_function_tool_call import (
     ChatCompletionMessageFunctionToolCall,
     Function,
 )
+from pydantic import ValidationError
 
 from search_harness.integrations.openai_compatible import OpenAICompatibleConfig
 from search_harness.evolution.research.roles.native_chat_runner import (
     NativeChatRoleRunner,
+    TeacherRoleRunFailed,
+    _structured_validation_feedback,
 )
+from search_harness.evolution.research.roles.contracts import EvidenceReview
 from search_harness.evolution.research.resources.base import TeacherResourceConfig
 
 
@@ -85,6 +89,81 @@ class ReplayClient:
 
 
 class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
+    def test_length_feedback_reports_field_and_actual_limit(self) -> None:
+        arguments = {
+            "decision": "continue",
+            "phase_findings": [
+                {
+                    "phase": "post_tool",
+                    "status": "inconclusive",
+                    "assessment": "x" * 501,
+                }
+            ],
+            "assessment": "More evidence is required.",
+            "key_risk": None,
+            "next_obligation": "Run one independent trial.",
+        }
+        try:
+            EvidenceReview.model_validate(arguments)
+        except ValidationError as exc:
+            feedback, fields = _structured_validation_feedback(exc, arguments)
+        else:
+            self.fail("overlong Evidence Review unexpectedly validated")
+
+        self.assertEqual(
+            fields,
+            ["phase_findings.0.assessment:string_too_long"],
+        )
+        self.assertIn("actual_length=501", feedback)
+        self.assertIn("maximum_length=500", feedback)
+
+    async def test_exhausted_role_exposes_complete_failure_artifact(self) -> None:
+        client = ReplayClient(
+            [ChatCompletionMessage(role="assistant", content="not submitted")]
+        )
+        config = OpenAICompatibleConfig(
+            base_url="https://teacher.invalid",
+            model_id="teacher-test",
+            max_tokens=512,
+        )
+
+        with self.assertRaises(TeacherRoleRunFailed) as raised:
+            await NativeChatRoleRunner(
+                max_turns=1,
+                client=client,
+                config=config,
+            ).run(
+                template_root=REVIEWER_TEMPLATE,
+                role_id="evidence_reviewer",
+                role_version=1,
+                role_input={
+                    "hypothesis": _hypothesis(
+                        intervention="Append one bounded instruction."
+                    ),
+                    "aggregate_observations": {"trial_count": 0},
+                    "trial_reviews": [
+                        {
+                            "trial_ref": "trial_001",
+                            "assessment": "The trial remains inconclusive.",
+                        }
+                    ],
+                    "budget": _review_budget(trials_used=1),
+                    "prior_obligation": None,
+                },
+                resource_config=TeacherResourceConfig(),
+            )
+
+        artifact = raised.exception.failure_artifact
+        self.assertEqual(artifact["status"], "failed")
+        self.assertEqual(artifact["role"]["id"], "evidence_reviewer")
+        self.assertEqual(artifact["error"]["turn_count"], 1)
+        self.assertEqual(
+            artifact["role_budget"],
+            {"max_tokens": 512, "max_turns": 1},
+        )
+        self.assertEqual(artifact["usage"]["requests"], 1)
+        self.assertEqual(artifact["transcript"][-1]["role"], "user")
+
     async def test_trial_reviewer_must_read_its_single_full_trial(
         self,
     ) -> None:
@@ -226,6 +305,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                         "assessment": "The effect needs another case.",
                     }
                 ],
+                "budget": _review_budget(trials_used=1),
                 "prior_obligation": None,
             },
             resource_config=TeacherResourceConfig(),
@@ -239,6 +319,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                 }
             ],
             aggregate_observations={"trial_count": 2},
+            budget=_review_budget(trials_used=2),
         )
 
         self.assertEqual(first["role_session"]["revision"], 1)
@@ -254,6 +335,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             ],
             ["trial_001", "trial_002"],
         )
+        self.assertEqual(second["input"]["budget"]["trials_used"], 2)
         continuation_request = client.completions.requests[1]
         continuation_messages = continuation_request["messages"]
         self.assertEqual(
@@ -415,6 +497,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     "phase": "post_tool",
                     "trigger_condition": "A required relation is unsupported.",
                     "decision_inputs": ["question", "latest tool result"],
+                    "runtime_inputs": ["task", "tool", "persistent_state"],
                     "decision_evaluator": "deterministic",
                     "action": "Append a generic evidence-gap instruction.",
                     "activation_budget": 1,
@@ -598,6 +681,7 @@ def _distiller_input() -> dict[str, Any]:
             "next_obligation": None,
         },
         "evidence_refs": ["trial_001"],
+        "budget": _review_budget(trials_used=1),
         "capability_constraints": ["Student runtime cannot call Teacher."],
     }
 
@@ -641,6 +725,21 @@ def _researcher_input() -> dict[str, Any]:
             "caveats": ["Corpus coverage may vary."],
             "evidence_refs": ["example_1/r000", "example_2/r000"],
         }
+    }
+
+
+def _review_budget(*, trials_used: int) -> dict[str, Any]:
+    max_trials = 4
+    max_assignments = 12
+    assignments_used = trials_used
+    return {
+        "max_trials_per_hypothesis": max_trials,
+        "trials_used": trials_used,
+        "trials_remaining": max_trials - trials_used,
+        "max_trial_assignments": max_assignments,
+        "assignments_used": assignments_used,
+        "assignments_remaining": max_assignments - assignments_used,
+        "conclusion_required": trials_used == max_trials,
     }
 
 

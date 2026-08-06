@@ -1,0 +1,24 @@
+{
+  "outcome": {
+    "metrics": {
+      "answers": {
+        "scored_count": 2,
+        "static_pass_count": 1,
+        "accuracy": 0.75,
+        "mean_answer_consistency": 0.8
+      },
+      "tokens": {
+        "student_total_tokens": 100,
+        "hook_total_tokens": 20
+      },
+      "execution": {
+        "record_count": 2,
+        "mean_model_calls": 1.5,
+        "mean_steps": 2.5
+      }
+    }
+  },
+  "artifact_refs": {
+    "report_dir": "evaluation_report"
+  }
+}

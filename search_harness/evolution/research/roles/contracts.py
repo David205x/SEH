@@ -13,6 +13,8 @@ from pydantic import (
     model_validator,
 )
 
+from ..mechanism.runtime_inputs import RuntimeInputId
+
 
 class TeacherPayload(BaseModel):
     """所有 Teacher 模型协议共享的严格基类。"""
@@ -221,9 +223,22 @@ class MechanismPhaseRule(TeacherPayload):
     phase: HookPhaseName
     trigger_condition: str = Field(min_length=1)
     decision_inputs: list[str] = Field(min_length=1)
+    runtime_inputs: list[RuntimeInputId] = Field(min_length=1)
     decision_evaluator: DecisionEvaluator
     action: str = Field(min_length=1)
     activation_budget: int = Field(default=1, ge=1)
+
+    @field_validator("runtime_inputs")
+    @classmethod
+    def validate_runtime_inputs(
+        cls,
+        value: list[RuntimeInputId],
+    ) -> list[RuntimeInputId]:
+        """拒绝重复 Topic，避免 Packet 重复加载相同文档。"""
+
+        if len(value) != len(set(value)):
+            raise ValueError("mechanism runtime_inputs must be unique")
+        return value
 
 
 class MechanismSpec(TeacherPayload):
@@ -270,6 +285,8 @@ class MechanismSpec(TeacherPayload):
                 1,
             ),
         }
+        if "runtime_inputs" in normalized:
+            phase_rule["runtime_inputs"] = normalized.pop("runtime_inputs")
         if "decision_evaluator" in normalized:
             phase_rule["decision_evaluator"] = normalized.pop(
                 "decision_evaluator"
@@ -303,6 +320,12 @@ class MechanismSpec(TeacherPayload):
         """兼容读取单阶段机制的决策输入。"""
 
         return list(self._single_rule().decision_inputs)
+
+    @property
+    def runtime_inputs(self) -> list[RuntimeInputId]:
+        """兼容读取单阶段机制的受控运行时输入主题。"""
+
+        return list(self._single_rule().runtime_inputs)
 
     @property
     def decision_evaluator(self) -> DecisionEvaluator:
@@ -371,7 +394,6 @@ InterventionActionName = Literal[
 InterventionResultKind = Literal[
     "executed",
     "unsuitable_assignment",
-    "unsupported_hypothesis",
 ]
 
 
@@ -402,9 +424,9 @@ class InterventionWorkerResult(TeacherPayload):
             raise ValueError(
                 "modified_phases must be a subset of activated_phases"
             )
-        if self.result_kind == "executed" and not self.modified_phases:
+        if self.result_kind == "executed" and not self.activated_phases:
             raise ValueError(
-                "executed intervention requires at least one modified phase"
+                "executed trial requires at least one reached phase"
             )
         if (
             self.result_kind != "executed"
@@ -501,12 +523,47 @@ class TrialReview(TeacherPayload):
     assessment: str = Field(min_length=1, max_length=4000)
 
 
+class EvidenceReviewBudget(TeacherPayload):
+    """Teacher Role 可见的当前假设试验预算状态。"""
+
+    max_trials_per_hypothesis: int = Field(ge=1)
+    trials_used: int = Field(ge=0)
+    trials_remaining: int = Field(ge=0)
+    max_trial_assignments: int = Field(ge=1)
+    assignments_used: int = Field(ge=0)
+    assignments_remaining: int = Field(ge=0)
+    conclusion_required: bool
+
+    @model_validator(mode="after")
+    def validate_budget_state(self) -> "EvidenceReviewBudget":
+        if self.trials_used > self.max_trials_per_hypothesis:
+            raise ValueError("trials_used exceeds the configured maximum")
+        if self.assignments_used > self.max_trial_assignments:
+            raise ValueError("assignments_used exceeds the configured maximum")
+        if self.trials_remaining != (
+            self.max_trials_per_hypothesis - self.trials_used
+        ):
+            raise ValueError("trials_remaining is inconsistent")
+        if self.assignments_remaining != (
+            self.max_trial_assignments - self.assignments_used
+        ):
+            raise ValueError("assignments_remaining is inconsistent")
+        expected_conclusion = (
+            self.trials_remaining == 0
+            or self.assignments_remaining == 0
+        )
+        if self.conclusion_required != expected_conclusion:
+            raise ValueError("conclusion_required is inconsistent")
+        return self
+
+
 class EvidenceReviewerInput(TeacherPayload):
     """Evidence Reviewer 的模型可见任务输入。"""
 
     hypothesis: InterventionHypothesis
     aggregate_observations: dict[str, Any]
     trial_reviews: list[TrialReview] = Field(min_length=1)
+    budget: EvidenceReviewBudget
     prior_obligation: str | None = None
 
 
@@ -516,6 +573,7 @@ class MechanismDistillerInput(TeacherPayload):
     hypothesis: InterventionHypothesis
     review: EvidenceReview
     evidence_refs: list[str] = Field(min_length=1)
+    budget: EvidenceReviewBudget
     capability_constraints: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -566,28 +624,26 @@ ConformanceVerdict = Literal[
 
 
 class ConformanceReviewerInput(TeacherPayload):
-    """Conformance Reviewer 的单条完整 Candidate rollout 审阅任务。"""
+    """Conformance Reviewer 的单条 Candidate 行为视图审阅任务。"""
 
     mechanism: MechanismSpec
     trial_refs: list[str] = Field(min_length=1)
     reference_observations: list[dict[str, Any]] = Field(min_length=1)
     example_id: str = Field(min_length=1)
     replicate_id: str = Field(min_length=1)
-    candidate_trajectory: dict[str, Any]
+    candidate_trajectory_view: dict[str, Any]
 
 
-class ConformanceFinding(TeacherPayload):
-    """Conformance Reviewer 对一条 Candidate rollout 的实现保真判断。"""
+class ConformanceReview(TeacherPayload):
+    """Conformance Reviewer 对一条 Candidate rollout 的语义判断。"""
 
-    trial_refs: list[str] = Field(min_length=1)
-    candidate_run_ref: str = Field(min_length=1)
     verdict: ConformanceVerdict
     observed_phases: list[HookPhaseName] = Field(default_factory=list)
     assessment: str = Field(min_length=1, max_length=1200)
     repair_obligation: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
-    def validate_repair_obligation(self) -> "ConformanceFinding":
+    def validate_repair_obligation(self) -> "ConformanceReview":
         if len(self.observed_phases) != len(set(self.observed_phases)):
             raise ValueError("observed_phases must not contain duplicates")
         if self.verdict == "faithful":
@@ -605,6 +661,13 @@ class ConformanceFinding(TeacherPayload):
                 "repair_obligation"
             )
         return self
+
+
+class ConformanceFinding(ConformanceReview):
+    """程序附加任务身份后的权威 Conformance Finding。"""
+
+    trial_refs: list[str] = Field(min_length=1)
+    candidate_run_ref: str = Field(min_length=1)
 
 
 @dataclass(frozen=True)
@@ -657,7 +720,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=MechanismDistillerInput,
         output_contract_id="mechanism_distillation",
-        output_contract_version=1,
+        output_contract_version=2,
         output_type=MechanismDistillation,
     ),
     "intervention_worker": TeacherRoleDefinition(
@@ -665,7 +728,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=InterventionWorkerInput,
         output_contract_id="intervention_worker_result",
-        output_contract_version=3,
+        output_contract_version=4,
         output_type=InterventionWorkerResult,
     ),
     "compiler": TeacherRoleDefinition(
@@ -688,9 +751,9 @@ _ROLE_DEFINITIONS = {
         role_id="conformance_reviewer",
         version=1,
         input_type=ConformanceReviewerInput,
-        output_contract_id="conformance_finding",
-        output_contract_version=1,
-        output_type=ConformanceFinding,
+        output_contract_id="conformance_review",
+        output_contract_version=2,
+        output_type=ConformanceReview,
     ),
 }
 

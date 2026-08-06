@@ -23,6 +23,8 @@ from ..roles.contracts import (
     FailureAnalystInput,
     HypothesisResearcherInput,
     InterventionWorkerInput,
+    MechanismDistillation,
+    MechanismDistillerInput,
     MechanismSpec,
     TeacherPayload,
     TrialReview,
@@ -67,6 +69,8 @@ class TeacherResources:
     intervention_capabilities_inspected: bool = False
     compiler_capability_packet: dict[str, Any] | None = None
     evidence_review_phases: tuple[str, ...] = ()
+    evidence_review_conclusion_required: bool = False
+    mechanism_distillation_conclusion_required: bool = False
 
     @classmethod
     def from_config(cls, config: TeacherResourceConfig) -> "TeacherResources":
@@ -134,6 +138,13 @@ class TeacherResources:
             self.evidence_review_phases = tuple(
                 directive.phase
                 for directive in role_input.hypothesis.phase_plan
+            )
+            self.evidence_review_conclusion_required = (
+                role_input.budget.conclusion_required
+            )
+        if isinstance(role_input, MechanismDistillerInput):
+            self.mechanism_distillation_conclusion_required = (
+                role_input.budget.conclusion_required
             )
         if isinstance(role_input, InterventionWorkerInput):
             if self.intervention is None:
@@ -241,6 +252,30 @@ class TeacherResources:
                 "Evidence Reviewer phase_findings must follow the frozen "
                 f"phase plan: expected={list(self.evidence_review_phases)}, "
                 f"actual={list(actual)}"
+            )
+        if (
+            self.evidence_review_conclusion_required
+            and review.decision == "continue"
+        ):
+            raise ValueError(
+                "Evidence Reviewer cannot continue when no further trial "
+                "can be scheduled; choose ready_to_distill, revise, or reject"
+            )
+
+    def validate_mechanism_distillation(
+        self,
+        result: MechanismDistillation,
+    ) -> None:
+        """Prevent an exhausted trial loop from requesting more evidence."""
+
+        if (
+            self.mechanism_distillation_conclusion_required
+            and result.decision == "needs_evidence"
+        ):
+            raise ValueError(
+                "Mechanism Distiller cannot request more evidence when no "
+                "further trial can be scheduled; choose distilled or "
+                "not_distillable"
             )
 
     def role_session_state(self) -> dict[str, Any]:
@@ -877,6 +912,7 @@ class TrialEvidenceStore:
 
     trials: dict[str, dict[str, Any]]
     _reads: set[str] = field(default_factory=set)
+    _source_runs: dict[str, dict[str, Any] | None] = field(default_factory=dict)
 
     @classmethod
     def load(cls, paths: list[Path]) -> "TrialEvidenceStore":
@@ -930,27 +966,77 @@ class TrialEvidenceStore:
         except KeyError as exc:
             raise KeyError(f"unknown trial reference: {trial_ref}") from exc
         self._reads.add(trial_ref)
+        source_run = _load_trial_source_run(payload)
+        self._source_runs[trial_ref] = source_run
         return {
             "trial_ref": trial_ref,
             "intent": payload.get("intent"),
             "worker_result": payload.get("worker_result"),
             "source": {
                 "selector": _trial_source_selector(payload),
-                "run": _judgment_run(_load_trial_source_run(payload)),
+                "run": _judgment_run(
+                    source_run,
+                    stream="source",
+                ),
             },
             "action": payload.get("action"),
             "phase_plan": payload.get("phase_plan"),
             "activation_budgets": payload.get("activation_budgets"),
             "activation_counts": payload.get("activation_counts"),
-            "context_changes": payload.get("context_changes"),
+            "context_changes": _judgment_context_changes(
+                payload.get("context_changes")
+            ),
             "phase_effects": payload.get("phase_effects"),
-            "worker_trace": payload.get("worker_trace"),
-            "branch_run": _judgment_run(payload.get("branch_run")),
+            "worker_events": _event_catalog(
+                payload.get("worker_trace"),
+                stream="worker",
+            ),
+            "branch_run": _judgment_run(
+                payload.get("branch_run"),
+                stream="branch",
+            ),
             "run_scopes": {
-                "source": "complete original rollout",
-                "branch": "continuation from the selected prefix",
+                "source": "event catalog for the complete original rollout",
+                "branch": (
+                    "event catalog for continuation from the selected prefix"
+                ),
+                "worker": "event catalog for Intervention Worker decisions",
             },
             "comparison": payload.get("comparison"),
+        }
+
+    def get_trial_event(
+        self,
+        *,
+        trial_ref: str,
+        stream: str,
+        event_index: int,
+    ) -> dict[str, Any]:
+        """Read one exact event selected from a compact trial catalog."""
+
+        try:
+            payload = self.trials[trial_ref]
+        except KeyError as exc:
+            raise KeyError(f"unknown trial reference: {trial_ref}") from exc
+        source_run = self._source_runs.get(trial_ref)
+        if stream == "source" and trial_ref not in self._source_runs:
+            source_run = _load_trial_source_run(payload)
+            self._source_runs[trial_ref] = source_run
+        events = _trial_event_stream(
+            payload,
+            stream,
+            source_run=source_run,
+        )
+        if event_index < 0 or event_index >= len(events):
+            raise IndexError(
+                f"unknown {stream} event index: {event_index}; "
+                f"available range is 0..{max(0, len(events) - 1)}"
+            )
+        return {
+            "trial_ref": trial_ref,
+            "stream": stream,
+            "event_index": event_index,
+            "event": _judgment_event(events[event_index]),
         }
 
     def bind_refs(self, trial_refs: list[str]) -> None:
@@ -1069,25 +1155,214 @@ def _load_trial_source_run(payload: dict[str, Any]) -> dict[str, Any] | None:
     return run if isinstance(run, dict) else None
 
 
-def _judgment_run(run: object) -> dict[str, Any] | None:
-    """保留完整 run，仅删除与证据判断无关的模型 usage 元数据。"""
+def _judgment_run(
+    run: object,
+    *,
+    stream: str = "run",
+) -> dict[str, Any] | None:
+    """Project one run into a compact event catalog for judgment."""
 
     if not isinstance(run, dict):
         return None
     result = json.loads(json.dumps(run, ensure_ascii=False))
-    trace = result.get("trace")
-    if not isinstance(trace, list):
-        return result
-    for event in trace:
-        if not isinstance(event, dict) or event.get("event_type") != "model_output":
-            continue
-        payload = event.get("payload")
-        if not isinstance(payload, dict):
-            continue
+    state = result.pop("state", None)
+    trace = result.pop("trace", None)
+    if isinstance(state, dict):
+        result["state"] = {
+            key: value
+            for key, value in state.items()
+            if key
+            not in {
+                "model_inputs",
+                "model_outputs",
+                "parsed_outputs",
+                "tool_interactions",
+                "conversation_messages",
+            }
+        }
+    result["events"] = _event_catalog(trace, stream=stream)
+    return result
+
+
+def _trial_event_stream(
+    payload: dict[str, Any],
+    stream: str,
+    *,
+    source_run: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    if stream == "source":
+        run = source_run
+        events = run.get("trace") if isinstance(run, dict) else None
+    elif stream == "branch":
+        run = payload.get("branch_run")
+        events = run.get("trace") if isinstance(run, dict) else None
+    elif stream == "worker":
+        events = payload.get("worker_trace")
+    else:
+        raise ValueError("trial event stream must be source, branch or worker")
+    if not isinstance(events, list):
+        return []
+    return [event for event in events if isinstance(event, dict)]
+
+
+def _event_catalog(events: object, *, stream: str) -> list[dict[str, Any]]:
+    if not isinstance(events, list):
+        return []
+    return [
+        _event_summary(event, stream=stream, event_index=event_index)
+        for event_index, event in enumerate(events)
+        if isinstance(event, dict)
+    ]
+
+
+def _event_summary(
+    event: dict[str, Any],
+    *,
+    stream: str,
+    event_index: int,
+) -> dict[str, Any]:
+    event_type = str(event.get("event_type", "unknown"))
+    summary = {
+        "event_ref": f"{stream}/{event_index}",
+        "event_index": event_index,
+        "event_type": event_type,
+    }
+    for key in ("step", "activation", "worker_step", "phase"):
+        if key in event:
+            summary[key] = event[key]
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    if event_type == "model_input":
+        messages = payload.get("messages")
+        messages = messages if isinstance(messages, list) else []
+        summary["detail"] = {
+            "message_count": len(messages),
+            "roles": [
+                message.get("role")
+                for message in messages
+                if isinstance(message, dict)
+            ],
+            "characters": sum(
+                len(str(message.get("content", "")))
+                for message in messages
+                if isinstance(message, dict)
+            ),
+        }
+    elif event_type in {"model_output", "worker_model_output"}:
+        raw_output = event.get("raw_output", payload.get("raw_output"))
+        raw_output = raw_output if isinstance(raw_output, str) else ""
+        metadata = event.get("metadata", payload.get("metadata"))
+        metadata = metadata if isinstance(metadata, dict) else {}
+        summary["detail"] = {
+            "characters": len(raw_output),
+            "preview": _text_preview(raw_output),
+            "reasoning_available": any(
+                isinstance(metadata.get(key), str) and metadata[key]
+                for key in ("reasoning_content", "reasoning", "thinking")
+            ),
+            "tool_calls": [
+                call.get("name")
+                for call in metadata.get("tool_calls", [])
+                if isinstance(call, dict)
+            ],
+        }
+    elif event_type == "tool_call":
+        summary["detail"] = {
+            "name": payload.get("name"),
+            "arguments": payload.get("arguments"),
+        }
+    elif event_type == "parsed_output":
+        reasoning = payload.get("inband_thinking")
+        reasoning = reasoning if isinstance(reasoning, str) else ""
+        summary["detail"] = {
+            "kind": payload.get("kind"),
+            "tool_call": payload.get("tool_call"),
+            "final_answer": payload.get("final_answer"),
+            "inband_thinking_characters": len(reasoning),
+            "inband_thinking_preview": _text_preview(reasoning),
+        }
+    elif event_type in {"tool_result", "worker_tool_result"}:
+        tool_result = event.get("tool_result")
+        tool_result = tool_result if isinstance(tool_result, dict) else payload
+        content = tool_result.get("content")
+        content = content if isinstance(content, str) else ""
+        summary["detail"] = {
+            "name": tool_result.get("name"),
+            "characters": len(content),
+            "preview": _text_preview(content),
+        }
+    elif event_type == "worker_action":
+        summary["detail"] = event.get("action")
+    else:
+        compact = payload if payload else {
+            key: value
+            for key, value in event.items()
+            if key not in {"event_type", "index", "step"}
+        }
+        summary["detail"] = (
+            compact
+            if len(json.dumps(compact, ensure_ascii=False)) <= 1200
+            else {"characters": len(json.dumps(compact, ensure_ascii=False))}
+        )
+    return summary
+
+
+def _judgment_event(event: dict[str, Any]) -> dict[str, Any]:
+    result = json.loads(json.dumps(event, ensure_ascii=False))
+    event_type = result.get("event_type")
+    if event_type == "worker_model_output":
+        result.pop("model_input", None)
+    payload = result.get("payload")
+    if isinstance(payload, dict):
+        payload.pop("usage", None)
         metadata = payload.get("metadata")
         if isinstance(metadata, dict):
             metadata.pop("usage", None)
+        if event_type == "tool_result" and isinstance(metadata, dict):
+            payload.pop("metadata", None)
+    metadata = result.get("metadata")
+    if isinstance(metadata, dict):
+        metadata.pop("usage", None)
+    if event_type == "worker_tool_result":
+        tool_result = result.get("tool_result")
+        if isinstance(tool_result, dict):
+            tool_result.pop("metadata", None)
     return result
+
+
+def _judgment_context_changes(changes: object) -> list[dict[str, Any]]:
+    if not isinstance(changes, list):
+        return []
+    projected = []
+    for change in changes:
+        if not isinstance(change, dict):
+            continue
+        item = {
+            key: value
+            for key, value in change.items()
+            if key not in {"model_input_before", "model_input_after"}
+        }
+        for source_key, target_key in (
+            ("model_input_before", "message_count_before"),
+            ("model_input_after", "message_count_after"),
+        ):
+            model_input = change.get(source_key)
+            messages = (
+                model_input.get("messages")
+                if isinstance(model_input, dict)
+                else None
+            )
+            if isinstance(messages, list):
+                item[target_key] = len(messages)
+        projected.append(item)
+    return projected
+
+
+def _text_preview(value: str, *, limit: int = 240) -> str:
+    compact = " ".join(value.split())
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[: limit - 1].rstrip()}…"
 
 
 _BEHAVIOR_EVENT_TYPES = frozenset(
@@ -1270,6 +1545,7 @@ class MechanismDraftStore:
         phase: str,
         trigger_condition: str,
         decision_inputs: list[str],
+        runtime_inputs: list[str],
         decision_evaluator: DecisionEvaluator,
         action: str,
         activation_budget: int,
@@ -1290,6 +1566,7 @@ class MechanismDraftStore:
                 "phase": phase,
                 "trigger_condition": trigger_condition,
                 "decision_inputs": list(decision_inputs),
+                "runtime_inputs": list(runtime_inputs),
                 "decision_evaluator": decision_evaluator,
                 "action": action,
                 "activation_budget": activation_budget,

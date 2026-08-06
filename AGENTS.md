@@ -7,8 +7,7 @@
 项目文档位于 `docs/`：`docs/architecture/`、`docs/reference/` 和 `docs/guides/`
 是当前文档骨架；`docs/design/` 记录研究设计、决策过程和实验方案，其中历史专题可能
 早于当前代码并使用旧术语；`docs/manual_v1/` 与 `docs/manual_v2/` 都是历史版本档案。
-在新的编码指南正文完成前，`docs/manual_v2/python_style.md` 继续作为明确例外提供当前
-Python 代码风格规范。`docs/design.md` 是早期综合设计参考。
+当前 Python 代码风格规范位于 `docs/python_style.md`。`docs/design.md` 是早期综合设计参考。
 
 除非任务明确要求，编码 Agent 应优先进行范围最小、可验证、可回滚的修改，避免提前实现尚未确定的架构。
 
@@ -33,7 +32,7 @@ Python 代码风格规范。`docs/design.md` 是早期综合设计参考。
 - `docs/design/post-removal-normalization.md` 记录 V1 删除后的已确认架构和迁移验收。
 - `docs/design/` 的其余文件记录研究架构、实验流程与历史设计。
 - `docs/manual_v1/` 与 `docs/manual_v2/` 记录历史版本实现，不作为新增接口的依据；
-  `docs/manual_v2/python_style.md` 的代码风格规范除外。
+- `docs/python_style.md` 记录当前 Python 代码风格规范。
 - 代码表示当前实现状态，但代码现状不自动等同于正确设计。
 
 执行任务时，按以下优先级理解要求：
@@ -82,7 +81,7 @@ Python 代码风格规范。`docs/design.md` 是早期综合设计参考。
 
 ## Python 代码风格与实现规范
 
-完整规范见 `docs/manual_v2/python_style.md`。本节只保留编码 Agent 必须优先遵守的核心约束。
+完整规范见 `docs/python_style.md`。本节只保留编码 Agent 必须优先遵守的核心约束。
 
 - 核心框架代码优先保证稳定性、可维护性和清晰边界。
 - 默认采用最小修改原则，不顺手重构，不提前实现未确认能力。

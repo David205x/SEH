@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import types
 from dataclasses import MISSING, dataclass, fields, is_dataclass
+from difflib import get_close_matches
 from enum import Enum
 from math import ceil
 from typing import Any, get_args, get_origin, get_type_hints
@@ -28,6 +29,13 @@ from search_harness.framework import (
     TrajectoryEvent,
 )
 from search_harness.framework.harness import STAGE_KEYS_BY_PHASE
+
+from .runtime_inputs import (
+    RuntimeInputTopic,
+    get_runtime_input_topic,
+    list_runtime_input_topics,
+    suggest_runtime_input_topics,
+)
 
 
 HOOK_API_CATALOG_VERSION = 2
@@ -450,7 +458,9 @@ _CORE_POLICIES: dict[str, _StatePolicy] = {
             "Serialized completed pairs with shape "
             "{'tool_call': {'name': str, 'arguments': dict}, "
             "'tool_result': {'name': str, 'content': str}}. "
-            "At POST_TOOL this excludes the current stage call/result."
+            "At POST_TOOL this excludes the current stage call/result; at "
+            "PRE_FINAL it includes all interactions committed before the "
+            "current Hook invocation. This is the preferred Tool history API."
         ),
     ),
     "core.conversation_messages": _StatePolicy(
@@ -461,7 +471,9 @@ _CORE_POLICIES: dict[str, _StatePolicy] = {
         (
             "Serialized follow-up messages with role/content fields retained "
             "for later prompts. At POST_TOOL this includes prior deferred "
-            "feedback but excludes the current result."
+            "feedback but excludes the current result. Tool results may be "
+            "represented as user-role messages; do not use message roles as "
+            "a semantic Tool Result protocol."
         ),
     ),
     "core.hook_state": _StatePolicy(
@@ -551,6 +563,69 @@ def query_hook_api(symbol: str) -> dict[str, Any]:
     return _member_payload(object_name, member_name, policy)
 
 
+def query_hook_api_reference(query: str) -> dict[str, Any]:
+    """查询 Topic 或精确 symbol，并为未知查询返回可操作建议。"""
+
+    normalized = query.strip()
+    if not normalized:
+        return {"status": "rejected", "reason": "empty_query"}
+    try:
+        topic = get_runtime_input_topic(normalized)
+    except ValueError:
+        topic = None
+    if topic is not None:
+        return {
+            "status": "resolved",
+            "query_kind": "runtime_input_topic",
+            "query": normalized,
+            "document": runtime_input_topic_document(topic.topic_id),
+        }
+    try:
+        contract = query_hook_api(normalized)
+    except ValueError:
+        symbol_candidates = get_close_matches(
+            normalized,
+            [item["symbol"] for item in _symbol_summaries()],
+            n=6,
+            cutoff=0.3,
+        )
+        return {
+            "status": "rejected",
+            "reason": "unknown_query",
+            "query": normalized,
+            "runtime_input_suggestions": suggest_runtime_input_topics(normalized),
+            "symbol_suggestions": symbol_candidates,
+        }
+    return {
+        "status": "resolved",
+        "query_kind": "symbol",
+        "query": normalized,
+        "contract": contract,
+        "native_reference": _render_native_contract(contract),
+        "related_runtime_inputs": [
+            topic.topic_id
+            for topic in list_runtime_input_topics()
+            if normalized in topic.symbols
+        ],
+    }
+
+
+def runtime_input_topic_document(topic_id: str) -> dict[str, Any]:
+    """把一个受控 Topic 渲染为 Compiler 可直接使用的完整文档。"""
+
+    topic = get_runtime_input_topic(topic_id)
+    contracts = [query_hook_api(symbol) for symbol in topic.symbols]
+    return {
+        "runtime_input_id": topic.topic_id,
+        "description": topic.description,
+        "preferred_usage": list(topic.preferred_usage),
+        "avoid": list(topic.avoid),
+        "lifecycle_notes": list(topic.lifecycle_notes),
+        "symbols": list(topic.symbols),
+        "native_reference": _render_runtime_input_topic(topic, contracts),
+    }
+
+
 def public_hook_imports() -> list[str]:
     """返回 Compiler 可从 ``search_harness.framework`` 导入的公开符号。"""
 
@@ -565,6 +640,84 @@ def hook_api_categories() -> tuple[str, ...]:
     """返回公开目录当前支持的查询分类。"""
 
     return _categories()
+
+
+def _render_runtime_input_topic(
+    topic: RuntimeInputTopic,
+    contracts: list[dict[str, Any]],
+) -> str:
+    """生成紧凑的 Python-native Topic 文档。"""
+
+    lines = [
+        f"# Runtime Input Topic: {topic.topic_id}",
+        f"# {topic.description}",
+        "# Preferred usage:",
+        *(f"# - {item}" for item in topic.preferred_usage),
+    ]
+    if topic.lifecycle_notes:
+        lines.extend(
+            ["# Lifecycle semantics:", *(f"# - {item}" for item in topic.lifecycle_notes)]
+        )
+    lines.extend(["# Avoid:", *(f"# - {item}" for item in topic.avoid)])
+    if topic.topic_id == "tool":
+        lines.extend(
+            [
+                "class SerializedToolCall(TypedDict):",
+                "    name: str  # Registered Tool instance ID.",
+                "    arguments: dict[str, Any]  # Validated execution arguments.",
+                "class SerializedToolResult(TypedDict):",
+                "    name: str  # Tool instance that produced this result.",
+                "    content: str  # Student-visible result; format is Tool-specific.",
+                "class CompletedToolInteraction(TypedDict):",
+                "    tool_call: SerializedToolCall",
+                "    tool_result: SerializedToolResult",
+            ]
+        )
+    lines.extend(_render_native_contract(contract) for contract in contracts)
+    return "\n".join(lines)
+
+
+def _render_native_contract(contract: dict[str, Any]) -> str:
+    """把一个结构化白名单契约渲染为紧凑 Python 签名。"""
+
+    kind = contract.get("kind")
+    symbol = str(contract.get("symbol"))
+    note = str(contract.get("note") or contract.get("summary") or "").strip()
+    if kind == "state_key":
+        phases = contract.get("phases")
+        phase_text = (
+            f" Available phases: {', '.join(str(item) for item in phases)}."
+            if isinstance(phases, list) and phases
+            else ""
+        )
+        return (
+            f"def context.state.get(key: Literal[{symbol!r}]) -> {contract['type']}:\n"
+            f"    \"\"\"{note}{phase_text} Read: {contract['read']}\n"
+            f"    Write: {contract['write']}\"\"\"\n"
+            "    ..."
+        )
+    if kind in {"class", "runtime_view"}:
+        lines = [f"class {symbol}:"]
+        if note:
+            lines.append(f"    \"\"\"{note}\"\"\"")
+        signature = contract.get("signature")
+        if isinstance(signature, str):
+            lines.append(f"    # Constructor: {signature}")
+        for field in contract.get("fields", []):
+            if isinstance(field, dict):
+                suffix = f"  # {field['note']}" if field.get("note") else ""
+                lines.append(f"    {str(field['symbol']).split('.')[-1]}: {field['type']}{suffix}")
+        for method in contract.get("methods", []):
+            if isinstance(method, dict):
+                method_note = method.get("note") or method.get("summary") or ""
+                lines.append(f"    def {method['signature']}: ...  # {method_note}".rstrip())
+        if len(lines) == 1:
+            lines.append("    ...")
+        return "\n".join(lines)
+    if kind in {"method", "field", "constant", "enum_value"}:
+        signature = contract.get("signature") or contract.get("type") or "Any"
+        return f"{symbol}: {signature}  # {note}".rstrip()
+    return f"# {symbol}: {note}".rstrip()
 
 
 def _categories() -> tuple[str, ...]:

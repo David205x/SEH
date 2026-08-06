@@ -4,18 +4,18 @@
   "tools": [
     {
       "instance_id": "search",
-      "entrypoint": "components/tools/retriever_search/component.py:build",
+      "entrypoint": "tools/retriever_search/component.py:build",
       "config": {}
     }
   ],
   "prompt": {
     "instance_id": "simple_search",
-    "entrypoint": "components/prompts/simple_search/component.py:build",
+    "entrypoint": "prompt/component.py:build",
     "config": {}
   },
   "output": {
     "instance_id": "tagged_output",
-    "entrypoint": "components/outputs/tagged_output/component.py:build",
+    "entrypoint": "output/component.py:build",
     "config": {}
   },
   "extensions": []

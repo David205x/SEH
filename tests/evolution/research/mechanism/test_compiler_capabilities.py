@@ -79,91 +79,56 @@ class CompilerCapabilityPacketTest(unittest.TestCase):
         self.assertIn("HookContext.call_model", symbols)
         self.assertIn("HookModelResponse.json_object", symbols)
 
-    def test_packet_maps_conversation_history_to_trace_contracts(self) -> None:
-        """验证常见 conversation_history 语义输入零查询获得 trace 契约。"""
+    def test_packet_loads_complete_tool_runtime_topic(self) -> None:
+        """验证受控 tool Topic 零查询加载当前值、历史值和 Native 文档。"""
 
         packet = build_compiler_capability_packet(
             _mechanism(
                 trigger_phase="pre_final",
                 decision_inputs=[
                     "stage.final_decision",
-                    "conversation_history",
+                    "completed search calls and results",
                 ],
                 required_capabilities=[],
+                runtime_inputs=["task", "tool", "final_decision"],
             )
         )
 
         symbols = {item["symbol"] for item in packet["contracts"]}
-        self.assertIn("HookContext.trajectory", symbols)
-        self.assertIn("TrajectoryEvent", symbols)
+        self.assertIn("core.tool_interactions", symbols)
+        self.assertIn("stage.tool_call", symbols)
+        self.assertIn("stage.tool_result", symbols)
         phase_rule = packet["selection"]["phase_rules"][0]
         self.assertEqual(
-            phase_rule["semantic_input_mappings"],
-            [
-                {
-                    "input": "conversation_history",
-                    "symbols": [
-                        "core.conversation_messages",
-                        "core.tool_interactions",
-                        "HookContext.trajectory",
-                        "TrajectoryEvent",
-                    ],
-                }
-            ],
+            phase_rule["runtime_inputs"],
+            ["task", "tool", "final_decision"],
         )
-        trace_event = next(
+        tool_document = next(
             item
-            for item in packet["contracts"]
-            if item["symbol"] == "TrajectoryEvent"
+            for item in packet["runtime_input_documents"]
+            if item["runtime_input_id"] == "tool"
         )
-        self.assertIn(
-            "TrajectoryEvent.event_type",
-            {field["symbol"] for field in trace_event["fields"]},
-        )
+        self.assertIn("CompletedToolInteraction", tool_document["native_reference"])
+        self.assertIn("At POST_TOOL", tool_document["native_reference"])
 
-    def test_packet_maps_conversation_aliases_to_trace_contracts(self) -> None:
-        """验证常见历史消息与历史工具结果别名都映射到 trace。"""
+    def test_packet_does_not_parse_free_text_for_runtime_api(self) -> None:
+        """验证自由文本只保留语义，不再决定 Packet API 选择。"""
 
         packet = build_compiler_capability_packet(
             _mechanism(
                 trigger_phase="post_tool",
                 decision_inputs=[
-                    "conversation_messages",
-                    "prior_tool_results",
+                    "arbitrary wording for prior search evidence",
                     "stage.tool_result",
                 ],
                 required_capabilities=[],
+                runtime_inputs=["tool"],
             )
         )
 
         symbols = {item["symbol"] for item in packet["contracts"]}
-        self.assertIn("HookContext.trajectory", symbols)
-        self.assertIn("TrajectoryEvent", symbols)
-        mappings = packet["selection"]["phase_rules"][0][
-            "semantic_input_mappings"
-        ]
-        self.assertEqual(
-            mappings,
-            [
-                {
-                    "input": "conversation_messages",
-                    "symbols": [
-                        "core.conversation_messages",
-                        "core.tool_interactions",
-                        "HookContext.trajectory",
-                        "TrajectoryEvent",
-                    ],
-                },
-                {
-                    "input": "prior_tool_results",
-                    "symbols": [
-                        "core.tool_interactions",
-                        "HookContext.trajectory",
-                        "TrajectoryEvent",
-                    ],
-                },
-            ],
-        )
+        self.assertIn("core.tool_interactions", symbols)
+        self.assertNotIn("HookContext.trajectory", symbols)
 
     def test_packet_preserves_semantic_student_capabilities(self) -> None:
         """验证自然语言 Student 能力不会被误判为缺失的框架 API。"""
@@ -227,6 +192,7 @@ class CompilerCapabilityPacketTest(unittest.TestCase):
                     "phase": "post_tool",
                     "trigger_condition": "A visible relation is unsupported.",
                     "decision_inputs": ["stage.tool_result", "question text"],
+                    "runtime_inputs": ["task", "tool", "persistent_state"],
                     "decision_evaluator": "hook_model",
                     "action": "Record the visible evidence gap.",
                     "activation_budget": 1,
@@ -238,6 +204,7 @@ class CompilerCapabilityPacketTest(unittest.TestCase):
                         "stage.final_decision",
                         "extension.gap_open",
                     ],
+                    "runtime_inputs": ["final_decision", "persistent_state"],
                     "decision_evaluator": "deterministic",
                     "action": "Defer finalization once.",
                     "activation_budget": 1,
@@ -274,12 +241,14 @@ def _mechanism(
     decision_inputs: list[str],
     required_capabilities: list[str],
     decision_evaluator: str = "deterministic",
+    runtime_inputs: list[str] | None = None,
 ) -> MechanismSpec:
     return MechanismSpec(
         goal="Test one bounded mechanism.",
         trigger_phase=trigger_phase,
         trigger_condition="The selected phase is reached.",
         decision_inputs=decision_inputs,
+        runtime_inputs=runtime_inputs or ["task"],
         decision_evaluator=decision_evaluator,
         action="Apply one bounded context intervention.",
         behavioral_pseudocode=(

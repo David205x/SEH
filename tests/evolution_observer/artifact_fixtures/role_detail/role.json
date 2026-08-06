@@ -1,0 +1,22 @@
+{
+  "role": {"id": "failure_analyst"},
+  "model": {"provider": "fixture", "model_id": "teacher-test"},
+  "usage": {"requests": 1, "total_tokens": 30},
+  "transcript": [
+    {"role": "system", "content": "System guidance"},
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "Inspect the evidence first.",
+      "tool_calls": [
+        {
+          "id": "call-1",
+          "type": "function",
+          "function": {"name": "inspect_case", "arguments": "{\"case_id\": \"a\"}"}
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call-1", "content": "{\"score\": 0}"},
+    {"role": "assistant", "content": "The failure is stable."}
+  ]
+}

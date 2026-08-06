@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import unittest
-from typing import get_args
-
 from search_harness.evolution.research.intervention.prefix import (
     recoverable_prefix_phases,
 )
 from search_harness.framework import HookPhase
-from search_harness.evolution.research.roles.contracts import InterventionActionName
 from search_harness.evolution.research.intervention.capabilities import (
     intervention_capabilities,
 )
@@ -27,7 +24,11 @@ class InterventionCapabilityCatalogTest(unittest.TestCase):
         )
         self.assertEqual(
             {item["name"] for item in catalog["actions"]},
-            set(get_args(InterventionActionName)),
+            {
+                "apply_context_patch",
+                "defer_final_answer",
+                "continue_without_change",
+            },
         )
 
     def test_catalog_exposes_observability_and_action_limits(self) -> None:
@@ -47,11 +48,11 @@ class InterventionCapabilityCatalogTest(unittest.TestCase):
             [HookPhase.PRE_FINAL],
         )
         self.assertEqual(
-            actions["append_user_message"]["persistence"],
-            "branch_prefix",
+            actions["apply_context_patch"]["persistence"],
+            "next_generation",
         )
         self.assertIn(
-            "model_input.messages",
+            "editable_context.block_id",
             catalog["observability"]["selected_prefix"],
         )
         self.assertTrue(

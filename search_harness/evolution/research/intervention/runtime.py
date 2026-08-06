@@ -29,6 +29,7 @@ from search_harness.evaluation import (
 from search_harness.integrations.openai_compatible import (
     OpenAICompatibleConfig,
     OpenAICompatibleModel,
+    OpenAICompatibleSyncClient,
     ProfiledHookModelBackend,
 )
 from search_harness.paths import COMPONENT_RUNS_ROOT, STUDENT_TEMPLATE_ROOT
@@ -77,12 +78,14 @@ class InterventionRunner:
         config: InterventionRuntimeConfig | None = None,
         *,
         student_model: Model | None = None,
-        teacher_model: Model | None = None,
+        teacher_config: OpenAICompatibleConfig | None = None,
+        teacher_client: OpenAICompatibleSyncClient | None = None,
         judge_model: OpenAICompatibleModel | None = None,
     ) -> None:
         self.config = config or InterventionRuntimeConfig()
         self._student_model = student_model
-        self._teacher_model = teacher_model
+        self._teacher_config = teacher_config
+        self._teacher_client = teacher_client
         self._judge_model = judge_model
 
     def run(
@@ -120,13 +123,14 @@ class InterventionRunner:
             model_role=self.config.student_model_role,
             intervention_timeout=False,
         )
-        teacher_model = self._teacher_model or _build_model(
+        teacher_config = self._teacher_config or _build_model_config(
             env_file=self.config.env_file,
             model_role=self.config.teacher_model_role,
             intervention_timeout=True,
         )
         worker = InterventionWorker(
-            model=teacher_model,
+            config=teacher_config,
+            client=self._teacher_client,
             intent=intent,
             hook_guidance=guidance,
             max_steps_per_activation=self.config.worker_max_steps_per_activation,
@@ -213,9 +217,10 @@ class InterventionRunner:
                 "student_model_role": self.config.student_model_role,
                 "teacher_model_role": self.config.teacher_model_role,
                 "student_model": _model_provenance(student_model),
-                "teacher_model": _model_provenance(teacher_model),
+                "teacher_model": teacher_config.provenance(),
                 "student_max_steps": self.config.student_max_steps,
                 "worker_max_steps_per_activation": self.config.worker_max_steps_per_activation,
+                "worker_tool_protocol": "native",
                 "teacher_judge": self.config.teacher_judge,
             },
             "intent": intent,
@@ -231,7 +236,20 @@ class InterventionRunner:
             "branch_run": branch_run.to_dict(),
             "comparison": comparison,
             "worker_trace": list(worker.trace),
+            "worker_transcript": worker.transcript,
+            "worker_tool_calls": [
+                {
+                    "name": call.name,
+                    "call_id": call.call_id,
+                    "arguments": call.arguments,
+                    "content": call.content,
+                    "metadata": call.metadata,
+                }
+                for call in worker.tool_calls
+            ],
+            "worker_usage": worker.usage,
         }
+        worker.close()
         if persist:
             output_dir = _new_trial_dir(self.config.output_root)
             artifact_file = output_dir / "intervention.json"
@@ -297,19 +315,34 @@ def _build_model(
     model_role: str,
     intervention_timeout: bool,
 ) -> OpenAICompatibleModel:
+    return OpenAICompatibleModel(
+        _build_model_config(
+            env_file=env_file,
+            model_role=model_role,
+            intervention_timeout=intervention_timeout,
+        )
+    )
+
+
+def _build_model_config(
+    *,
+    env_file: Path,
+    model_role: str,
+    intervention_timeout: bool,
+) -> OpenAICompatibleConfig:
     config = OpenAICompatibleConfig.from_env(
         env_file=env_file,
         prefix=model_role.upper(),
     )
     if not intervention_timeout:
-        return OpenAICompatibleModel(config)
+        return config
     values = read_env_file(env_file)
     timeout = parse_float(
         get_env_value(values, INTERVENTION_REQUEST_TIMEOUT_ENV),
         default=config.timeout,
         name=INTERVENTION_REQUEST_TIMEOUT_ENV,
     )
-    return OpenAICompatibleModel(replace(config, timeout=timeout))
+    return replace(config, timeout=timeout)
 
 
 def _evaluate_effect(

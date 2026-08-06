@@ -5,9 +5,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from search_harness._internal import read_runtime_config, teacher_role_budget
+from search_harness.integrations.openai_compatible import OpenAICompatibleConfig
 
 from .prefix import load_rollout_record, resolve_prefix_boundary
 from .runtime import InterventionRunner, InterventionRuntimeConfig
@@ -84,16 +88,18 @@ class InterventionRoleRunner:
                 f"{boundary['phase']} != {task.hypothesis.fork_phase}"
             )
 
-        prompt_file = (
-            template_root
-            / "components"
-            / "prompts"
-            / "intervention_worker"
-            / "templates"
-            / "activation_system.md"
-        )
-        system_prompt_template = prompt_file.read_text(encoding="utf-8")
+        system_prompt_template = spec.prompt.instructions
         guidance, budgets = _phase_runtime_plan(task.hypothesis)
+        model_config = OpenAICompatibleConfig.from_env(
+            env_file=config.env_file,
+            prefix="TEACHER",
+        )
+        role_budget = teacher_role_budget(
+            read_runtime_config(env_file=config.env_file),
+            role_id,
+            default_max_tokens=model_config.max_tokens,
+            default_max_turns=self.max_steps_per_activation,
+        )
         runner = InterventionRunner(
             InterventionRuntimeConfig(
                 env_file=config.env_file,
@@ -101,11 +107,13 @@ class InterventionRoleRunner:
                 student_model_role="student",
                 teacher_model_role="teacher",
                 student_max_steps=config.student_max_steps,
-                worker_max_steps_per_activation=(
-                    self.max_steps_per_activation
-                ),
+                worker_max_steps_per_activation=role_budget.max_turns,
                 teacher_judge=self.teacher_judge,
-            )
+            ),
+            teacher_config=replace(
+                model_config,
+                max_tokens=role_budget.max_tokens,
+            ),
         )
         branch_artifact = await asyncio.to_thread(
             runner.run,
@@ -138,15 +146,19 @@ class InterventionRoleRunner:
                 "schema_digest": _schema_digest(output_schema),
             },
             "runtime": "persistent_intervention_branch",
+            "role_budget": {
+                "max_tokens": role_budget.max_tokens,
+                "max_turns": role_budget.max_turns,
+            },
             "model": branch_artifact["runtime"]["teacher_model"],
             "input": task.model_dump(mode="json"),
             "resource_config": resource_config.model_dump(mode="json"),
             "output": output.model_dump(mode="json"),
             "validated_mechanisms": {},
             "resource_artifacts": {"intervention_trial": trial},
-            "tool_calls": [],
+            "tool_calls": list(branch_artifact.get("worker_tool_calls", [])),
             "usage": _usage(branch_artifact),
-            "transcript": list(branch_artifact["worker_trace"]),
+            "transcript": list(branch_artifact.get("worker_transcript", [])),
         }
 
 
@@ -204,7 +216,7 @@ def _worker_result(
     ]
     return InterventionWorkerResult(
         result_kind=(
-            "executed" if modified_phases else "unsuitable_assignment"
+            "executed" if activated_phases else "unsuitable_assignment"
         ),
         activated_phases=activated_phases,
         modified_phases=modified_phases,
@@ -225,6 +237,10 @@ def _trial_artifact(
         ],
         "activation_budgets": artifact["activation_budgets"],
         "activation_counts": artifact["activation_counts"],
+        "worker_tool_protocol": artifact.get("runtime", {}).get(
+            "worker_tool_protocol",
+            "native",
+        ),
         "context_changes": artifact["intervention_changes"],
         "phase_effects": artifact.get("phase_effects", []),
         "branch_run": artifact["branch_run"],

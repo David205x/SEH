@@ -35,6 +35,7 @@ class OpenAICompatibleConfig:
     temperature: float = 0.6
     seed: int | None = None
     ollama_think: bool | None = None
+    thinking_mode: str | None = None
 
     def __post_init__(self) -> None:
         if not self.base_url.strip():
@@ -45,6 +46,8 @@ class OpenAICompatibleConfig:
             raise ValueError("model max_tokens must be positive")
         if self.timeout <= 0:
             raise ValueError("model timeout must be positive")
+        if self.thinking_mode not in {None, "enabled", "disabled"}:
+            raise ValueError("thinking_mode must be enabled, disabled, or None")
 
     @classmethod
     def from_env(
@@ -63,6 +66,7 @@ class OpenAICompatibleConfig:
         api_key_env = _env_name(normalized_prefix, "API_KEY")
         model_id_env = _env_name(normalized_prefix, "MODEL_ID")
         timeout_env = _env_name(normalized_prefix, "REQUEST_TIMEOUT")
+        max_tokens_env = _env_name(normalized_prefix, "MAX_TOKENS")
         temperature_env = _env_name(normalized_prefix, "TEMPERATURE")
         thinking_mode_env = _env_name(normalized_prefix, "THINKING_MODE")
         seed_env = _env_name(normalized_prefix, "SEED")
@@ -74,10 +78,15 @@ class OpenAICompatibleConfig:
         if model_id is None:
             raise ValueError(f"{model_id_env} is required")
 
+        max_tokens_value = get_env_value(values, max_tokens_env)
+        max_tokens_name = max_tokens_env
+        if max_tokens_value is None:
+            max_tokens_value = get_env_value(values, MAX_TOKENS_ENV)
+            max_tokens_name = MAX_TOKENS_ENV
         max_tokens = parse_int(
-            get_env_value(values, MAX_TOKENS_ENV),
+            max_tokens_value,
             default=1024,
-            name=MAX_TOKENS_ENV,
+            name=max_tokens_name,
         )
         timeout_value = get_env_value(values, timeout_env)
         timeout_name = timeout_env
@@ -90,10 +99,13 @@ class OpenAICompatibleConfig:
             default=0.6,
             name=temperature_env,
         )
-        ollama_think = _parse_ollama_think(
+        thinking_mode = _parse_thinking_mode(
+            get_env_value(values, thinking_mode_env),
+            thinking_mode_env,
+        )
+        ollama_think = _ollama_think(
             base_url=base_url,
-            value=get_env_value(values, thinking_mode_env),
-            name=thinking_mode_env,
+            thinking_mode=thinking_mode,
         )
         return cls(
             base_url=base_url,
@@ -104,6 +116,9 @@ class OpenAICompatibleConfig:
             temperature=temperature,
             seed=_parse_optional_int(get_env_value(values, seed_env), seed_env),
             ollama_think=ollama_think,
+            thinking_mode=(
+                thinking_mode if _is_deepseek_base_url(base_url) else None
+            ),
         )
 
     @property
@@ -125,6 +140,7 @@ class OpenAICompatibleConfig:
             "temperature": self.temperature,
             "seed": self.seed,
             "ollama_think": self.ollama_think,
+            "thinking_mode": self.thinking_mode,
         }
 
 
@@ -153,6 +169,8 @@ class OpenAICompatibleModel:
         }
         if self.config.ollama_think is not None:
             payload["think"] = self.config.ollama_think
+        if self.config.thinking_mode is not None:
+            payload["thinking"] = {"type": self.config.thinking_mode}
         if self.config.seed is not None:
             payload["seed"] = self.config.seed
         self.requests.append(json.loads(json.dumps(payload, ensure_ascii=False)))
@@ -253,7 +271,7 @@ def _parse_optional_int(value: str | None, name: str) -> int | None:
         raise ValueError(f"{name} must be an integer") from exc
 
 
-def _parse_ollama_think(base_url: str, value: str | None, name: str) -> bool | None:
+def _parse_thinking_mode(value: str | None, name: str) -> str | None:
     if value is None:
         return None
 
@@ -261,17 +279,23 @@ def _parse_ollama_think(base_url: str, value: str | None, name: str) -> bool | N
     if normalized in {"", "auto", "default"}:
         return None
     if normalized in {"disabled", "false", "off", "0", "no"}:
-        parsed = False
+        return "disabled"
     elif normalized in {"enabled", "true", "on", "1", "yes"}:
-        parsed = True
-    else:
-        raise ValueError(f"{name} must be one of auto, disabled, or enabled")
+        return "enabled"
+    raise ValueError(f"{name} must be one of auto, disabled, or enabled")
 
-    if not _is_default_ollama_base_url(base_url):
+
+def _ollama_think(*, base_url: str, thinking_mode: str | None) -> bool | None:
+    if not _is_default_ollama_base_url(base_url) or thinking_mode is None:
         return None
-    return parsed
+    return thinking_mode == "enabled"
 
 
 def _is_default_ollama_base_url(base_url: str) -> bool:
     parsed = urllib_parse.urlparse(base_url)
     return parsed.port == 11434
+
+
+def _is_deepseek_base_url(base_url: str) -> bool:
+    parsed = urllib_parse.urlparse(base_url)
+    return (parsed.hostname or "").casefold() == "api.deepseek.com"

@@ -6,21 +6,22 @@ import json
 from typing import Annotated, Any
 
 from search_harness.framework import (
-    ChatMessage,
-    ModelInput,
-    ParsedOutputKind,
-    TaggedOutputParser,
+    ToolCall,
     ToolExecutor,
     ToolResult,
 )
-from search_harness.framework.agent import Model
-from search_harness.framework.prompting import render_tagged_tool_section
 from search_harness.framework.tools import (
     CallableTool,
     ToolArg,
-    ToolDefinition,
     ToolSet,
     tool,
+)
+from search_harness.integrations.openai_compatible import (
+    NativeToolCall,
+    OpenAICompatibleConfig,
+    OpenAICompatibleSyncClient,
+    OpenAICompatibleToolSession,
+    PendingNativeToolCall,
 )
 
 from .types import InterventionAction
@@ -32,11 +33,12 @@ class InterventionWorker:
     def __init__(
         self,
         *,
-        model: Model,
+        config: OpenAICompatibleConfig,
         intent: str,
         hook_guidance: dict[str, str],
         max_steps_per_activation: int = 8,
         system_prompt_template: str | None = None,
+        client: OpenAICompatibleSyncClient | None = None,
     ) -> None:
         if not intent.strip():
             raise ValueError("intervention intent must not be empty")
@@ -44,27 +46,29 @@ class InterventionWorker:
             raise ValueError("intervention hook_guidance must not be empty")
         if max_steps_per_activation < 1:
             raise ValueError("Worker max_steps_per_activation must be positive")
-        self.model = model
         self.intent = intent.strip()
         self.hook_guidance = dict(hook_guidance)
         self.max_steps_per_activation = max_steps_per_activation
         self.trace: list[dict[str, Any]] = []
-        self._history: list[ChatMessage] = []
-        self._parser = TaggedOutputParser()
         self._activation_count = 0
         self._system_prompt = _render_system_prompt(
             template=system_prompt_template,
         )
-        self._history.append(
-            ChatMessage(
-                role="user",
-                content=(
-                    "Intervention intent:\n"
-                    f"{self.intent}\n\n"
-                    "Configured Hook guidance:\n"
-                    f"{json.dumps(self.hook_guidance, ensure_ascii=False, indent=2)}"
-                ),
-            )
+        self._session = OpenAICompatibleToolSession(
+            config=config,
+            client=client,
+            messages=[
+                {"role": "system", "content": self._system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        "Intervention intent:\n"
+                        f"{self.intent}\n\n"
+                        "Configured Hook guidance:\n"
+                        f"{json.dumps(self.hook_guidance, ensure_ascii=False, indent=2)}"
+                    ),
+                },
+            ],
         )
 
     def activate(
@@ -85,20 +89,26 @@ class InterventionWorker:
         tool_set = _ActivationTools(activation).tool_set
         runtime = ToolExecutor(tool_set.tools)
         step = snapshot.get("current_step")
-        tool_section = render_tagged_tool_section(tool_set.definitions)
-        self._history.append(
-            ChatMessage(
-                role="user",
-                content=(
-                    f"Hook activation {self._activation_count}: phase={phase}, "
-                    f"student_step={step}, phase_activation="
-                    f"{phase_activation}/{max_activations}.\n"
-                    f"Phase guidance: {guidance}\n"
-                    "Available tools for this activation:\n"
-                    f"{tool_section}\n"
-                    "Inspect the bound Student context as needed, then call exactly one "
-                    "terminal action tool. The terminal tool ends this Hook activation."
-                ),
+        active_observation = _active_observation(snapshot)
+        self._session.append_user_message(
+            (
+                f"Hook activation {self._activation_count}: phase={phase}, "
+                f"student_step={step}, phase_activation="
+                f"{phase_activation}/{max_activations}.\n"
+                "Read-only active observation:\n"
+                f"{json.dumps(active_observation, ensure_ascii=False)}\n"
+                f"Phase guidance: {guidance}\n"
+                "Act only on the current phase guidance. Treat guidance for other "
+                "phases as context for continuity, not authorization to act early.\n"
+                "The API tool list contains the exact tools available for this "
+                "activation.\n"
+                "Treat the active observation as authoritative lifecycle state. "
+                "Do not try to rediscover an active stage value in the editable "
+                "Student message blocks. Evaluate any semantic condition from the "
+                "candidate and inspected Student-visible evidence; the runtime has "
+                "not decided that semantic condition for you.\n"
+                "Inspect the bound Student context as needed, then call exactly one "
+                "terminal action tool. The terminal tool ends this Hook activation."
             )
         )
         self.trace.append(
@@ -114,73 +124,175 @@ class InterventionWorker:
         )
 
         for worker_step in range(1, self.max_steps_per_activation + 1):
-            model_input = self._model_input()
-            response = self.model.generate(model_input)
-            raw_output = response.raw_output
-            metadata = dict(response.metadata)
-            if response.usage:
-                metadata["usage"] = dict(response.usage)
+            turn = self._session.complete(tools=tool_set.tools)
+            raw_output = _assistant_content(turn.assistant_message)
+            metadata = {
+                "usage": dict(turn.usage),
+                "tool_calls": [
+                    {
+                        "name": call.name,
+                        "call_id": call.call_id,
+                        "arguments": (
+                            call.arguments
+                            if call.parse_error is None
+                            else call.arguments_text
+                        ),
+                    }
+                    for call in turn.tool_calls
+                ],
+            }
+            for key in ("reasoning_content", "reasoning", "thinking"):
+                value = turn.assistant_message.get(key)
+                if isinstance(value, str) and value:
+                    metadata[key] = value
             self.trace.append(
                 {
                     "event_type": "worker_model_output",
                     "activation": self._activation_count,
                     "worker_step": worker_step,
-                    "model_input": model_input.to_dict(),
+                    "model_input": {
+                        "messages": turn.request_messages,
+                        "tools": [
+                            {
+                                "name": definition.name,
+                                "description": definition.description,
+                                "parameters": definition.to_json_schema(),
+                            }
+                            for definition in tool_set.definitions
+                        ],
+                    },
                     "raw_output": raw_output,
                     "metadata": metadata,
                 }
             )
-            parsed = self._parser.parse(raw_output)
-            self._history.append(ChatMessage(role="assistant", content=raw_output))
-
-            if parsed.kind is ParsedOutputKind.TOOL_CALL:
-                if parsed.tool_call is None:
-                    raise RuntimeError("Worker parsed tool call is missing")
-                result = runtime.execute(parsed.tool_call)
-                self._history.append(ChatMessage(role="user", content=result.content))
-                self.trace.append(
-                    {
-                        "event_type": "worker_tool_result",
-                        "activation": self._activation_count,
-                        "worker_step": worker_step,
-                        "tool_call": parsed.tool_call.to_dict(),
-                        "tool_result": result.to_dict(),
-                    }
+            if not turn.tool_calls:
+                self._session.append_user_message(
+                    "No native tool call was returned. Call exactly one tool from "
+                    "the current API tool list."
                 )
-                if activation.action is not None:
-                    self.trace.append(
-                        {
-                            "event_type": "worker_action",
-                            "activation": self._activation_count,
-                            "action": activation.action.to_dict(),
-                        }
-                    )
-                    return activation.action
                 continue
 
-            if parsed.kind is ParsedOutputKind.FINAL_ANSWER:
-                feedback = (
-                    "A Hook activation cannot finish with final_answer. Call one terminal "
-                    "action tool: append_context_message, replace_model_input, "
-                    "defer_final_answer, accept_final_answer, or "
-                    "continue_without_change."
+            self._session.commit_assistant(turn)
+            if len(turn.tool_calls) != 1:
+                content = (
+                    "Call exactly one tool per response during an Intervention Hook "
+                    "activation. Retry with one tool call."
                 )
-            else:
-                feedback = (
-                    f"Worker output could not be parsed: {parsed.error}. Return one "
-                    "complete tool_call block."
+                for call in turn.tool_calls:
+                    self._record_tool_result(
+                        call=call,
+                        content=content,
+                        metadata={"error_type": "multiple_tool_calls"},
+                        worker_step=worker_step,
+                    )
+                continue
+
+            call = turn.tool_calls[0]
+            if call.parse_error is not None:
+                self._record_tool_result(
+                    call=call,
+                    content=call.parse_error,
+                    metadata={"error_type": "invalid_json"},
+                    worker_step=worker_step,
                 )
-            self._history.append(ChatMessage(role="user", content=feedback))
+                continue
+            if call.name not in {tool.name for tool in tool_set.tools}:
+                content = (
+                    f"Unknown tool '{call.name}'. Use one of: "
+                    f"{sorted(tool.name for tool in tool_set.tools)}"
+                )
+                self._record_tool_result(
+                    call=call,
+                    content=content,
+                    metadata={"error_type": "unknown_tool"},
+                    worker_step=worker_step,
+                )
+                continue
+
+            result = runtime.execute(
+                ToolCall(name=call.name, arguments=call.arguments)
+            )
+            self._record_tool_result(
+                call=call,
+                content=result.content,
+                metadata=dict(result.metadata),
+                worker_step=worker_step,
+                result=result,
+            )
+            if activation.action is not None:
+                self.trace.append(
+                    {
+                        "event_type": "worker_action",
+                        "activation": self._activation_count,
+                        "action": activation.action.to_dict(),
+                    }
+                )
+                return activation.action
 
         raise RuntimeError(
             f"Intervention Worker did not choose an action within "
             f"{self.max_steps_per_activation} steps"
         )
 
-    def _model_input(self) -> ModelInput:
-        return ModelInput.from_messages(
-            [ChatMessage(role="system", content=self._system_prompt), *self._history]
+    def _record_tool_result(
+        self,
+        *,
+        call: PendingNativeToolCall,
+        content: str,
+        metadata: dict[str, Any],
+        worker_step: int,
+        result: ToolResult | None = None,
+    ) -> None:
+        self._session.append_tool_result(
+            call=call,
+            content=content,
+            metadata=metadata,
         )
+        tool_result = result or ToolResult(
+            name=call.name,
+            content=content,
+            metadata=metadata,
+        )
+        self.trace.append(
+            {
+                "event_type": "worker_tool_result",
+                "activation": self._activation_count,
+                "worker_step": worker_step,
+                "tool_call": {
+                    "name": call.name,
+                    "arguments": (
+                        call.arguments
+                        if call.parse_error is None
+                        else {"raw_arguments": call.arguments_text}
+                    ),
+                    "call_id": call.call_id,
+                },
+                "tool_result": tool_result.to_dict(),
+            }
+        )
+
+    @property
+    def transcript(self) -> list[dict[str, Any]]:
+        """Return the complete native Worker transcript."""
+
+        return self._session.transcript
+
+    @property
+    def tool_calls(self) -> tuple[NativeToolCall, ...]:
+        """Return auditable native tool calls from all activations."""
+
+        return self._session.tool_calls
+
+    @property
+    def usage(self) -> dict[str, Any]:
+        """Return aggregate Teacher usage for this Worker session."""
+
+        return self._session.usage
+
+    def close(self) -> None:
+        """Close transport resources owned by this Worker."""
+
+        self._session.close()
 
 
 class _ActivationState:
@@ -194,7 +306,7 @@ class _ActivationState:
         self.action = action
         return ToolResult(
             name=action.kind,
-            content=f"ACTION_ACCEPTED: {json.dumps(action.to_dict(), ensure_ascii=False)}",
+            content=f"ACTION_ACCEPTED: {action.kind}",
             metadata={"terminal": True, "action": action.to_dict()},
         )
 
@@ -203,10 +315,12 @@ class _ActivationTools:
     def __init__(self, activation: _ActivationState) -> None:
         self._activation = activation
         tools = [
-            CallableTool.from_callable(self.inspect_student_context),
-            CallableTool.from_callable(self.append_context_message),
-            CallableTool.from_callable(self.replace_model_input),
+            CallableTool.from_callable(self.inspect_active_observation),
+            CallableTool.from_callable(self.inspect_editable_context),
+            CallableTool.from_callable(self.inspect_context_block),
         ]
+        if _context_patch_is_available(activation.snapshot):
+            tools.append(CallableTool.from_callable(self.apply_context_patch))
         if _stage_is_active(activation.snapshot, "final_decision"):
             tools.extend(
                 [
@@ -217,79 +331,109 @@ class _ActivationTools:
         tools.append(CallableTool.from_callable(self.continue_without_change))
         self.tool_set = ToolSet(tools)
 
-    @tool(name="inspect_student_context")
-    def inspect_student_context(self) -> ToolResult:
-        """Read the complete source prefix, current Student state, trace and stage values."""
+    @tool(name="inspect_active_observation")
+    def inspect_active_observation(self) -> ToolResult:
+        """Read phase-local stage values and lifecycle facts; these are not editable."""
 
         return ToolResult(
-            name="inspect_student_context",
-            content=json.dumps(self._activation.snapshot, ensure_ascii=False),
+            name="inspect_active_observation",
+            content=json.dumps(
+                _active_observation(self._activation.snapshot),
+                ensure_ascii=False,
+            ),
         )
 
-    @tool(name="append_context_message")
-    def append_context_message(
+    @tool(name="inspect_editable_context")
+    def inspect_editable_context(self) -> ToolResult:
+        """List editable blocks using short summaries, not full content."""
+
+        blocks = self._activation.snapshot.get("editable_context")
+        return ToolResult(
+            name="inspect_editable_context",
+            content=json.dumps(
+                blocks if isinstance(blocks, list) else [],
+                ensure_ascii=False,
+            ),
+        )
+
+    @tool(name="inspect_context_block")
+    def inspect_context_block(
         self,
-        role: Annotated[
-            str,
+        block_id: Annotated[
+            int,
             ToolArg(
-                "Role of the message added to Student model input.",
-                choices=("system", "user", "assistant", "tool"),
+                "Numeric block ID from inspect_editable_context.",
+                minimum=1,
             ),
         ],
-        content: Annotated[str, ToolArg("Complete message content to add.")],
-        persistence: Annotated[
-            str,
-            ToolArg(
-                "Apply once to the next generation or to every remaining generation.",
-                choices=("next_generation", "branch"),
-            ),
-        ] = "next_generation",
     ) -> ToolResult:
-        """Add a message to Student context and end the current Hook activation."""
+        """Read the complete visible content of one selected editable context block."""
 
-        return self._activation.finish(
-            InterventionAction(
-                kind="append_context_message",
-                payload={
-                    "role": role,
-                    "content": content,
-                    "persistence": persistence,
-                },
+        blocks = self._activation.snapshot.get("_editable_context_blocks")
+        if not isinstance(blocks, list):
+            blocks = []
+        block = next(
+            (
+                item
+                for item in blocks
+                if isinstance(item, dict) and item.get("block_id") == block_id
+            ),
+            None,
+        )
+        if block is None:
+            return ToolResult(
+                name="inspect_context_block",
+                content=f"TOOL_INPUT_ERROR: unknown block_id {block_id}",
+                metadata={"error": f"unknown block_id {block_id}"},
             )
+        return ToolResult(
+            name="inspect_context_block",
+            content=json.dumps(
+                {
+                    "block_id": block_id,
+                    "kind": block.get("kind"),
+                    "role": block.get("role"),
+                    "content": block.get("content"),
+                },
+                ensure_ascii=False,
+            ),
         )
 
-    @tool(name="replace_model_input")
-    def replace_model_input(
+    @tool(name="apply_context_patch")
+    def apply_context_patch(
         self,
-        system_instruction: Annotated[
-            str,
+        operations: Annotated[
+            list[dict[str, object]],
             ToolArg(
-                "Complete replacement system instruction. Existing non-system "
-                "messages and tool evidence are preserved automatically."
+                "Ordered atomic patch operations. Replace: {operation:'replace', "
+                "block_id:<int>, content:<string>}. Delete: {operation:'delete', "
+                "block_id:<int>}. Insert: {operation:'insert', anchor_block_id:<int>, "
+                "position:'before'|'after', role:'system'|'user'|'assistant'|'tool', "
+                "content:<string>}. IDs come from inspect_editable_context."
             ),
         ],
-        user_instruction: Annotated[
+        reason: Annotated[
             str,
-            ToolArg(
-                "Optional user-role instruction appended after the preserved history."
-            ),
+            ToolArg("Why this context transformation tests the hypothesis."),
         ] = "",
     ) -> ToolResult:
-        """Rewrite Student instructions without serializing its complete message list."""
+        """Atomically insert, replace or delete context blocks and finish."""
 
-        if not system_instruction.strip():
+        error = _context_patch_error(
+            operations=operations,
+            snapshot=self._activation.snapshot,
+        )
+        if error is not None:
             return ToolResult(
-                name="replace_model_input",
-                content="TOOL_INPUT_ERROR: system_instruction must not be empty",
-                metadata={"error": "system_instruction must not be empty"},
+                name="apply_context_patch",
+                content=f"TOOL_INPUT_ERROR: {error}",
+                metadata={"error": error},
             )
         return self._activation.finish(
             InterventionAction(
-                kind="replace_model_input",
-                payload={
-                    "system_instruction": system_instruction.strip(),
-                    "user_instruction": user_instruction.strip(),
-                },
+                kind="apply_context_patch",
+                payload={"operations": operations},
+                reason=reason.strip(),
             )
         )
 
@@ -367,8 +511,8 @@ def _render_system_prompt(
     template: str | None = None,
 ) -> str:
     tool_section = (
-        "The runtime lists the exact tools available for each Hook activation "
-        "in the current activation message. Use only that current list."
+        "The API request supplies the exact tools available for each Hook "
+        "activation. Use only that current native tool list."
     )
     if template is not None:
         if "{{tools}}" not in template:
@@ -381,18 +525,59 @@ def _render_system_prompt(
         "You may inspect all bound trace evidence and modify only through the supplied "
         "tools. At each Hook activation, inspect what you need and call exactly one "
         "terminal action tool. A terminal action immediately returns control to the "
-        "Student, so do not write anything after its tool_call block. Never use a golden "
+        "Student. Never use a golden "
         "answer or invent evidence. Tool-phase recommendations are advisory; any active "
         "stage may be replaced when the experiment intent requires it.\n\n"
         f"{tool_section}\n\n"
-        "Write concise analysis before an action, then exactly one complete block:\n"
-        '<tool_call>{"name": "<tool>", "arguments": {}}</tool_call>\n'
+        "Use provider-native structured tool calling for every action."
     )
+
+
+def _assistant_content(message: dict[str, Any]) -> str:
+    content = message.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    return json.dumps(content, ensure_ascii=False)
+
+
+def _active_observation(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Project only phase-local state needed to interpret the current activation."""
+
+    active_stage = snapshot.get("active_stage")
+    active_stage = active_stage if isinstance(active_stage, dict) else {}
+    projected_stage = {
+        key: (
+            value
+            if key == "final_decision"
+            else {"active": True}
+        )
+        for key, value in active_stage.items()
+    }
+    prior_changes = snapshot.get("prior_intervention_changes")
+    prior_changes = prior_changes if isinstance(prior_changes, list) else []
+    return {
+        "phase": snapshot.get("current_phase"),
+        "student_step": snapshot.get("current_step"),
+        "active_stage": projected_stage,
+        "lifecycle_facts": {
+            "active_stage_keys": list(active_stage),
+            "prior_intervention_count": len(prior_changes),
+        },
+    }
 
 
 def _stage_is_active(snapshot: dict[str, Any], key: str) -> bool:
     active_stage = snapshot.get("active_stage")
     return isinstance(active_stage, dict) and key in active_stage
+
+
+def _context_patch_is_available(snapshot: dict[str, Any]) -> bool:
+    return bool(snapshot.get("source_boundary")) or snapshot.get("current_phase") in {
+        "post_prompt",
+        "post_tool",
+    }
 
 
 def _stage_replacement_error(
@@ -439,4 +624,61 @@ def _stage_replacement_error(
                 return "accepted final_decision requires an answer"
         else:
             return "final_decision action must be accept or defer"
+    return None
+
+
+def _context_patch_error(
+    *,
+    operations: list[dict[str, object]],
+    snapshot: dict[str, Any],
+) -> str | None:
+    if not operations:
+        return "operations must contain at least one patch operation"
+    if len(operations) > 8:
+        return "operations must contain at most 8 patch operations"
+    blocks = snapshot.get("_editable_context_blocks")
+    valid_ids = {
+        item.get("block_id")
+        for item in blocks if isinstance(item, dict)
+    } if isinstance(blocks, list) else set()
+    touched: set[int] = set()
+    for index, operation in enumerate(operations, start=1):
+        if not isinstance(operation, dict):
+            return f"operation {index} must be an object"
+        kind = operation.get("operation")
+        if kind not in {"insert", "replace", "delete"}:
+            return f"operation {index} has unsupported operation type"
+        id_key = "anchor_block_id" if kind == "insert" else "block_id"
+        block_id = operation.get(id_key)
+        if not isinstance(block_id, int) or isinstance(block_id, bool):
+            return f"operation {index} requires integer {id_key}"
+        if block_id not in valid_ids:
+            return f"operation {index} references unknown block ID {block_id}"
+        if kind != "insert":
+            if block_id in touched:
+                return f"block ID {block_id} is modified more than once"
+            touched.add(block_id)
+        if kind == "delete":
+            if set(operation) != {"operation", "block_id"}:
+                return f"delete operation {index} contains unsupported fields"
+            continue
+        content = operation.get("content")
+        if not isinstance(content, str) or not content.strip():
+            return f"operation {index} requires non-empty content"
+        if kind == "replace":
+            if set(operation) != {"operation", "block_id", "content"}:
+                return f"replace operation {index} contains unsupported fields"
+            continue
+        if operation.get("position") not in {"before", "after"}:
+            return f"insert operation {index} requires position before or after"
+        if operation.get("role") not in {"system", "user", "assistant", "tool"}:
+            return f"insert operation {index} has unsupported role"
+        if set(operation) != {
+            "operation", "anchor_block_id", "position", "role", "content"
+        }:
+            return f"insert operation {index} contains unsupported fields"
+    if len(touched) == len(valid_ids) and all(
+        operation.get("operation") == "delete" for operation in operations
+    ):
+        return "patch must leave at least one context block"
     return None

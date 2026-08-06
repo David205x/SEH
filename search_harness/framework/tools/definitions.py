@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
-from typing import Any, Annotated, Protocol, TypeVar, get_args, get_origin, get_type_hints
+from typing import Any, Annotated, Literal, Protocol, TypeVar, get_args, get_origin, get_type_hints
 
 from .types import ToolResult
 
@@ -321,6 +321,23 @@ def _annotation_to_json_schema(annotation: Any) -> dict[str, Any]:
 
     origin = get_origin(annotation)
     args = get_args(annotation)
+    if origin is Literal and args:
+        literal_type = type(args[0])
+        if literal_type is bool:
+            schema_type = "boolean"
+        elif literal_type is int:
+            schema_type = "integer"
+        elif literal_type is float:
+            schema_type = "number"
+        elif literal_type is str:
+            schema_type = "string"
+        else:
+            raise ValueError(
+                f"unsupported Literal value type: {literal_type!r}"
+            )
+        if any(type(value) is not literal_type for value in args):
+            raise ValueError("Literal tool values must share one JSON type")
+        return {"type": schema_type, "enum": list(args)}
     if origin is list and len(args) == 1:
         return {"type": "array", "items": _annotation_to_json_schema(args[0])}
     if origin is dict and args == (str, object):
@@ -363,6 +380,8 @@ def _matches_annotation(value: object, annotation: Any) -> bool:
 
     origin = get_origin(annotation)
     args = get_args(annotation)
+    if origin is Literal and args:
+        return value in args
     if origin is list and len(args) == 1:
         return isinstance(value, list) and all(
             _matches_annotation(item, args[0]) for item in value

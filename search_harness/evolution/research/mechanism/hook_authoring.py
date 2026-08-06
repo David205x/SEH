@@ -212,7 +212,7 @@ def _final_decision() -> dict[str, Any]:
 def _manifest() -> dict[str, Any]:
     return {
         "required_changes": [
-            "Create a complete components/extensions/<instance_id>/component.py.",
+            "Create a complete extensions/<instance_id>/component.py.",
             "Create referenced UTF-8 prompt files when the Hook calls a model.",
             "Register the extension in harness.json in the same candidate transaction.",
             "Register its mutable policy in evolution.json in the same transaction.",

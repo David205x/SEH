@@ -58,6 +58,7 @@ class MechanismReplayModel(Model):
                         "phase": "post_tool",
                         "trigger_condition": "The target relation is absent.",
                         "decision_inputs": ["question", "latest tool result"],
+                        "runtime_inputs": ["task", "tool", "persistent_state"],
                         "decision_evaluator": "deterministic",
                         "action": "Append a generic evidence-gap instruction.",
                         "activation_budget": 1,
@@ -222,6 +223,7 @@ class AgentsSdkRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     "next_obligation": None,
                 },
                 "evidence_refs": ["trial_001"],
+                "budget": _review_budget(trials_used=1),
                 "capability_constraints": ["Student runtime cannot call Teacher."],
             }
             artifact = await AgentsSdkRoleRunner(max_turns=8).run(
@@ -328,7 +330,22 @@ def _distiller_input() -> dict[str, Any]:
             "next_obligation": None,
         },
         "evidence_refs": ["trial_001"],
+        "budget": _review_budget(trials_used=1),
         "capability_constraints": ["Student runtime cannot call Teacher."],
+    }
+
+
+def _review_budget(*, trials_used: int) -> dict[str, Any]:
+    max_trials = 4
+    max_assignments = 12
+    return {
+        "max_trials_per_hypothesis": max_trials,
+        "trials_used": trials_used,
+        "trials_remaining": max_trials - trials_used,
+        "max_trial_assignments": max_assignments,
+        "assignments_used": trials_used,
+        "assignments_remaining": max_assignments - trials_used,
+        "conclusion_required": trials_used == max_trials,
     }
 
 

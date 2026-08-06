@@ -19,7 +19,7 @@ class CompilerCandidateReviewTest(unittest.TestCase):
 
         workspace = _workspace()
         workspace.write_text(
-            "components/extensions/probe/component.py",
+            "extensions/probe/component.py",
             (
                 "def build(config, context):\n"
                 "    del context\n"
@@ -42,7 +42,7 @@ class CompilerCandidateReviewTest(unittest.TestCase):
 
         workspace = _workspace()
         workspace.write_text(
-            "components/extensions/probe/component.py",
+            "extensions/probe/component.py",
             (
                 "def build(config, context):\n"
                 "    if config:\n"
@@ -61,7 +61,7 @@ class CompilerCandidateReviewTest(unittest.TestCase):
 
         workspace = _workspace()
         workspace.write_text(
-            "components/extensions/probe/component.py",
+            "extensions/probe/component.py",
             "def build(:\n",
         )
 
@@ -72,7 +72,7 @@ class CompilerCandidateReviewTest(unittest.TestCase):
 
         workspace = _workspace()
         workspace.write_text(
-            "components/extensions/probe/component.py",
+            "extensions/probe/component.py",
             (
                 "def handle(context):\n"
                 "    result = context.state.get('stage.tool_result')\n"

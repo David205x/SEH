@@ -16,7 +16,7 @@ from search_harness.framework.tools import CallableTool, ToolArg, ToolSet, tool
 BASELINE_TEMPLATE_ROOT = (
     Path(__file__).parents[2] / "harness_templates" / "student" / "baseline"
 )
-PROMPT_ENTRYPOINT = "components/prompts/simple_search/component.py:build"
+PROMPT_ENTRYPOINT = "prompt/component.py:build"
 
 
 class SimpleSearchPromptTest(TestCase):
@@ -24,10 +24,7 @@ class SimpleSearchPromptTest(TestCase):
         """Verifies the loads default system prompt from resource contract."""
         prompt = (
             BASELINE_TEMPLATE_ROOT
-            / "components"
-            / "prompts"
-            / "simple_search"
-            / "templates"
+            / "prompt"
             / "system.md"
         ).read_text(encoding="utf-8")
 

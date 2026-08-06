@@ -80,7 +80,7 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
             "intervention_worker": "InterventionWorkerResult",
             "compiler": "CompilerResult",
             "candidate_reviewer": "CandidateReview",
-            "conformance_reviewer": "ConformanceFinding",
+            "conformance_reviewer": "ConformanceReview",
         }
         for role_id, output_name in expected.items():
             with self.subTest(role_id=role_id):

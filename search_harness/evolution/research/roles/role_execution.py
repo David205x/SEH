@@ -88,10 +88,12 @@ def validate_role_output(
         if resources.trials is None:
             raise ValueError("Trial Reviewer resources are unavailable")
         resources.trials.validate_trial_review(output)
-    if isinstance(output, MechanismDistillation) and output.decision == "distilled":
-        if output.mechanism_ref is None:
-            raise ValueError("distilled result lacks mechanism_ref")
-        resources.mechanisms.resolve(output.mechanism_ref)
+    if isinstance(output, MechanismDistillation):
+        resources.validate_mechanism_distillation(output)
+        if output.decision == "distilled":
+            if output.mechanism_ref is None:
+                raise ValueError("distilled result lacks mechanism_ref")
+            resources.mechanisms.resolve(output.mechanism_ref)
     if isinstance(output, InterventionWorkerResult):
         raise ValueError(
             "Intervention Worker must run through "
@@ -143,6 +145,59 @@ def build_role_artifact(
         "resource_config": prepared.resource_config.model_dump(mode="json"),
         "output": output.model_dump(mode="json"),
         "validated_mechanisms": prepared.resources.mechanisms.validated_payloads(),
+        "resource_artifacts": prepared.resources.artifacts(),
+        "tool_calls": tool_calls,
+        "usage": usage,
+        "transcript": transcript,
+    }
+    if runtime_fields:
+        overlap = set(artifact) & set(runtime_fields)
+        if overlap:
+            raise ValueError(
+                f"runtime artifact fields overlap shared fields: {sorted(overlap)}"
+            )
+        artifact.update(runtime_fields)
+    return artifact
+
+
+def build_failed_role_artifact(
+    prepared: PreparedRoleRun,
+    *,
+    runtime: str,
+    model: dict[str, Any],
+    error: dict[str, Any],
+    tool_calls: list[dict[str, Any]],
+    usage: dict[str, Any],
+    transcript: list[dict[str, Any]],
+    runtime_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a failure artifact without pretending a Role Output exists."""
+
+    output_schema = prepared.spec.role.output_type.model_json_schema()
+    artifact = {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "failed",
+        "template_root": str(prepared.template_root.resolve()),
+        "harness_id": prepared.spec.manifest.harness_id,
+        "role": {
+            "id": prepared.spec.role.role_id,
+            "version": prepared.spec.role.version,
+        },
+        "output_contract": {
+            "id": prepared.spec.role.output_contract_id,
+            "version": prepared.spec.role.output_contract_version,
+            "schema_digest": _schema_digest(output_schema),
+        },
+        "runtime": runtime,
+        "model": model,
+        "input": prepared.role_input.model_dump(mode="json"),
+        "resource_config": prepared.resource_config.model_dump(mode="json"),
+        "output": None,
+        "error": error,
+        "validated_mechanisms": (
+            prepared.resources.mechanisms.validated_payloads()
+        ),
         "resource_artifacts": prepared.resources.artifacts(),
         "tool_calls": tool_calls,
         "usage": usage,

@@ -43,6 +43,7 @@ class EvidenceReviewEffects:
         hypothesis: dict[str, Any],
         trial_paths: list[Path],
         persisted_trial_reviews: dict[int, Path],
+        budget: dict[str, Any],
         prior_obligation: object,
         work_dir: Path,
     ) -> EffectResult:
@@ -112,6 +113,7 @@ class EvidenceReviewEffects:
                     review.model_dump(mode="json")
                     for review in trial_reviews
                 ],
+                "budget": budget,
                 "prior_obligation": prior_obligation,
             },
             resource_config=TeacherResourceConfig(),

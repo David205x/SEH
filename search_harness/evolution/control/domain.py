@@ -348,6 +348,10 @@ def _apply_event(state: ControlState, event: ControlEvent) -> None:
             )
         record.status = "failed"
         record.error = _required_string(payload, "error")
+        state.total_tokens += _non_negative_integer(
+            payload.get("total_tokens", 0),
+            "total_tokens",
+        )
         return
     if event.event_type == "work_transitioned":
         if record.status not in {"completed", "failed"}:

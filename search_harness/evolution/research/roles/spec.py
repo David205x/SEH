@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from search_harness.framework.harness import HarnessManifest
@@ -14,14 +14,16 @@ from .contracts import TeacherPayload, TeacherRoleDefinition
 
 ROLE_INPUT_PLACEHOLDER = "{{role_input}}"
 RESOURCE_CONTEXT_PLACEHOLDER = "{{resource_context}}"
+FEEDBACK_EVENT_PLACEHOLDER = "{{feedback_event}}"
 
 
 @dataclass(frozen=True)
 class TeacherPromptSpec:
-    """Teacher instructions 与单次运行输入模板。"""
+    """Teacher 初始输入与按反馈来源选择的续接模板。"""
 
     instructions: str
     user_template: str
+    continuation_templates: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.instructions.strip():
@@ -35,6 +37,14 @@ class TeacherPromptSpec:
                 "Teacher user template must contain "
                 f"{RESOURCE_CONTEXT_PLACEHOLDER}"
             )
+        for source, template in self.continuation_templates.items():
+            if not source.strip():
+                raise ValueError("Teacher continuation source must not be empty")
+            if template.count(FEEDBACK_EVENT_PLACEHOLDER) != 1:
+                raise ValueError(
+                    "Teacher continuation template must contain exactly one "
+                    f"{FEEDBACK_EVENT_PLACEHOLDER}: {source}"
+                )
 
     def render_input(
         self,
@@ -58,6 +68,21 @@ class TeacherPromptSpec:
             )
             .strip()
         )
+
+    def render_continuation(
+        self,
+        source: str,
+        feedback_event: dict[str, Any],
+    ) -> str:
+        """按已声明的反馈来源渲染同一 Role Session 的续接输入。"""
+
+        template = self.continuation_templates.get(source)
+        if template is None:
+            raise ValueError(f"unsupported role continuation source: {source}")
+        return template.replace(
+            FEEDBACK_EVENT_PLACEHOLDER,
+            json.dumps(feedback_event, ensure_ascii=False, indent=2),
+        ).strip()
 
 
 @dataclass(frozen=True)

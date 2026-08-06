@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ from search_harness.datasets import DatasetExample
 from search_harness.evolution.research.conformance import (
     ConformanceCase,
     aggregate_conformance,
+    project_conformance_trajectory,
 )
 from search_harness.evolution.research.roles.contracts import ConformanceFinding
 
@@ -108,6 +110,117 @@ class ConformanceAggregationTest(unittest.TestCase):
 
         self.assertEqual(summary.decision, "revise_implementation")
         self.assertFalse(summary.per_example["example-2"]["passed"])
+
+    def test_trajectory_view_keeps_decision_evidence_without_snapshots(
+        self,
+    ) -> None:
+        """验证 Conformance view 保留行为证据并移除重复上下文。"""
+
+        record = {
+            "example": {"example_id": "example-1", "question": "Who?"},
+            "replicate": {"replicate_id": "r000"},
+            "run": {
+                "status": "completed",
+                "answer": "Candidate",
+                "trace": [
+                    {
+                        "index": 1,
+                        "step": 1,
+                        "event_type": "model_input",
+                        "payload": {
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": "repeated full conversation",
+                                }
+                            ]
+                        },
+                    },
+                    {
+                        "index": 2,
+                        "step": 1,
+                        "event_type": "tool_result",
+                        "payload": {
+                            "name": "search",
+                            "content": "retrieved relation evidence",
+                            "metadata": {"usage": {"total_tokens": 99}},
+                        },
+                    },
+                    {
+                        "index": 3,
+                        "step": 1,
+                        "event_type": "hook_model_output",
+                        "payload": {
+                            "phase": "post_tool",
+                            "hook_id": "grounding_gate",
+                            "profile": "student",
+                            "purpose": "grounding",
+                            "raw_output": "explicit_relation_present=false",
+                            "model_input": {
+                                "messages": [
+                                    {
+                                        "role": "user",
+                                        "content": "duplicated hook evidence",
+                                    }
+                                ]
+                            },
+                            "metadata": {"reasoning": "private reasoning"},
+                        },
+                    },
+                    {
+                        "index": 4,
+                        "step": 1,
+                        "event_type": "hook_applied",
+                        "payload": {
+                            "phase": "post_tool",
+                            "hook_id": "grounding_gate",
+                            "changes": [
+                                {
+                                    "key": "stage.tool_result",
+                                    "before": {
+                                        "name": "search",
+                                        "content": "retrieved relation evidence",
+                                    },
+                                    "after": {
+                                        "name": "search",
+                                        "content": (
+                                            "retrieved relation evidence"
+                                            "\ncontinue searching"
+                                        ),
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                    {
+                        "index": 5,
+                        "step": 2,
+                        "event_type": "parsed_output",
+                        "payload": {
+                            "kind": "tool_call",
+                            "tool_call": {
+                                "name": "search",
+                                "arguments": {"query": "specific relation"},
+                            },
+                            "inband_thinking": "private Student thinking",
+                        },
+                    },
+                ],
+            },
+        }
+
+        view = project_conformance_trajectory(record)
+        encoded = json.dumps(view, ensure_ascii=False)
+
+        self.assertEqual(view["view"], "conformance")
+        self.assertNotIn("repeated full conversation", encoded)
+        self.assertNotIn("duplicated hook evidence", encoded)
+        self.assertNotIn("private reasoning", encoded)
+        self.assertNotIn("private Student thinking", encoded)
+        self.assertIn("retrieved relation evidence", encoded)
+        self.assertIn("explicit_relation_present=false", encoded)
+        self.assertIn("continue searching", encoded)
+        self.assertIn("specific relation", encoded)
 
 
 def _case(example_id: str) -> ConformanceCase:

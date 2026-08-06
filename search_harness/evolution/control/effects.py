@@ -264,6 +264,7 @@ class LocalControlEffects:
             hypothesis=hypothesis,
             trial_paths=trial_paths,
             persisted_trial_reviews=persisted_reviews,
+            budget=_evidence_review_budget(work, len(trial_paths)),
             prior_obligation=work.payload.get("prior_obligation"),
             work_dir=work_dir,
         )
@@ -275,6 +276,7 @@ class LocalControlEffects:
         state: ControlState,
         work_dir: Path,
     ) -> EffectResult:
+        trial_paths = _trial_paths(work)
         return await self._research_role_effects().distill_mechanism(
             hypothesis=_role_output(
                 _read_json(_ref_path(work, "hypothesis_artifact"))
@@ -282,7 +284,8 @@ class LocalControlEffects:
             review=_role_output(
                 _read_json(_ref_path(work, "reviewer_artifact"))
             ),
-            trial_files=_trial_paths(work),
+            trial_files=trial_paths,
+            budget=_evidence_review_budget(work, len(trial_paths)),
             capability_constraints=list(
                 work.payload.get("capability_constraints", [])
             ),
@@ -306,6 +309,11 @@ class LocalControlEffects:
             ),
             validation_feedback=list(
                 work.payload.get("validation_feedback", [])
+            ),
+            continuation_candidate_file=(
+                Path(work.input_refs["compiler_candidate_file"])
+                if "compiler_candidate_file" in work.input_refs
+                else None
             ),
             work_dir=work_dir,
         )
@@ -608,6 +616,45 @@ def _required_current_version(state: ControlState) -> str:
     return state.current_version
 
 
+def _evidence_review_budget(
+    work: WorkItem,
+    persisted_trial_count: int,
+) -> dict[str, Any]:
+    limits = _required_payload_object(work, "trial_budget")
+    max_trials = _required_positive_int(
+        limits,
+        "max_trials_per_hypothesis",
+    )
+    max_assignments = _required_positive_int(
+        limits,
+        "max_trial_assignments",
+    )
+    trials_used = _required_non_negative_int(work.payload, "trial_count")
+    assignments_used = _required_non_negative_int(
+        work.payload,
+        "assignment_count",
+    )
+    if trials_used != persisted_trial_count:
+        raise ValueError(
+            "trial_count differs from persisted trial artifact count"
+        )
+    if trials_used > max_trials or assignments_used > max_assignments:
+        raise ValueError("Evidence Review budget usage exceeds its maximum")
+    trials_remaining = max_trials - trials_used
+    assignments_remaining = max_assignments - assignments_used
+    return {
+        "max_trials_per_hypothesis": max_trials,
+        "trials_used": trials_used,
+        "trials_remaining": trials_remaining,
+        "max_trial_assignments": max_assignments,
+        "assignments_used": assignments_used,
+        "assignments_remaining": assignments_remaining,
+        "conclusion_required": (
+            trials_remaining == 0 or assignments_remaining == 0
+        ),
+    }
+
+
 def _required_string(value: dict[str, Any], name: str) -> str:
     item = value.get(name)
     if not isinstance(item, str) or not item.strip():
@@ -623,6 +670,20 @@ def _required_object(
     if not isinstance(item, dict):
         raise TypeError(f"{name} must be an object")
     return dict(item)
+
+
+def _required_positive_int(value: dict[str, Any], name: str) -> int:
+    item = value.get(name)
+    if not isinstance(item, int) or isinstance(item, bool) or item < 1:
+        raise TypeError(f"{name} must be a positive integer")
+    return item
+
+
+def _required_non_negative_int(value: dict[str, Any], name: str) -> int:
+    item = value.get(name)
+    if not isinstance(item, int) or isinstance(item, bool) or item < 0:
+        raise TypeError(f"{name} must be a non-negative integer")
+    return item
 
 
 def _role_output(artifact: dict[str, Any]) -> dict[str, Any]:

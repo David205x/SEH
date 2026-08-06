@@ -131,6 +131,14 @@ class _CompletedTransition:
                 "assignment_count": 0,
                 "used_assignments": [],
                 "prior_obligation": None,
+                "trial_budget": {
+                    "max_trials_per_hypothesis": (
+                        self.config.max_trials_per_hypothesis
+                    ),
+                    "max_trial_assignments": (
+                        self.config.max_trial_assignments
+                    ),
+                },
             }
         )
         return self._one(
@@ -188,13 +196,6 @@ class _CompletedTransition:
             return self._one(
                 WorkKind.SELECT_TRIAL,
                 "assignment_unsuitable",
-                refs=refs,
-                payload=payload,
-            )
-        if result_kind == "unsupported_hypothesis":
-            return self._research_revision(
-                feedback_source="intervention_worker",
-                feedback=output,
                 refs=refs,
                 payload=payload,
             )
@@ -312,6 +313,7 @@ class _CompletedTransition:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
         if decision == "needs_revision":
+            refs.pop("compiler_candidate_file", None)
             revision = int(payload.get("mechanism_revision", 0)) + 1
             if revision > self.config.max_mechanism_revisions:
                 return TransitionPlan(
@@ -555,6 +557,8 @@ class _CompletedTransition:
                 "candidate_attempt_",
             ),
         )
+        if target != "implementation":
+            refs.pop("compiler_candidate_file", None)
         payload = _context(self.item)
         payload["after_rejection"] = None
         if target == "evidence":

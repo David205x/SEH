@@ -68,11 +68,11 @@ class HarnessAssemblyTest(TestCase):
 
         with TemporaryDirectory(dir=Path("runs/components")) as directory:
             root = Path(directory)
-            self._write_component(root / "components/tools/probe.py", TOOL_COMPONENT)
-            self._write_component(root / "components/prompts/probe.py", PROMPT_COMPONENT)
-            self._write_component(root / "components/outputs/probe.py", OUTPUT_COMPONENT)
+            self._write_component(root / "tools/probe/component.py", TOOL_COMPONENT)
+            self._write_component(root / "prompt/component.py", PROMPT_COMPONENT)
+            self._write_component(root / "output/component.py", OUTPUT_COMPONENT)
             self._write_component(
-                root / "components/extensions/probe.py",
+                root / "extensions/probe/component.py",
                 EXTENSION_COMPONENT,
             )
             self._write_manifest(root)
@@ -100,24 +100,24 @@ class HarnessAssemblyTest(TestCase):
             "tools": [
                 {
                     "instance_id": "probe_tool",
-                    "entrypoint": "components/tools/probe.py:build",
+                    "entrypoint": "tools/probe/component.py:build",
                     "config": {},
                 }
             ],
             "prompt": {
                 "instance_id": "probe_prompt",
-                "entrypoint": "components/prompts/probe.py:build",
+                "entrypoint": "prompt/component.py:build",
                 "config": {},
             },
             "output": {
                 "instance_id": "probe_output",
-                "entrypoint": "components/outputs/probe.py:build",
+                "entrypoint": "output/component.py:build",
                 "config": {"format": "tagged"},
             },
             "extensions": [
                 {
                     "instance_id": "probe_extension",
-                    "entrypoint": "components/extensions/probe.py:build",
+                    "entrypoint": "extensions/probe/component.py:build",
                     "config": {},
                 }
             ],

@@ -10,6 +10,7 @@ from search_harness.framework.tools import CallableTool, ToolArg, tool
 from search_harness.framework.harness import ComponentFactoryContext
 
 from .mechanism.hook_api import hook_api_categories
+from .mechanism.runtime_inputs import RuntimeInputId
 from .intervention.capabilities import intervention_capabilities
 from .resources.base import (
     EvaluationEvidenceStore,
@@ -48,6 +49,7 @@ def build_builtin_tool(
         "get_harness_component": _get_harness_component,
         "list_trial_evidence": _list_trial_evidence,
         "get_trial_evidence": _get_trial_evidence,
+        "get_trial_event": _get_trial_event,
         "create_mechanism_draft": _create_mechanism_draft,
         "add_mechanism_phase": _add_mechanism_phase,
         "complete_mechanism_draft": _complete_mechanism_draft,
@@ -334,11 +336,44 @@ def _get_trial_evidence(resources: TeacherResources) -> CallableTool:
             ToolArg("Trial reference returned by list_trial_evidence."),
         ],
     ) -> ToolResult:
-        """Read full source and branch runs with non-judgment metadata removed."""
+        """Read trace-canonical source and branch evidence for one trial."""
 
         return _json_result(
             "get_trial_evidence",
             _require_trials(resources).get_trial(trial_ref),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_trial_event(resources: TeacherResources) -> CallableTool:
+    @tool(name="get_trial_event")
+    def invoke(
+        trial_ref: Annotated[
+            str,
+            ToolArg("Trial reference returned by get_trial_evidence."),
+        ],
+        stream: Annotated[
+            str,
+            ToolArg(
+                "Event stream selected from the trial catalog.",
+                choices=("source", "branch", "worker"),
+            ),
+        ],
+        event_index: Annotated[
+            int,
+            ToolArg("Zero-based event index from the selected catalog.", minimum=0),
+        ],
+    ) -> ToolResult:
+        """Read one exact event from a compact trial evidence catalog."""
+
+        return _json_result(
+            "get_trial_event",
+            _require_trials(resources).get_trial_event(
+                trial_ref=trial_ref,
+                stream=stream,
+                event_index=event_index,
+            ),
         )
 
     return CallableTool.from_callable(invoke)
@@ -377,7 +412,15 @@ def _add_mechanism_phase(resources: TeacherResources) -> CallableTool:
         ],
         decision_inputs: Annotated[
             list[str],
-            ToolArg("Runtime inputs available without Teacher."),
+            ToolArg("Semantic values required by the phase rule."),
+        ],
+        runtime_inputs: Annotated[
+            list[RuntimeInputId],
+            ToolArg(
+                "Controlled Runtime Input Topics required by this phase. "
+                "Choose one or more of: task, conversation, tool, model_io, "
+                "parsed_output, final_decision, trajectory, persistent_state."
+            ),
         ],
         decision_evaluator: Annotated[
             str,
@@ -407,6 +450,7 @@ def _add_mechanism_phase(resources: TeacherResources) -> CallableTool:
             phase=phase,
             trigger_condition=trigger_condition,
             decision_inputs=decision_inputs,
+            runtime_inputs=runtime_inputs,
             decision_evaluator=decision_evaluator,
             action=action,
             activation_budget=activation_budget,
@@ -702,12 +746,13 @@ def _query_hook_api(resources: TeacherResources) -> CallableTool:
         symbol: Annotated[
             str,
             ToolArg(
-                "One exact public symbol absent from capability_packet. "
-                "At most four unique symbols may be queried in one Compiler run."
+                "A Runtime Input Topic ID such as tool, an exact public symbol, "
+                "or a short search phrase. Topic and unknown-query suggestions do "
+                "not consume the twelve-symbol exact-query budget."
             ),
         ],
     ) -> ToolResult:
-        """Resolve one packet gap under the Compiler's hard query budget."""
+        """Resolve one Topic or API contract and suggest nearby public inputs."""
 
         return _json_result(
             "query_hook_api",

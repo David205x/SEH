@@ -263,7 +263,7 @@ class DatasetRunnerTest(TestCase):
                 instance_id="candidate_hook",
                 files={"component.py": _CANDIDATE_HOOK},
             )
-            candidate_path = "components/extensions/candidate_hook/component.py"
+            candidate_path = "extensions/candidate_hook/component.py"
             source = attempt.read_text(candidate_path)
             attempt.apply_patch(
                 (FileEdit("write", candidate_path, f"{source}\n# candidate marker\n"),)

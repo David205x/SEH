@@ -1,6 +1,6 @@
 """Formal evidence-driven Evolution Controller."""
 
-from .controller import ControlEffects, EvolutionController
+from .controller import ControlEffects, ControlProjection, EvolutionController
 from .domain import (
     ControlOutcome,
     ControlState,
@@ -14,6 +14,7 @@ from .effects import LocalControlEffects, LocalControlEffectsConfig
 __all__ = [
     "ControlEffects",
     "ControlOutcome",
+    "ControlProjection",
     "ControlState",
     "EffectResult",
     "EvolutionControlConfig",

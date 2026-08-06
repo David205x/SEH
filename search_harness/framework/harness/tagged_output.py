@@ -74,6 +74,9 @@ class TaggedOutputParser:
         blocks: list[_ActionBlock] = []
         cursor = 0
         while opening := self._open_pattern.search(raw_output, cursor):
+            if self._is_backtick_literal(raw_output, opening):
+                cursor = opening.end()
+                continue
             kind = opening.group(1)
             content_start = opening.end()
             closing_tag = f"</{kind}>"
@@ -99,6 +102,17 @@ class TaggedOutputParser:
         return blocks
 
     @staticmethod
+    def _is_backtick_literal(raw_output: str, opening: re.Match[str]) -> bool:
+        before = opening.start() - 1
+        after = opening.end()
+        return (
+            before >= 0
+            and after < len(raw_output)
+            and raw_output[before] == "`"
+            and raw_output[after] == "`"
+        )
+
+    @staticmethod
     def _find_closing_boundary(
         raw_output: str,
         *,
@@ -106,19 +120,25 @@ class TaggedOutputParser:
         closing_tag: str,
         require_json: bool,
     ) -> int | None:
-        first_closing: int | None = None
-        search_from = content_start
-        while (closing := raw_output.find(closing_tag, search_from)) >= 0:
-            if first_closing is None:
-                first_closing = closing
-            if not require_json:
-                return closing
-            try:
-                json.loads(raw_output[content_start:closing].strip())
-            except json.JSONDecodeError:
-                search_from = closing + len(closing_tag)
-                continue
-            return closing
+        first_closing = raw_output.find(closing_tag, content_start)
+        if first_closing < 0 or not require_json:
+            return first_closing if first_closing >= 0 else None
+
+        content = raw_output[content_start:]
+        json_start = len(content) - len(content.lstrip())
+        try:
+            _, json_end = json.JSONDecoder().raw_decode(content, json_start)
+        except json.JSONDecodeError:
+            return first_closing
+
+        closing_start = content_start + json_end
+        while (
+            closing_start < len(raw_output)
+            and raw_output[closing_start].isspace()
+        ):
+            closing_start += 1
+        if raw_output.startswith(closing_tag, closing_start):
+            return closing_start
         return first_closing
 
     def _parse_tool_call(

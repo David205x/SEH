@@ -12,6 +12,7 @@ from typing import Any, Sequence
 from .intervention.role_runner import InterventionRoleRunner
 from .roles.contracts import get_teacher_role
 from .roles.native_chat_runner import NativeChatRoleRunner
+from .roles.native_chat_runner import TeacherRoleRunFailed
 from .roles.runner import RoleRunner
 from .resources.stores import (
     CandidateReviewResourceConfig,
@@ -62,21 +63,25 @@ def main(argv: Sequence[str] | None = None) -> None:
             env_file=args.env_file,
             max_turns=args.max_turns,
         )
-    artifact = asyncio.run(
-        runner.run(
-            template_root=args.template_root,
-            role_input=role_input,
-            resource_config=resources,
-            role_id=role.role_id,
-            role_version=role.version,
+    try:
+        artifact = asyncio.run(
+            runner.run(
+                template_root=args.template_root,
+                role_input=role_input,
+                resource_config=resources,
+                role_id=role.role_id,
+                role_version=role.version,
+            )
         )
-    )
+    except TeacherRoleRunFailed as exc:
+        failure_file = args.output_file or _default_output_file(
+            exc.failure_artifact
+        )
+        _write_artifact(failure_file, exc.failure_artifact)
+        print(f"Teacher role failed; evidence written to: {failure_file.resolve()}")
+        raise
     output_file = args.output_file or _default_output_file(artifact)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(
-        json.dumps(artifact, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    _write_artifact(output_file, artifact)
     print(f"Teacher role completed: {artifact['role']['id']}")
     print(f"Result written to: {output_file.resolve()}")
 
@@ -167,3 +172,11 @@ def _default_output_file(artifact: dict[str, Any]) -> Path:
     role_id = str(artifact["role"]["id"])
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     return DEFAULT_RUN_ROOT / role_id / timestamp / "run.json"
+
+
+def _write_artifact(path: Path, artifact: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(artifact, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )

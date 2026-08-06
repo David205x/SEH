@@ -4,23 +4,30 @@
   "tools": [
     {
       "instance_id": "get_trial_evidence",
-      "entrypoint": "components/tools/runtime/component.py:build",
+      "entrypoint": "tools/runtime/component.py:build",
       "config": {
         "kind": "get_trial_evidence"
+      }
+    },
+    {
+      "instance_id": "get_trial_event",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_trial_event"
       }
     }
   ],
   "prompt": {
     "instance_id": "trial_reviewer",
-    "entrypoint": "components/prompts/trial_reviewer/component.py:build",
+    "entrypoint": "prompt/component.py:build",
     "config": {
-      "instructions": "templates/system.md",
-      "user_template": "templates/user.md"
+      "instructions": "system.md",
+      "user_template": "user.md"
     }
   },
   "output": {
     "instance_id": "role_contract",
-    "entrypoint": "components/outputs/role_contract/component.py:build",
+    "entrypoint": "output/component.py:build",
     "config": {}
   },
   "extensions": []

@@ -10,11 +10,16 @@ from unittest.mock import patch
 
 from search_harness.evolution.research.intervention.role_runner import (
     InterventionRoleRunner,
+    _worker_result,
+)
+from search_harness.evolution.research.roles.contracts import (
+    InterventionHypothesis,
 )
 from search_harness.evolution.research.resources.base import TeacherResourceConfig
 from search_harness.evolution.research.resources.stores import (
     InterventionResourceConfig,
 )
+from search_harness.integrations.openai_compatible import OpenAICompatibleConfig
 
 from tests.evolution.research.intervention.test_prefix import _write_rollout
 
@@ -33,7 +38,12 @@ class _FakeRunner:
 
     last_kwargs: dict[str, Any] | None = None
 
-    def __init__(self, _config: object) -> None:
+    def __init__(
+        self,
+        _config: object,
+        *,
+        teacher_config: object | None = None,
+    ) -> None:
         pass
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
@@ -99,16 +109,46 @@ class _FakeRunner:
 
 
 class InterventionRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
+    def test_reached_no_change_is_a_completed_trial(self) -> None:
+        """正确保持上下文不变仍保留为可审查的负对照。"""
+
+        result = _worker_result(
+            InterventionHypothesis.model_validate(_hypothesis()),
+            {
+                "activation_counts": {"post_tool": 1, "pre_final": 0},
+                "intervention_changes": [
+                    {
+                        "phase": "post_tool",
+                        "action": {"kind": "continue_without_change"},
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(result.result_kind, "executed")
+        self.assertEqual(result.activated_phases, ["post_tool"])
+        self.assertEqual(result.modified_phases, [])
+        self.assertEqual(result.unmet_phases, ["pre_final"])
+
     async def test_wraps_one_persistent_branch_as_worker_contract(self) -> None:
-        """验证正式角色运行时只按分支事实生成 v3 输出。"""
+        """验证正式角色运行时只按分支事实生成 v4 输出。"""
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             rollout_file = root / "rollout.jsonl"
             _write_rollout(rollout_file)
-            with patch(
-                "search_harness.evolution.research.intervention.role_runner.InterventionRunner",
-                _FakeRunner,
+            with (
+                patch(
+                    "search_harness.evolution.research.intervention.role_runner.InterventionRunner",
+                    _FakeRunner,
+                ),
+                patch(
+                    "search_harness.evolution.research.intervention.role_runner.OpenAICompatibleConfig.from_env",
+                    return_value=OpenAICompatibleConfig(
+                        base_url="https://teacher.invalid",
+                        model_id="teacher-test",
+                    ),
+                ),
             ):
                 artifact = await InterventionRoleRunner(
                     env_file=root / ".env",
@@ -140,7 +180,7 @@ class InterventionRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             artifact["output_contract"],
             {
                 "id": "intervention_worker_result",
-                "version": 3,
+                "version": 4,
                 "schema_digest": artifact["output_contract"][
                     "schema_digest"
                 ],
@@ -170,7 +210,7 @@ class InterventionRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertFalse(_FakeRunner.last_kwargs["persist"])
         self.assertIn(
-            "same Worker transcript",
+            "same Worker session",
             _FakeRunner.last_kwargs["system_prompt_template"],
         )
 

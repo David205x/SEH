@@ -277,13 +277,13 @@ def _policy_coverage_errors(
 
 
 def _component_directory_errors(manifest: HarnessManifest) -> list[str]:
-    roots: dict[PurePosixPath, str] = {}
+    roots: dict[PurePosixPath, tuple[str, PurePosixPath]] = {}
     errors: list[str] = []
     groups = (
-        ("components/tools", manifest.tools),
-        ("components/prompts", (manifest.prompt,)),
-        ("components/outputs", (manifest.output,)),
-        ("components/extensions", manifest.extensions),
+        ("tools", manifest.tools),
+        ("prompt", (manifest.prompt,)),
+        ("output", (manifest.output,)),
+        ("extensions", manifest.extensions),
     )
     for expected_root, specs in groups:
         expected_parts = PurePosixPath(expected_root).parts
@@ -293,10 +293,13 @@ def _component_directory_errors(manifest: HarnessManifest) -> list[str]:
                 errors.append(
                     f"component '{spec.instance_id}' entrypoint must be under {expected_root}/"
                 )
-            owner = roots.setdefault(module.parent, spec.instance_id)
-            if owner != spec.instance_id:
+            owner_id, owner_module = roots.setdefault(
+                module.parent,
+                (spec.instance_id, module),
+            )
+            if owner_module != module:
                 errors.append(
-                    f"component directory {module.parent} is shared by '{owner}' and "
+                    f"component directory {module.parent} is shared by '{owner_id}' and "
                     f"'{spec.instance_id}'"
                 )
     return errors

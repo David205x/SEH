@@ -13,6 +13,8 @@ from search_harness.evolution.research.roles.contracts import (
     EvidenceReview,
     EvidenceReviewerInput,
     InterventionHypothesis,
+    MechanismDistillation,
+    MechanismDistillerInput,
 )
 from search_harness.evolution.research.resources.base import (
     EvaluationEvidenceStore,
@@ -23,6 +25,60 @@ from search_harness.evolution.research.resources.base import (
 
 
 class TeacherResourceTest(unittest.TestCase):
+    def test_distiller_cannot_request_evidence_after_budget_exhaustion(
+        self,
+    ) -> None:
+        hypothesis = InterventionHypothesis.model_validate(
+            {
+                "fork_phase": "post_tool",
+                "phase_plan": [
+                    {
+                        "phase": "post_tool",
+                        "activation_condition": "A visible gap exists.",
+                        "instruction": "Ask for another search.",
+                        "expected_effect": "The Student searches again.",
+                        "max_activations": 1,
+                    }
+                ],
+                "evaluation": {
+                    "primary_signal": "next_action",
+                    "success_condition": "Another search occurs.",
+                    "falsifier": "No search occurs.",
+                    "secondary_metrics": [],
+                },
+                "applicability": "Partial-evidence retrieval cases.",
+            }
+        )
+        resources = TeacherResources()
+        resources.bind_role_input(
+            MechanismDistillerInput(
+                hypothesis=hypothesis,
+                review={
+                    "decision": "ready_to_distill",
+                    "assessment": "The bounded behavior is supported.",
+                },
+                evidence_refs=["trial_001"],
+                budget={
+                    "max_trials_per_hypothesis": 1,
+                    "trials_used": 1,
+                    "trials_remaining": 0,
+                    "max_trial_assignments": 3,
+                    "assignments_used": 1,
+                    "assignments_remaining": 2,
+                    "conclusion_required": True,
+                },
+            )
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot request"):
+            resources.validate_mechanism_distillation(
+                MechanismDistillation(
+                    decision="needs_evidence",
+                    rationale="One more trial would otherwise be useful.",
+                    next_obligation="Run another trial.",
+                )
+            )
+
     def test_review_validation_does_not_derive_decision_from_phase_labels(
         self,
     ) -> None:
@@ -67,6 +123,15 @@ class TeacherResourceTest(unittest.TestCase):
                         "assessment": "The complete trial was reviewed.",
                     }
                 ],
+                budget={
+                    "max_trials_per_hypothesis": 4,
+                    "trials_used": 1,
+                    "trials_remaining": 3,
+                    "max_trial_assignments": 12,
+                    "assignments_used": 1,
+                    "assignments_remaining": 11,
+                    "conclusion_required": False,
+                },
             )
         )
         review = EvidenceReview(
@@ -90,10 +155,72 @@ class TeacherResourceTest(unittest.TestCase):
 
         resources.validate_evidence_review(review)
 
-    def test_trial_evidence_returns_full_runs_without_usage_metadata(
+    def test_review_cannot_continue_after_trial_budget_is_exhausted(
         self,
     ) -> None:
-        """验证 Reviewer 获得完整双侧轨迹且只剥离模型 usage。"""
+        hypothesis = InterventionHypothesis.model_validate(
+            {
+                "fork_phase": "post_tool",
+                "phase_plan": [
+                    {
+                        "phase": "post_tool",
+                        "activation_condition": "A gap is visible.",
+                        "instruction": "Ask for another search.",
+                        "expected_effect": "The Student searches again.",
+                        "max_activations": 1,
+                    }
+                ],
+                "evaluation": {
+                    "primary_signal": "next_action",
+                    "success_condition": "Another search occurs.",
+                    "falsifier": "No search occurs.",
+                    "secondary_metrics": [],
+                },
+                "applicability": "Partial-evidence retrieval cases.",
+            }
+        )
+        resources = TeacherResources()
+        resources.bind_role_input(
+            EvidenceReviewerInput(
+                hypothesis=hypothesis,
+                aggregate_observations={"trial_count": 4},
+                trial_reviews=[
+                    {
+                        "trial_ref": "trial_004",
+                        "assessment": "The final trial remained mixed.",
+                    }
+                ],
+                budget={
+                    "max_trials_per_hypothesis": 4,
+                    "trials_used": 4,
+                    "trials_remaining": 0,
+                    "max_trial_assignments": 12,
+                    "assignments_used": 4,
+                    "assignments_remaining": 8,
+                    "conclusion_required": True,
+                },
+            )
+        )
+        review = EvidenceReview(
+            decision="continue",
+            phase_findings=[
+                {
+                    "phase": "post_tool",
+                    "status": "inconclusive",
+                    "assessment": "The available evidence remains mixed.",
+                }
+            ],
+            assessment="Another trial would otherwise be useful.",
+            next_obligation="Run another discriminating trial.",
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot continue"):
+            resources.validate_evidence_review(review)
+
+    def test_trial_evidence_returns_trace_canonical_runs(
+        self,
+    ) -> None:
+        """验证 Reviewer 保留 trace，并剥离 state 重复集合和 usage。"""
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -101,6 +228,17 @@ class TeacherResourceTest(unittest.TestCase):
             source_run = {
                 "status": "completed",
                 "answer": "source",
+                "state": {
+                    "status": "completed",
+                    "final_answer": "source",
+                    "step": 1,
+                    "model_inputs": [{"messages": []}],
+                    "model_outputs": ["source"],
+                    "parsed_outputs": [{"kind": "final_answer"}],
+                    "tool_interactions": [],
+                    "conversation_messages": [],
+                    "hook_state": {"seen": True},
+                },
                 "trace": [
                     {
                         "event_type": "model_input",
@@ -110,6 +248,7 @@ class TeacherResourceTest(unittest.TestCase):
                         "event_type": "model_output",
                         "payload": {
                             "raw_output": "<final_answer>source</final_answer>",
+                            "usage": {"total_tokens": 10},
                             "metadata": {
                                 "reasoning": "Source reasoning.",
                                 "usage": {"total_tokens": 10},
@@ -190,28 +329,44 @@ class TeacherResourceTest(unittest.TestCase):
 
         self.assertNotIn("source_run", listing["items"][0]["source"])
         self.assertEqual(
-            evidence["source"]["run"]["trace"][0]["event_type"],
-            "model_input",
+            [
+                event["event_type"]
+                for event in evidence["source"]["run"]["events"]
+            ],
+            ["model_input", "model_output"],
         )
         self.assertEqual(
-            evidence["source"]["run"]["trace"][1]["payload"]["metadata"][
-                "reasoning"
-            ],
-            "Source reasoning.",
-        )
-        self.assertNotIn(
-            "usage",
-            evidence["source"]["run"]["trace"][1]["payload"]["metadata"],
+            evidence["source"]["run"]["state"],
+            {
+                "status": "completed",
+                "final_answer": "source",
+                "step": 1,
+                "hook_state": {"seen": True},
+            },
         )
         self.assertNotIn("rollout_file", evidence["source"]["selector"])
         self.assertNotIn("source_run", evidence["source"]["selector"])
         self.assertEqual(
             evidence["run_scopes"]["branch"],
-            "continuation from the selected prefix",
+            "event catalog for continuation from the selected prefix",
         )
+        source_event = store.get_trial_event(
+            trial_ref="trial_001",
+            stream="source",
+            event_index=1,
+        )
+        self.assertEqual(
+            source_event["event"]["payload"]["metadata"]["reasoning"],
+            "Source reasoning.",
+        )
+        self.assertNotIn("usage", source_event["event"]["payload"])
         self.assertNotIn(
             "usage",
-            evidence["branch_run"]["trace"][0]["payload"]["metadata"],
+            store.get_trial_event(
+                trial_ref="trial_001",
+                stream="branch",
+                event_index=0,
+            )["event"]["payload"]["metadata"],
         )
         self.assertNotIn("worker_summary", evidence)
         store.validate_all_inspected()
@@ -660,6 +815,7 @@ class TeacherResourceTest(unittest.TestCase):
             phase="post_tool",
             trigger_condition="Target relation is absent.",
             decision_inputs=["question", "latest tool result"],
+            runtime_inputs=["task", "tool"],
             decision_evaluator="deterministic",
             action="Append a generic evidence-gap instruction.",
             activation_budget=1,

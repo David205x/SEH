@@ -1,4 +1,4 @@
-"""Run the v2 role chain from Researcher to an evaluation-ready Candidate."""
+"""Run the research chain from incumbent evidence to an evaluation-ready Candidate."""
 
 from __future__ import annotations
 
@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from search_harness._internal import (
+    evolution_control_values,
+    evolution_effect_values,
+    read_runtime_config,
+)
 from search_harness.evolution.control.controller import EvolutionController
 from search_harness.evolution.control.domain import (
     EvolutionControlConfig,
@@ -29,8 +34,9 @@ from search_harness.evolution.versioning import TemplateVersionStore
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Start from an existing Failure Analyst result and stop after "
-            "Mechanism Conformance Replay schedules candidate evaluation."
+            "Reuse an incumbent evaluation, optionally reuse its Failure "
+            "Analyst result, and stop after Mechanism Conformance Replay "
+            "schedules candidate evaluation."
         )
     )
     parser.add_argument("--run-dir", type=Path, required=True)
@@ -38,13 +44,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--experience-file", type=Path, required=True)
     parser.add_argument("--incumbent-rollout-file", type=Path, required=True)
     parser.add_argument("--incumbent-report-dir", type=Path, required=True)
-    parser.add_argument("--failure-artifact", type=Path, required=True)
+    parser.add_argument(
+        "--failure-artifact",
+        type=Path,
+        help=(
+            "Reuse an existing Failure Analyst artifact. Omit this option "
+            "to run Failure Analyst through the normal Controller route."
+        ),
+    )
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
-    parser.add_argument("--student-max-steps", type=int, default=30)
-    parser.add_argument("--teacher-max-turns", type=int, default=50)
-    parser.add_argument("--rollout-workers", type=int, default=6)
-    parser.add_argument("--judge-workers", type=int, default=8)
-    parser.add_argument("--max-work-items", type=int, default=120)
     parser.add_argument(
         "--resume-exhausted",
         action="store_true",
@@ -74,7 +82,7 @@ def _prepare_inputs(
     experience_file: Path,
     rollout_file: Path,
     report_dir: Path,
-    failure_artifact: Path,
+    failure_artifact: Path | None,
 ) -> dict[str, Path]:
     inputs_dir = run_dir / "inputs"
     inputs_dir.mkdir(parents=True, exist_ok=False)
@@ -84,29 +92,13 @@ def _prepare_inputs(
         "experience_file": run_dir / "experience_set.jsonl",
         "rollout_file": inputs_dir / "incumbent_rollouts.jsonl",
         "report_dir": copied_report,
-        "failure_artifact": inputs_dir / "failure_analyst.json",
     }
     shutil.copy2(experience_file, copied["experience_file"])
     shutil.copy2(rollout_file, copied["rollout_file"])
-    shutil.copy2(failure_artifact, copied["failure_artifact"])
+    if failure_artifact is not None:
+        copied["failure_artifact"] = inputs_dir / "failure_analyst.json"
+        shutil.copy2(failure_artifact, copied["failure_artifact"])
     return copied
-
-
-def _control_config(max_work_items: int) -> EvolutionControlConfig:
-    return EvolutionControlConfig(
-        max_generations=1,
-        max_trials_per_hypothesis=10,
-        max_trial_assignments=60,
-        max_hypothesis_revisions=6,
-        max_mechanism_revisions=5,
-        max_compiler_revisions=5,
-        max_candidate_revisions=4,
-        max_work_retries=3,
-        max_work_items=max_work_items,
-        max_total_tokens=50_000_000,
-        min_accuracy_delta=0.0,
-        max_total_token_ratio=3.0,
-    )
 
 
 async def _run(args: argparse.Namespace) -> None:
@@ -137,7 +129,11 @@ async def _run(args: argparse.Namespace) -> None:
             experience_file=args.experience_file.resolve(),
             rollout_file=args.incumbent_rollout_file.resolve(),
             report_dir=args.incumbent_report_dir.resolve(),
-            failure_artifact=args.failure_artifact.resolve(),
+            failure_artifact=(
+                args.failure_artifact.resolve()
+                if args.failure_artifact is not None
+                else None
+            ),
         )
         versions = store.list_versions()
         if not versions:
@@ -149,26 +145,29 @@ async def _run(args: argparse.Namespace) -> None:
         if not isinstance(metrics, dict):
             raise TypeError("Incumbent report summary lacks metrics")
 
-        control_config = _control_config(args.max_work_items)
+        runtime = read_runtime_config(env_file=args.env_file)
+        control_config = EvolutionControlConfig(
+            **evolution_control_values(runtime)
+        )
         effects_config = LocalControlEffectsConfig(
             experience_file=copied["experience_file"],
             env_file=args.env_file.resolve(),
-            student_max_steps=args.student_max_steps,
-            teacher_max_turns=args.teacher_max_turns,
-            rollout_workers=args.rollout_workers,
-            rollouts_per_example=3,
-            judge_workers=args.judge_workers,
+            **evolution_effect_values(runtime),
             teacher_judge=True,
             show_progress=True,
-            candidate_error_streak_limit=3,
         )
         run_id = uuid4().hex
+        start_from_failure = "failure_artifact" in copied
         _write_object(
             run_dir / "run.json",
             {
                 "schema_version": 2,
                 "run_id": run_id,
-                "start_mode": "researcher_from_existing_failure",
+                "start_mode": (
+                    "researcher_from_existing_failure"
+                    if start_from_failure
+                    else "failure_analyst_from_existing_incumbent"
+                ),
                 "version_store": str(args.version_store.resolve()),
                 "version_store_id": store.version_store_id,
                 "initial_version": initial_version,
@@ -188,22 +187,38 @@ async def _run(args: argparse.Namespace) -> None:
                     "incumbent_report_dir": str(
                         args.incumbent_report_dir.resolve()
                     ),
-                    "failure_artifact": str(
-                        args.failure_artifact.resolve()
+                    "failure_artifact": (
+                        str(args.failure_artifact.resolve())
+                        if args.failure_artifact is not None
+                        else None
                     ),
                 },
             },
         )
 
         first = WorkItem(
-            work_id=f"research_hypothesis-{uuid4().hex[:16]}",
-            kind=WorkKind.RESEARCH_HYPOTHESIS,
+            work_id=(
+                f"research_hypothesis-{uuid4().hex[:16]}"
+                if start_from_failure
+                else f"analyze_failure-{uuid4().hex[:16]}"
+            ),
+            kind=(
+                WorkKind.RESEARCH_HYPOTHESIS
+                if start_from_failure
+                else WorkKind.ANALYZE_FAILURE
+            ),
             subject_ref=f"generation:1:{initial_version}",
             input_refs={
                 "rollout_file": str(copied["rollout_file"].resolve()),
                 "report_dir": str(copied["report_dir"].resolve()),
-                "failure_artifact": str(
-                    copied["failure_artifact"].resolve()
+                **(
+                    {
+                        "failure_artifact": str(
+                            copied["failure_artifact"].resolve()
+                        )
+                    }
+                    if start_from_failure
+                    else {}
                 ),
             },
             payload={

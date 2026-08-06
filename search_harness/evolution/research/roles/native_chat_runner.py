@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -14,17 +14,33 @@ from pydantic import ValidationError
 from search_harness.integrations.openai_compatible import (
     OpenAICompatibleClient,
     OpenAICompatibleConfig,
+    NativeToolRunExhausted,
     OpenAICompatibleToolRunner,
 )
+from search_harness._internal import read_runtime_config, teacher_role_budget
 
 from .contracts import TeacherPayload, TrialReview
+from .spec import TeacherPromptSpec
 from ..resources.base import TeacherResourceConfig, TeacherResources
 from .role_execution import (
+    build_failed_role_artifact,
     build_role_artifact,
     prepare_role_run,
     validate_role_output,
 )
 from .sessions import RoleContinuation, RoleSession
+
+
+class TeacherRoleRunFailed(RuntimeError):
+    """Teacher failure carrying a complete serializable attempt artifact."""
+
+    def __init__(
+        self,
+        message: str,
+        failure_artifact: dict[str, Any],
+    ) -> None:
+        super().__init__(message)
+        self.failure_artifact = failure_artifact
 
 
 class NativeChatRoleRunner:
@@ -75,7 +91,7 @@ class NativeChatRoleRunner:
             template_root=template_root,
             role_input=prepared.role_input.model_dump(mode="json"),
             resource_config=resource_config.model_dump(mode="json"),
-            instructions=spec.prompt.instructions,
+            prompt=spec.prompt,
             user_input=prepared.rendered_input,
             resources=resources,
             continuation=continuation,
@@ -84,32 +100,69 @@ class NativeChatRoleRunner:
             env_file=self.env_file,
             prefix="TEACHER",
         )
-        output_tool_name = f"submit_{spec.role.output_contract_id}"
-        native_result = await OpenAICompatibleToolRunner(
-            config=config,
-            client=self.client,
-        ).run(
-            messages=session.messages,
-            tools=spec.tools.tools,
-            terminal_tool_name=output_tool_name,
-            terminal_tool_description=(
-                "Submit the final validated role result. Call this only after "
-                "all necessary evidence and tools have been inspected."
-            ),
-            terminal_output_schema=spec.role.output_type.model_json_schema(),
-            missing_terminal_message=(
-                "No terminal structured result was submitted. Continue the "
-                f"assigned role and call {output_tool_name} when the result "
-                "is ready."
-            ),
-            submit_terminal=lambda arguments: _submit_output(
-                output_type=spec.role.output_type,
-                arguments=arguments,
-                resources=resources,
-            ),
-            max_turns=self.max_turns,
-            run_label=f"Teacher role '{spec.role.role_id}'",
+        runtime_config = (
+            {}
+            if self.config is not None
+            else read_runtime_config(env_file=self.env_file)
         )
+        budget = teacher_role_budget(
+            runtime_config,
+            spec.role.role_id,
+            default_max_tokens=config.max_tokens,
+            default_max_turns=self.max_turns,
+        )
+        config = replace(config, max_tokens=budget.max_tokens)
+        output_tool_name = f"submit_{spec.role.output_contract_id}"
+        try:
+            native_result = await OpenAICompatibleToolRunner(
+                config=config,
+                client=self.client,
+            ).run(
+                messages=session.messages,
+                tools=spec.tools.tools,
+                terminal_tool_name=output_tool_name,
+                terminal_tool_description=(
+                    "Submit the final validated role result. Call this only "
+                    "after all necessary evidence and tools have been inspected."
+                ),
+                terminal_output_schema=spec.role.output_type.model_json_schema(),
+                missing_terminal_message=(
+                    "No terminal structured result was submitted. Continue the "
+                    f"assigned role and call {output_tool_name} when the result "
+                    "is ready."
+                ),
+                submit_terminal=lambda arguments: _submit_output(
+                    output_type=spec.role.output_type,
+                    arguments=arguments,
+                    resources=resources,
+                ),
+                max_turns=budget.max_turns,
+                run_label=f"Teacher role '{spec.role.role_id}'",
+            )
+        except NativeToolRunExhausted as exc:
+            failure = exc.failure
+            artifact = build_failed_role_artifact(
+                prepared,
+                runtime="native_chat",
+                model=config.provenance(),
+                error={
+                    "type": "structured_output_exhausted",
+                    "message": str(exc),
+                    "turn_count": failure.turn_count,
+                    "max_turns": budget.max_turns,
+                    "finish_reasons": list(failure.finish_reasons),
+                },
+                tool_calls=[asdict(call) for call in failure.tool_calls],
+                usage=failure.usage,
+                transcript=failure.transcript,
+                runtime_fields={
+                    "role_budget": {
+                        "max_tokens": budget.max_tokens,
+                        "max_turns": budget.max_turns,
+                    }
+                },
+            )
+            raise TeacherRoleRunFailed(str(exc), artifact) from exc
         output = native_result.output
         if not isinstance(output, TeacherPayload):
             raise TypeError("native tool runner returned an invalid role output")
@@ -124,6 +177,10 @@ class NativeChatRoleRunner:
             usage=native_result.usage,
             transcript=native_result.transcript,
             runtime_fields={
+                "role_budget": {
+                    "max_tokens": budget.max_tokens,
+                    "max_turns": budget.max_turns,
+                },
                 "role_session": {
                     "session_id": session.session_id,
                     "revision": session.revision,
@@ -191,6 +248,7 @@ class NativeChatRoleRunner:
         previous_artifact: dict[str, Any],
         trial_reviews: list[dict[str, Any]],
         aggregate_observations: dict[str, Any],
+        budget: dict[str, Any],
     ) -> dict[str, Any]:
         """在同一 Reviewer transcript 中追加独立 trial 审阅。"""
 
@@ -238,6 +296,7 @@ class NativeChatRoleRunner:
             **deepcopy(previous_input),
             "aggregate_observations": deepcopy(aggregate_observations),
             "trial_reviews": merged_reviews,
+            "budget": deepcopy(budget),
             "prior_obligation": previous_output.get("next_obligation"),
         }
         return await self.run(
@@ -256,6 +315,7 @@ class NativeChatRoleRunner:
                     "aggregate_observations": deepcopy(
                         aggregate_observations
                     ),
+                    "budget": deepcopy(budget),
                 },
             ),
         )
@@ -300,7 +360,7 @@ def _prepare_role_session(
     template_root: Path,
     role_input: dict[str, Any],
     resource_config: dict[str, Any],
-    instructions: str,
+    prompt: TeacherPromptSpec,
     user_input: str,
     resources: TeacherResources,
     continuation: RoleContinuation | None,
@@ -310,7 +370,7 @@ def _prepare_role_session(
             session_id=uuid4().hex,
             revision=1,
             messages=[
-                {"role": "system", "content": instructions},
+                {"role": "system", "content": prompt.instructions},
                 {"role": "user", "content": user_input},
             ],
             output_history=[],
@@ -324,7 +384,7 @@ def _prepare_role_session(
         template_root=template_root,
         role_input=role_input,
         resource_config=resource_config,
-        instructions=instructions,
+        instructions=prompt.instructions,
     )
     session = artifact["role_session"]
     resources.restore_role_session_state(session["resource_state"])
@@ -342,7 +402,10 @@ def _prepare_role_session(
     )
     return restored.continued(
         feedback_event=feedback_event,
-        feedback_message=_continuation_message(feedback_event),
+        feedback_message=prompt.render_continuation(
+            continuation.feedback_source,
+            feedback_event,
+        ),
     )
 
 
@@ -417,6 +480,7 @@ def _continuation_input_matches(
     stable_keys = set(previous) - {
         "aggregate_observations",
         "trial_reviews",
+        "budget",
         "prior_obligation",
     }
     if any(previous.get(key) != current.get(key) for key in stable_keys):
@@ -463,42 +527,6 @@ def _continuation_resources_match(
     return previous_paths <= current_paths
 
 
-def _continuation_message(feedback_event: dict[str, Any]) -> str:
-    source = feedback_event["source"]
-    if source == "intervention_worker":
-        instruction = (
-            "The assigned intervention could not execute the frozen "
-            "hypothesis because of a hypothesis-level capability mismatch. "
-            "Revise the hypothesis so it uses supported observable state and "
-            "actions."
-        )
-    elif source == "evidence_reviewer":
-        instruction = (
-            "Intervention evidence has been reviewed. Preserve supported "
-            "parts of the previous hypothesis and respond directly to the "
-            "review decision and next obligation. Submit one complete revised "
-            "hypothesis."
-        )
-    elif source == "trial_reviews":
-        instruction = (
-            "New independent trial reviews for the same frozen hypothesis "
-            "are attached. Preserve prior supported findings and update the "
-            "global judgment against the accumulated reviews and deterministic "
-            "aggregate observations."
-        )
-    else:
-        raise ValueError(
-            "unsupported role continuation source: "
-            f"{source}"
-        )
-    return (
-        "Continue as the same Teacher role in the existing session.\n"
-        f"{instruction}\n\n"
-        "Authoritative structured feedback:\n"
-        + json.dumps(feedback_event, ensure_ascii=False, indent=2)
-    )
-
-
 def _submit_output(
     *,
     output_type: type[TeacherPayload],
@@ -508,14 +536,67 @@ def _submit_output(
     try:
         output = output_type.model_validate(arguments)
         validate_role_output(output, resources)
-    except (ValidationError, ValueError, KeyError) as exc:
+    except ValidationError as exc:
+        feedback, fields = _structured_validation_feedback(exc, arguments)
         content = (
-            "Structured output validation failed. Correct the listed fields "
-            f"and call the submit tool again:\n{exc}"
+            "Structured output validation failed. Preserve the decision and "
+            "all valid fields. Repair only the listed fields, then call the "
+            f"submit tool again with the complete object:\n{feedback}"
         )
         return None, content, {
             "terminal": False,
             "validation_error": True,
+            "validation_error_fields": fields,
+        }
+    except (ValueError, KeyError) as exc:
+        return None, (
+            "Structured output validation failed. Correct the stated semantic "
+            "obligation and call the submit tool again with the complete "
+            f"object:\n{type(exc).__name__}: {exc}"
+        ), {
+            "terminal": False,
+            "validation_error": True,
+            "validation_error_fields": [
+                f"{type(exc).__name__}:{exc}"
+            ],
         }
     content = json.dumps(output.model_dump(mode="json"), ensure_ascii=False)
     return output, content, {"terminal": True}
+
+
+def _structured_validation_feedback(
+    error: ValidationError,
+    arguments: dict[str, Any],
+) -> tuple[str, list[str]]:
+    lines: list[str] = []
+    fields: list[str] = []
+    for item in error.errors(include_url=False, include_input=False):
+        location = tuple(item.get("loc", ()))
+        field = ".".join(str(part) for part in location) or "<root>"
+        error_type = str(item.get("type", "validation_error"))
+        fields.append(f"{field}:{error_type}")
+        details = [str(item.get("msg", "validation failed"))]
+        actual = _value_at(arguments, location)
+        if isinstance(actual, (str, list, dict)):
+            details.append(f"actual_length={len(actual)}")
+        context = item.get("ctx")
+        if isinstance(context, dict):
+            limit = context.get("max_length")
+            if isinstance(limit, int):
+                details.append(f"maximum_length={limit}")
+        lines.append(f"- {field}: " + "; ".join(details))
+    return "\n".join(lines), fields
+
+
+def _value_at(value: object, location: tuple[object, ...]) -> object:
+    current = value
+    for part in location:
+        if isinstance(current, dict) and isinstance(part, str):
+            current = current.get(part)
+        elif isinstance(current, list) and isinstance(part, int):
+            if part < 0 or part >= len(current):
+                return None
+            current = current[part]
+        else:
+            return None
+    return current

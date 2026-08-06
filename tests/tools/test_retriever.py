@@ -17,7 +17,7 @@ from search_harness.framework.harness import (
 BASELINE_TEMPLATE_ROOT = (
     Path(__file__).parents[2] / "harness_templates" / "student" / "baseline"
 )
-RETRIEVER_ENTRYPOINT = "components/tools/retriever_search/component.py:build"
+RETRIEVER_ENTRYPOINT = "tools/retriever_search/component.py:build"
 
 
 class RetrieverSearchToolTest(TestCase):

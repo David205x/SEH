@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 from unittest import TestCase
 
 from search_harness.framework import ToolResult
@@ -15,6 +15,18 @@ def _echo(
     """Return text a requested number of times."""
 
     return ToolResult(name="echo", content=text * count)
+
+
+@tool(name="select_topics")
+def _select_topics(
+    topics: Annotated[
+        list[Literal["task", "tool"]],
+        ToolArg("Controlled runtime input topics."),
+    ],
+) -> ToolResult:
+    """Return selected controlled topics."""
+
+    return ToolResult(name="select_topics", content=",".join(topics))
 
 
 class ToolDefinitionTest(TestCase):
@@ -48,3 +60,16 @@ class ToolDefinitionTest(TestCase):
 
         with self.assertRaisesRegex(ValueError, "duplicate tool names"):
             ToolSet([first, second])
+
+    def test_literal_list_emits_enum_and_rejects_unknown_value(self) -> None:
+        """Verifies controlled string arrays stay controlled at schema and runtime."""
+
+        tool_instance = CallableTool.from_callable(_select_topics)
+        schema = tool_instance.definition.to_json_schema()
+
+        self.assertEqual(
+            schema["properties"]["topics"]["items"],
+            {"type": "string", "enum": ["task", "tool"]},
+        )
+        result = tool_instance.run({"topics": ["unknown"]})
+        self.assertEqual(result.metadata["error_type"], "input_validation")

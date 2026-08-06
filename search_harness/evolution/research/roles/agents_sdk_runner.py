@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
+from search_harness._internal import read_runtime_config, teacher_role_budget
 from search_harness.integrations.openai_agents_sdk import AgentsSdkRunner
 from search_harness.integrations.openai_compatible import (
     OpenAICompatibleConfig,
@@ -71,8 +72,21 @@ class AgentsSdkRoleRunner:
             if model is None
             else None
         )
+        default_max_tokens = config.max_tokens if config is not None else 1024
+        budget = teacher_role_budget(
+            (
+                read_runtime_config(env_file=self.env_file)
+                if model is None
+                else {}
+            ),
+            spec.role.role_id,
+            default_max_tokens=default_max_tokens,
+            default_max_turns=self.max_turns,
+        )
+        if config is not None:
+            config = replace(config, max_tokens=budget.max_tokens)
         sdk_result = await AgentsSdkRunner(
-            max_turns=self.max_turns,
+            max_turns=budget.max_turns,
             output_mode=self.output_mode,
             config=config,
             model=model,
@@ -111,5 +125,11 @@ class AgentsSdkRoleRunner:
             tool_calls=[asdict(call) for call in sdk_result.tool_calls],
             usage=sdk_result.usage,
             transcript=sdk_result.transcript,
-            runtime_fields={"output_mode": self.output_mode},
+            runtime_fields={
+                "output_mode": self.output_mode,
+                "role_budget": {
+                    "max_tokens": budget.max_tokens,
+                    "max_turns": budget.max_turns,
+                },
+            },
         )

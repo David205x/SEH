@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
 
 from search_harness.framework.tools import DefinedTool
@@ -21,6 +21,15 @@ class OpenAICompatibleClient(Protocol):
     chat: Any
 
     async def close(self) -> None:
+        """Close resources owned by the client."""
+
+
+class OpenAICompatibleSyncClient(Protocol):
+    """Minimum synchronous Chat Completions client boundary."""
+
+    chat: Any
+
+    def close(self) -> None:
         """Close resources owned by the client."""
 
 
@@ -43,6 +52,170 @@ class NativeToolRunResult:
     tool_calls: tuple[NativeToolCall, ...]
     usage: dict[str, Any]
     transcript: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class NativeToolRunFailure:
+    """Auditable partial state retained when a bounded run is exhausted."""
+
+    tool_calls: tuple[NativeToolCall, ...]
+    usage: dict[str, Any]
+    transcript: list[dict[str, Any]]
+    finish_reasons: tuple[str | None, ...]
+    turn_count: int
+
+
+class NativeToolRunExhausted(RuntimeError):
+    """Raised with complete partial evidence after max_turns is exhausted."""
+
+    def __init__(self, message: str, failure: NativeToolRunFailure) -> None:
+        super().__init__(message)
+        self.failure = failure
+
+
+@dataclass(frozen=True)
+class PendingNativeToolCall:
+    """One provider tool call awaiting local validation and execution."""
+
+    name: str
+    call_id: str
+    arguments_text: str
+    arguments: dict[str, Any]
+    parse_error: str | None
+
+
+@dataclass(frozen=True)
+class NativeToolTurn:
+    """One native assistant response before it is committed to a session."""
+
+    request_messages: list[dict[str, Any]]
+    assistant_message: dict[str, Any]
+    tool_calls: tuple[PendingNativeToolCall, ...]
+    usage: dict[str, Any]
+
+
+class OpenAICompatibleToolSession:
+    """Persistent synchronous native tool-calling conversation."""
+
+    def __init__(
+        self,
+        *,
+        config: OpenAICompatibleConfig,
+        messages: list[dict[str, Any]],
+        client: OpenAICompatibleSyncClient | None = None,
+    ) -> None:
+        self.config = config
+        self._transcript = deepcopy(messages)
+        self._client = client or OpenAI(
+            api_key=config.api_key or "local",
+            base_url=_api_base_url(config.base_url),
+            timeout=config.timeout,
+        )
+        self._owns_client = client is None
+        self._usage_calls: list[dict[str, Any]] = []
+        self._tool_calls: list[NativeToolCall] = []
+
+    def complete(self, *, tools: tuple[DefinedTool, ...]) -> NativeToolTurn:
+        """Request one assistant turn using the currently active ToolSet."""
+
+        request_messages = deepcopy(self._transcript)
+        response = self._client.chat.completions.create(
+            model=self.config.model_id,
+            messages=request_messages,
+            tools=[_defined_tool_schema(tool) for tool in tools],
+            tool_choice="auto",
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            extra_body=_request_extra_body(self.config),
+        )
+        usage_value = (
+            response.get("usage")
+            if isinstance(response, dict)
+            else getattr(response, "usage", None)
+        )
+        usage = _model_dump(usage_value)
+        self._usage_calls.append(usage)
+        message = _first_response_message(response)
+        assistant_message = _assistant_message_payload(message)
+        pending_calls: list[PendingNativeToolCall] = []
+        for call in _message_tool_calls(message):
+            name, call_id, arguments_text = _tool_call_fields(call)
+            arguments, parse_error = _parse_tool_arguments(arguments_text)
+            pending_calls.append(
+                PendingNativeToolCall(
+                    name=name,
+                    call_id=call_id,
+                    arguments_text=arguments_text,
+                    arguments=arguments,
+                    parse_error=parse_error,
+                )
+            )
+        return NativeToolTurn(
+            request_messages=request_messages,
+            assistant_message=assistant_message,
+            tool_calls=tuple(pending_calls),
+            usage=usage,
+        )
+
+    def commit_assistant(self, turn: NativeToolTurn) -> None:
+        """Commit a response whose native tool calls will receive results."""
+
+        self._transcript.append(deepcopy(turn.assistant_message))
+
+    def append_user_message(self, content: str) -> None:
+        """Append protocol feedback without retaining an unusable response."""
+
+        self._transcript.append({"role": "user", "content": content})
+
+    def append_tool_result(
+        self,
+        *,
+        call: PendingNativeToolCall,
+        content: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Append one tool result and retain its auditable call record."""
+
+        self._transcript.append(
+            _tool_message(call_id=call.call_id, content=content)
+        )
+        self._tool_calls.append(
+            NativeToolCall(
+                name=call.name,
+                call_id=call.call_id,
+                arguments=(
+                    dict(call.arguments)
+                    if call.parse_error is None
+                    else {"raw_arguments": call.arguments_text}
+                ),
+                content=content,
+                metadata=dict(metadata),
+            )
+        )
+
+    @property
+    def transcript(self) -> list[dict[str, Any]]:
+        """Return a detached structured transcript snapshot."""
+
+        return deepcopy(self._transcript)
+
+    @property
+    def tool_calls(self) -> tuple[NativeToolCall, ...]:
+        """Return committed native tool calls in execution order."""
+
+        return tuple(self._tool_calls)
+
+    @property
+    def usage(self) -> dict[str, Any]:
+        """Return aggregate usage for all requests in this session."""
+
+        return _aggregate_usage(self._usage_calls)
+
+    def close(self) -> None:
+        """Close a client owned by this session."""
+
+        if self._owns_client:
+            self._client.close()
 
 
 TerminalSubmitter = Callable[
@@ -98,6 +271,8 @@ class OpenAICompatibleToolRunner:
         owns_client = self.client is None
         tool_calls: list[NativeToolCall] = []
         request_usage: list[dict[str, Any]] = []
+        finish_reasons: list[str | None] = []
+        previous_validation_signature: tuple[str, ...] | None = None
         output: Any | None = None
         try:
             for _turn in range(1, max_turns + 1):
@@ -109,13 +284,10 @@ class OpenAICompatibleToolRunner:
                     parallel_tool_calls=False,
                     temperature=self.config.temperature,
                     max_tokens=self.config.max_tokens,
-                    extra_body=(
-                        {"seed": self.config.seed}
-                        if self.config.seed is not None
-                        else None
-                    ),
+                    extra_body=_request_extra_body(self.config),
                 )
                 request_usage.append(_model_dump(response.usage))
+                finish_reasons.append(_first_finish_reason(response))
                 message = _first_response_message(response)
                 transcript.append(_assistant_message_payload(message))
                 native_calls = _message_tool_calls(message)
@@ -164,6 +336,18 @@ class OpenAICompatibleToolRunner:
                         candidate_output, content, metadata = (
                             submit_terminal(arguments)
                         )
+                        signature = _validation_signature(metadata)
+                        if (
+                            signature is not None
+                            and signature == previous_validation_signature
+                        ):
+                            content = (
+                                "The same fields still fail validation. Preserve "
+                                "the decision and all valid fields; repair only "
+                                "the listed fields, then submit the complete "
+                                f"object again.\n{content}"
+                            )
+                        previous_validation_signature = signature
                     else:
                         candidate_output = None
                         content, metadata = _run_defined_tool(
@@ -193,9 +377,18 @@ class OpenAICompatibleToolRunner:
                 await client.close()
 
         if output is None:
-            raise RuntimeError(
-                f"{run_label} exhausted {max_turns} turns without valid "
-                "structured output"
+            raise NativeToolRunExhausted(
+                (
+                    f"{run_label} exhausted {max_turns} turns without valid "
+                    "structured output"
+                ),
+                NativeToolRunFailure(
+                    tool_calls=tuple(tool_calls),
+                    usage=_aggregate_usage(request_usage),
+                    transcript=transcript,
+                    finish_reasons=tuple(finish_reasons),
+                    turn_count=len(request_usage),
+                ),
             )
         return NativeToolRunResult(
             output=output,
@@ -266,12 +459,47 @@ def _run_defined_tool(
 
 def _first_response_message(response: Any) -> Any:
     choices = getattr(response, "choices", None)
+    if choices is None and isinstance(response, dict):
+        choices = response.get("choices")
     if not isinstance(choices, list) or not choices:
         raise ValueError("response has no choices")
-    message = getattr(choices[0], "message", None)
+    first_choice = choices[0]
+    message = (
+        first_choice.get("message")
+        if isinstance(first_choice, dict)
+        else getattr(first_choice, "message", None)
+    )
     if message is None:
         raise ValueError("response choice has no message")
     return message
+
+
+def _first_finish_reason(response: Any) -> str | None:
+    choices = (
+        response.get("choices")
+        if isinstance(response, dict)
+        else getattr(response, "choices", None)
+    )
+    if not isinstance(choices, list) or not choices:
+        return None
+    first = choices[0]
+    value = (
+        first.get("finish_reason")
+        if isinstance(first, dict)
+        else getattr(first, "finish_reason", None)
+    )
+    return value if isinstance(value, str) else None
+
+
+def _validation_signature(
+    metadata: dict[str, Any],
+) -> tuple[str, ...] | None:
+    raw = metadata.get("validation_error_fields")
+    if not isinstance(raw, list) or not all(
+        isinstance(item, str) for item in raw
+    ):
+        return None
+    return tuple(raw)
 
 
 def _message_tool_calls(message: Any) -> list[Any]:
@@ -401,3 +629,12 @@ def _api_base_url(base_url: str) -> str:
     if normalized.endswith(suffix):
         normalized = normalized[: -len(suffix)]
     return normalized
+
+
+def _request_extra_body(config: OpenAICompatibleConfig) -> dict[str, Any] | None:
+    extra_body: dict[str, Any] = {}
+    if config.seed is not None:
+        extra_body["seed"] = config.seed
+    if config.thinking_mode is not None:
+        extra_body["thinking"] = {"type": config.thinking_mode}
+    return extra_body or None

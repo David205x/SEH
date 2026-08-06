@@ -26,6 +26,27 @@ class EvolutionControlCliTest(unittest.TestCase):
         )
 
         self.assertEqual(args.version_store, Path("versions"))
+        for runtime_field in (
+            "max_generations",
+            "max_trials_per_hypothesis",
+            "max_trial_assignments",
+            "max_hypothesis_revisions",
+            "max_mechanism_revisions",
+            "max_compiler_revisions",
+            "max_candidate_revisions",
+            "max_work_retries",
+            "max_work_items",
+            "max_total_tokens",
+            "min_accuracy_delta",
+            "max_total_token_ratio",
+            "student_max_steps",
+            "teacher_max_turns",
+            "rollout_workers",
+            "rollouts_per_example",
+            "judge_workers",
+            "candidate_error_streak_limit",
+        ):
+            self.assertFalse(hasattr(args, runtime_field))
 
     def test_reads_new_run_artifact_schema_v2(self) -> None:
         payload = {

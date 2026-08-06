@@ -103,10 +103,16 @@ class HarnessEvolutionStoreTest(TestCase):
             base = Path(tmpdir)
             store_root = base / "version-store"
             store = HarnessVersionStore(store_root)
-            baseline = store.initialize(_plugins_root(base))
+            baseline = store.initialize(_template_root(base))
             session = store.start_iteration(metadata={"source": "viewer-test"})
             session.apply_patch(
-                (FileEdit("write", "extensions/note.txt", "candidate note\n"),)
+                (
+                    FileEdit(
+                        "write",
+                        "components/extensions/note.txt",
+                        "candidate note\n",
+                    ),
+                )
             )
             session.reject("No improvement", evaluation={"accuracy": 0.0})
 
@@ -156,17 +162,25 @@ def _run(question: str) -> dict[str, object]:
     }
 
 
-def _plugins_root(base: Path) -> Path:
-    root = base / "plugins-source"
-    prompt_dir = root / "prompts" / "base"
+def _template_root(base: Path) -> Path:
+    root = base / "template-source"
+    prompt_dir = root / "components" / "prompts" / "base"
     prompt_dir.mkdir(parents=True)
-    (prompt_dir / "plugin.py").write_text(
+    (prompt_dir / "component.py").write_text(
         "from search_harness.core import ChatMessage, ModelInput\n\n"
         "class Prompt:\n"
         "    def build(self, state):\n"
         "        return ModelInput.from_messages([ChatMessage(role='user', content=state.question)])\n\n"
         "def build(config, context, tools):\n"
         "    return Prompt()\n",
+        encoding="utf-8",
+    )
+    output_dir = root / "components" / "outputs" / "tagged_output"
+    output_dir.mkdir(parents=True)
+    (output_dir / "component.py").write_text(
+        "from search_harness.framework.harness import TaggedOutputParser\n\n"
+        "def build(config, context):\n"
+        "    return TaggedOutputParser()\n",
         encoding="utf-8",
     )
     (root / "harness.json").write_text(
@@ -177,11 +191,28 @@ def _plugins_root(base: Path) -> Path:
                 "tools": [],
                 "prompt": {
                     "instance_id": "base_prompt",
-                    "entrypoint": "prompts/base/plugin.py:build",
+                    "entrypoint": "components/prompts/base/component.py:build",
                     "config": {},
-                    "evolution_policy": "fixed",
+                },
+                "output": {
+                    "instance_id": "tagged_output",
+                    "entrypoint": "components/outputs/tagged_output/component.py:build",
+                    "config": {},
                 },
                 "extensions": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (root / "evolution.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "harness_id": "viewer_test",
+                "components": {
+                    "base_prompt": "fixed",
+                    "tagged_output": "fixed",
+                },
             }
         ),
         encoding="utf-8",

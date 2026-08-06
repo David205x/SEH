@@ -14,11 +14,52 @@ from search_harness.evolution.research.intervention import (
     resolve_prefix_boundary,
     summarize_rollout_example,
 )
-from search_harness.evolution.research.intervention.bridge import initial_worker_snapshot
+from search_harness.evolution.research.intervention.bridge import (
+    InterventionContext,
+    initial_worker_snapshot,
+)
+from search_harness.evolution.research.intervention.types import InterventionAction
 from search_harness.framework import HookPhase, ToolResult
 
 
 class InterventionPrefixTest(TestCase):
+    def test_context_patch_can_delete_one_numbered_block_atomically(self) -> None:
+        """验证删除操作按原投影编号执行且不会改变相邻块。"""
+
+        with TemporaryDirectory() as tmpdir:
+            rollout_file = Path(tmpdir) / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            prefix = load_reconstructed_prefix(
+                PrefixSelector(
+                    rollout_file=rollout_file,
+                    example_id="example-1",
+                    replicate_id="r000",
+                    step=1,
+                    phase=HookPhase.POST_TOOL,
+                )
+            )
+            context = InterventionContext(prefix)
+
+            context.apply_initial(
+                InterventionAction(
+                    kind="apply_context_patch",
+                    payload={
+                        "operations": [
+                            {"operation": "delete", "block_id": 3}
+                        ]
+                    },
+                )
+            )
+
+        self.assertEqual(
+            [message.role for message in context.model_input.messages],
+            ["system", "user", "user"],
+        )
+        self.assertEqual(
+            context.model_input.messages[-1].content,
+            "retrieved evidence: Tolkien",
+        )
+
     def test_example_summary_and_trajectory_use_two_level_identity(self) -> None:
         """验证 example_id 返回目录，而复合键精确定位一条重复轨迹。"""
 
@@ -159,6 +200,12 @@ class InterventionPrefixTest(TestCase):
                 "error": None,
             },
         )
+        self.assertEqual(
+            [item["block_id"] for item in snapshot["editable_context"]],
+            [1, 2, 3, 4],
+        )
+        self.assertNotIn("content", snapshot["editable_context"][-1])
+        self.assertEqual(snapshot["editable_context"][-1]["kind"], "tool_result")
         self.assertEqual(snapshot["source"]["retained_trace"][-1]["index"], 6)
         self.assertNotIn(
             "Shakespeare",

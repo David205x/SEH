@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Event · Evolution Observer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/refinements.css" />
+  </head>
+  <body class="event-page">
+    <header class="app-header">
+      <div class="brand"><span class="brand-mark"></span><strong>Search Harness</strong><span>Event Detail</span></div>
+      <a class="button" href="/">返回概览</a>
+    </header>
+    <main class="event-layout">
+      <aside class="event-rail panel">
+        <div class="panel-heading"><span class="panel-eyebrow">RUN / WORK</span></div>
+        <div class="event-rail-content">
+          <strong id="event-run-name">加载中</strong>
+          <span id="event-work-id"></span>
+        </div>
+      </aside>
+      <section class="event-content panel">
+        <div class="panel-heading event-title-heading"><h2 id="event-title">加载中</h2></div>
+        <div class="event-toolbar" id="event-toolbar">
+          <select id="block-type-filter" aria-label="按内容块类型筛选">
+            <option value="">全部内容</option>
+            <option value="message">消息</option>
+            <option value="reasoning">推理</option>
+            <option value="tool_call">工具调用</option>
+            <option value="tool_result">工具结果</option>
+          </select>
+          <button class="button button-secondary" id="expand-all" type="button">全部展开</button>
+          <button class="button button-secondary" id="collapse-all" type="button">全部折叠</button>
+          <details class="fold-selector">
+            <summary>批量折叠</summary>
+            <div class="fold-selector-menu">
+              <span class="fold-selector-title">选择内容类型</span>
+              <label><input name="fold-type" type="checkbox" value="message" />消息</label>
+              <label><input name="fold-type" type="checkbox" value="reasoning" checked />推理</label>
+              <label><input name="fold-type" type="checkbox" value="tool_call" />工具调用</label>
+              <label><input name="fold-type" type="checkbox" value="tool_result" checked />工具结果</label>
+              <div class="fold-selector-actions">
+                <button class="button button-secondary" id="collapse-selected" type="button">折叠选中</button>
+                <button class="button button-secondary" id="expand-selected" type="button">展开选中</button>
+              </div>
+            </div>
+          </details>
+        </div>
+        <article class="event-document" id="event-document"></article>
+      </section>
+      <aside class="event-side">
+        <section class="panel event-metadata">
+          <div class="panel-heading"><span class="panel-eyebrow">METADATA</span></div>
+          <dl id="event-facts"></dl>
+        </section>
+        <section class="panel event-trajectories">
+          <div class="panel-heading"><span class="panel-eyebrow">TRAJECTORIES</span></div>
+          <div id="trajectory-list" class="trajectory-list"></div>
+        </section>
+      </aside>
+    </main>
+    <script src="/event.js"></script>
+  </body>
+</html>

@@ -5,18 +5,19 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from .runtime_config import legacy_runtime_values, read_runtime_config
+
 
 EnvValues = dict[str, str]
 
 
 def read_env_file(env_file: Path | None = None) -> EnvValues:
-    """Read simple KEY=VALUE pairs from a UTF-8 .env file."""
+    """Read runtime config defaults and secret/override .env values."""
 
     path = env_file if env_file is not None else Path.cwd() / ".env"
+    values = legacy_runtime_values(read_runtime_config(env_file=path))
     if not path.exists():
-        return {}
-
-    values: EnvValues = {}
+        return values
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -61,4 +62,3 @@ def parse_int(value: str | None, default: int, name: str) -> int:
     if parsed < 1:
         raise ValueError(f"{name} must be positive")
     return parsed
-

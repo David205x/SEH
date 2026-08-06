@@ -159,6 +159,55 @@ class TeacherRoleResourceTest(unittest.TestCase):
         self.assertNotIn("diff", result)
         self.assertIsNotNone(store.artifact())
 
+    def test_compiler_continues_from_submitted_workspace(self) -> None:
+        """验证实现修订继承上一轮 Candidate overlay 与查询账本。"""
+
+        first = CompilerWorkspaceStore.load(
+            CompilerResourceConfig(
+                parent_template_root=BASELINE_TEMPLATE,
+                env_file=PROJECT_ROOT / ".env",
+            )
+        )
+        first.bind_capability_packet(
+            {"contracts": [], "runtime_input_documents": []}
+        )
+        first.query_hook_api("HookPhase")
+        first.write_file(
+            path="candidate_note.txt",
+            content="first candidate revision\n",
+        )
+        submitted = first.finalize(summary="Add the first candidate revision.")
+        self.assertEqual(submitted["status"], "submitted")
+        candidate = first.artifact()
+        self.assertIsNotNone(candidate)
+        continuation_file = SCRATCH_ROOT / "candidate_workspace.json"
+        continuation_file.write_text(
+            json.dumps(candidate, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        continued = CompilerWorkspaceStore.load(
+            CompilerResourceConfig(
+                parent_template_root=BASELINE_TEMPLATE,
+                env_file=PROJECT_ROOT / ".env",
+                continuation_candidate_file=continuation_file,
+            )
+        )
+
+        self.assertEqual(
+            continued.read_file("candidate_note.txt")["content"],
+            "first candidate revision\n",
+        )
+        self.assertEqual(
+            continued.workspace.digest,
+            candidate["candidate_digest"],
+        )
+        self.assertEqual(
+            continued.initial_context()["continuation"]["changed_paths"],
+            ["candidate_note.txt"],
+        )
+        self.assertIn("HookPhase", continued.prior_queried_symbols)
+
     def test_compiler_finalizer_reports_authoring_policy_errors(self) -> None:
         """验证 finalizer 将 Compiler 专属代码缺陷返回给模型修复。"""
 
@@ -187,8 +236,8 @@ class TeacherRoleResourceTest(unittest.TestCase):
         self.assertGreaterEqual(len(result["errors"]), 3)
         self.assertIsNone(store.artifact())
 
-    def test_compiler_exact_api_query_enforces_packet_and_budget(self) -> None:
-        """验证 exact query 拒绝 packet 重复并硬限制四个唯一符号。"""
+    def test_compiler_api_query_replays_topics_and_preserves_budget(self) -> None:
+        """验证 Topic、Packet 重放和未知建议不消耗 exact query 预算。"""
 
         store = CompilerWorkspaceStore.load(
             CompilerResourceConfig(
@@ -205,39 +254,32 @@ class TeacherRoleResourceTest(unittest.TestCase):
                             {"symbol": "HookContext.trajectory"},
                         ],
                     }
-                ]
+                ],
+                "runtime_input_documents": [
+                    {"runtime_input_id": "tool"}
+                ],
             }
         )
 
+        topic = store.query_hook_api("tool")
         packet_hit = store.query_hook_api("HookContext.trajectory")
         first = store.query_hook_api("ToolResult")
         duplicate = store.query_hook_api("ToolResult")
         unknown = store.query_hook_api("MissingPublicSymbol")
-        third = store.query_hook_api("TrajectoryEvent")
-        fourth = store.query_hook_api("ParsedOutput")
-        exhausted = store.query_hook_api("ChatMessage")
 
-        self.assertEqual(packet_hit["reason"], "already_in_packet")
-        self.assertNotIn("contract", packet_hit)
+        self.assertEqual(topic["query_kind"], "runtime_input_topic")
+        self.assertEqual(topic["source"], "capability_packet")
+        self.assertIn("native_reference", topic["document"])
+        self.assertEqual(packet_hit["source"], "capability_packet")
+        self.assertIn("contract", packet_hit)
         self.assertEqual(first["status"], "resolved")
         self.assertIn("contract", first)
-        self.assertEqual(duplicate["reason"], "already_queried")
-        self.assertNotIn("contract", duplicate)
-        self.assertEqual(unknown["reason"], "unknown_symbol")
+        self.assertEqual(duplicate["source"], "exact_query")
+        self.assertIn("contract", duplicate)
+        self.assertEqual(unknown["reason"], "unknown_query")
+        self.assertIn("symbol_suggestions", unknown)
         self.assertNotIn("contract", unknown)
-        self.assertEqual(third["status"], "resolved")
-        self.assertEqual(fourth["status"], "resolved")
-        self.assertEqual(exhausted["reason"], "query_budget_exhausted")
-        self.assertNotIn("contract", exhausted)
-        self.assertEqual(
-            store.queried_symbols,
-            {
-                "ToolResult",
-                "MissingPublicSymbol",
-                "TrajectoryEvent",
-                "ParsedOutput",
-            },
-        )
+        self.assertEqual(store.queried_symbols, {"ToolResult"})
 
     def test_compiler_api_query_requires_bound_packet(self) -> None:
         """验证程序遗漏 packet 绑定时 exact query 立即失败。"""

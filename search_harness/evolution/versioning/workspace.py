@@ -207,7 +207,7 @@ class CandidateWorkspace:
             if any(item.get("instance_id") == instance_id for item in all_components):
                 raise ValueError(f"duplicate component instance_id: {instance_id}")
 
-            component_root = PurePosixPath("components/extensions") / instance_id
+            component_root = PurePosixPath("extensions") / instance_id
             for relative_text, content in files.items():
                 relative = normalize_template_path(relative_text)
                 target = component_root / relative

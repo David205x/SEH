@@ -116,6 +116,7 @@ class ResearchRoleEffects:
         hypothesis: dict[str, Any],
         review: dict[str, Any],
         trial_files: list[Path],
+        budget: dict[str, Any],
         capability_constraints: list[Any],
         work_dir: Path,
     ) -> EffectResult:
@@ -129,6 +130,7 @@ class ResearchRoleEffects:
                 "evidence_refs": [
                     path.parent.name for path in trial_files
                 ],
+                "budget": budget,
                 "capability_constraints": capability_constraints,
             },
             resource_config=TeacherResourceConfig(
@@ -167,6 +169,7 @@ class ResearchRoleEffects:
         implementation_constraints: list[Any],
         validation_feedback: list[Any],
         work_dir: Path,
+        continuation_candidate_file: Path | None = None,
     ) -> EffectResult:
         artifact = await self.role_runner.run(
             template_root=self._template("compiler"),
@@ -181,15 +184,32 @@ class ResearchRoleEffects:
                 compiler=CompilerResourceConfig(
                     parent_template_root=self.store.template_dir,
                     env_file=self.env_file,
+                    continuation_candidate_file=(
+                        continuation_candidate_file
+                    ),
                 )
             ),
         )
         output = CompilerResult.model_validate(artifact.get("output"))
         path = _write_json(work_dir / "role.json", artifact)
+        refs = {"compiler_artifact": str(path)}
+        if output.decision == "submitted":
+            resources = artifact.get("resource_artifacts")
+            resources = resources if isinstance(resources, dict) else {}
+            candidate = resources.get("compiler_candidate")
+            if not isinstance(candidate, dict):
+                raise ValueError(
+                    "submitted Compiler artifact lacks compiler_candidate"
+                )
+            candidate_path = _write_json(
+                work_dir / "candidate_workspace.json",
+                candidate,
+            )
+            refs["compiler_candidate_file"] = str(candidate_path)
         return _role_result(
             output.model_dump(mode="json"),
             artifact,
-            {"compiler_artifact": str(path)},
+            refs,
         )
 
     async def review_candidate(

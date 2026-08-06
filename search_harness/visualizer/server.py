@@ -12,12 +12,19 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlparse
 
-from search_harness.registry import build_harness, describe_harness
+from search_harness.framework.harness import (
+    assemble_harness_components,
+    describe_harness,
+)
 from search_harness.paths import (
     COMPONENT_RUNS_ROOT,
     DEFAULT_CHECKPOINT_STORE,
 )
-from search_harness.versioning import HarnessVersionStore, VersionRecord
+from search_harness.versioning import (
+    HarnessVersionStore,
+    VersionRecord,
+    load_evolution_policy,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -236,15 +243,22 @@ class HarnessEvolutionStore:
 
         store = self._require_store()
         snapshot = store.resolve(version_id)
-        with store.stage(snapshot) as plugins_root:
-            components = build_harness(
-                plugins_root,
+        with store.stage(snapshot) as template_root:
+            components = assemble_harness_components(
+                template_root,
                 env_file=self.env_file,
             )
+            policy = load_evolution_policy(template_root)
         return {
             "version_id": version_id,
             "digest": snapshot.digest,
-            "topology": describe_harness(components),
+            "topology": describe_harness(
+                components,
+                component_policies={
+                    instance_id: value.value
+                    for instance_id, value in policy.components.items()
+                },
+            ),
         }
 
     def _require_store(self) -> HarnessVersionStore:
@@ -261,7 +275,7 @@ class HarnessEvolutionStore:
 def serve(
     host: str,
     port: int,
-    actor_runs_dir: Path = COMPONENT_RUNS_ROOT / "actor",
+    student_runs_dir: Path = COMPONENT_RUNS_ROOT / "student",
     evaluation_runs_dir: Path = COMPONENT_RUNS_ROOT,
     checkpoint_store: Path | None = DEFAULT_CHECKPOINT_STORE,
     env_file: Path | None = Path(".env"),
@@ -270,7 +284,7 @@ def serve(
 
     if not 1 <= port <= 65535:
         raise ValueError("port must be between 1 and 65535")
-    store = TraceStore(actor_runs_dir)
+    store = TraceStore(student_runs_dir)
     report_store = ReportStore(evaluation_runs_dir)
     evolution_store = HarnessEvolutionStore(
         checkpoint_store,
@@ -285,7 +299,7 @@ def serve(
         ),
     )
     print(f"Trace visualizer: http://{host}:{port}")
-    print(f"Actor runs directory: {store.traces_dir}")
+    print(f"Student runs directory: {store.traces_dir}")
     print(f"Evaluation runs directory: {report_store.reports_dir}")
     if evolution_store.store_dir is not None:
         print(f"Harness Checkpoint Store: {evolution_store.store_dir}")

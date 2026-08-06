@@ -4,28 +4,28 @@
   "tools": [
     {
       "instance_id": "list_candidate_changes",
-      "entrypoint": "components/tools/runtime/component.py:build",
+      "entrypoint": "tools/runtime/component.py:build",
       "config": {
         "kind": "list_candidate_changes"
       }
     },
     {
       "instance_id": "get_candidate_case",
-      "entrypoint": "components/tools/runtime/component.py:build",
+      "entrypoint": "tools/runtime/component.py:build",
       "config": {
         "kind": "get_candidate_case"
       }
     },
     {
       "instance_id": "get_paired_student_trajectory",
-      "entrypoint": "components/tools/runtime/component.py:build",
+      "entrypoint": "tools/runtime/component.py:build",
       "config": {
         "kind": "get_paired_student_trajectory"
       }
     },
     {
       "instance_id": "get_candidate_harness_diff",
-      "entrypoint": "components/tools/runtime/component.py:build",
+      "entrypoint": "tools/runtime/component.py:build",
       "config": {
         "kind": "get_candidate_harness_diff"
       }
@@ -33,15 +33,15 @@
   ],
   "prompt": {
     "instance_id": "candidate_reviewer",
-    "entrypoint": "components/prompts/candidate_reviewer/component.py:build",
+    "entrypoint": "prompt/component.py:build",
     "config": {
-      "instructions": "templates/system.md",
-      "user_template": "templates/user.md"
+      "instructions": "system.md",
+      "user_template": "user.md"
     }
   },
   "output": {
     "instance_id": "role_contract",
-    "entrypoint": "components/outputs/role_contract/component.py:build",
+    "entrypoint": "output/component.py:build",
     "config": {}
   },
   "extensions": []

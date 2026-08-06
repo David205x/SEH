@@ -2,7 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/harness_checkpoints/search_actor" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/runs/experiments/evolution_controller_v2/real_closed_loop_20260729_01/checkpoint" vcs="Git" />
   </component>
 </project>

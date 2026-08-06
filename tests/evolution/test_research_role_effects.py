@@ -64,6 +64,19 @@ class _RecordingRoleRunner:
             artifact["validated_mechanisms"] = {
                 "mechanism:test": self.mechanism
             }
+        if role_id == "compiler":
+            artifact["resource_artifacts"] = {
+                "compiler_candidate": {
+                    "candidate_ref": "candidate:test",
+                    "summary": "Implement the tested mechanism.",
+                    "parent_digest": "parent-digest",
+                    "candidate_digest": "candidate-digest",
+                    "changed_files": {
+                        "extensions/test/component.py": "def build():\n    pass\n"
+                    },
+                    "queried_symbols": [],
+                }
+            }
         return artifact
 
     async def continue_researcher(
@@ -135,6 +148,15 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
                 hypothesis=continued.outcome["output"],
                 review={"decision": "ready_to_distill"},
                 trial_files=[root / "trial_001" / "trial.json"],
+                budget={
+                    "max_trials_per_hypothesis": 5,
+                    "trials_used": 1,
+                    "trials_remaining": 4,
+                    "max_trial_assignments": 12,
+                    "assignments_used": 1,
+                    "assignments_remaining": 11,
+                    "conclusion_required": False,
+                },
                 capability_constraints=[],
                 work_dir=root / "distilled",
             )
@@ -160,6 +182,7 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
 
         self.assertIn("mechanism_file", distilled.artifact_refs)
         self.assertIn("compiler_artifact", compiled.artifact_refs)
+        self.assertIn("compiler_candidate_file", compiled.artifact_refs)
         self.assertIn("candidate_reviewer_artifact", reviewed.artifact_refs)
         self.assertEqual(
             [call["role_id"] for call in runner.calls],

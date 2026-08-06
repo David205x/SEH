@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Evolution Experiment Observer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/refinements.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand"><span class="brand-mark"></span><strong>Search Harness</strong><span>Evolution Observer</span></div>
+      <button class="button" id="refresh-now" type="button">刷新数据</button>
+    </header>
+    <main class="app-layout">
+      <aside class="panel run-panel">
+          <div class="panel-heading"><span class="panel-eyebrow">RUNS</span><span class="badge" id="run-count">0</span></div>
+        <div class="run-list" id="run-list"></div>
+      </aside>
+      <section class="main-content" aria-live="polite">
+        <section class="run-summary" id="run-summary">
+          <div class="empty-state">选择一个实验以查看 Evolution Run。</div>
+        </section>
+        <section class="panel compact-flow-panel">
+          <div class="panel-heading flow-panel-heading">
+            <h2>环形角色主线</h2>
+            <nav class="generation-tabs" id="generation-tabs" aria-label="Generation 流程图"></nav>
+          </div>
+          <div class="compact-flow-track" id="compact-flow-track"></div>
+        </section>
+        <section class="panel progress-panel">
+          <div class="panel-heading progress-heading">
+            <h2>事件进展</h2>
+            <div class="filters">
+              <select id="category-filter" aria-label="按类别筛选">
+                <option value="">全部类别</option>
+                <option value="teacher_role">Teacher Role</option>
+                <option value="mechanism">机制</option>
+                <option value="unknown">未知</option>
+              </select>
+              <select id="status-filter" aria-label="按状态筛选">
+                <option value="">全部状态</option>
+                <option value="queued">已排队</option>
+                <option value="running">运行中</option>
+                <option value="completed">已完成</option>
+                <option value="failed">失败</option>
+              </select>
+              <button class="button button-secondary" id="journal-toggle" type="button">查看原始 Journal</button>
+            </div>
+          </div>
+          <div class="work-list" id="work-list"></div>
+          <div class="journal-list is-hidden" id="journal-list"></div>
+        </section>
+      </section>
+      <aside class="dashboard-column">
+        <section class="dashboard-card dashboard-suite">
+          <h2 class="dashboard-heading">Experiment</h2>
+          <h3 class="dashboard-subheading">WORK</h3>
+          <div class="dashboard-metric-grid experiment-metric-grid" id="experiment-stats"></div>
+          <h3 class="dashboard-subheading">STAGE TIME</h3>
+          <div class="dashboard-metric-grid time-metric-grid" id="time-stats"></div>
+          <div class="breakdown-surface">
+            <div class="donut-summary">
+              <div class="donut-chart" id="role-time-donut" aria-label="角色运行时间占比"></div>
+              <span>角色运行时间占比排名</span>
+            </div>
+            <div class="breakdown-table" id="role-time-table"></div>
+          </div>
+          <div class="stage-list stage-surface" id="stage-stats"></div>
+        </section>
+        <section class="dashboard-card dashboard-suite role-sessions-suite">
+          <div class="dashboard-title-row">
+            <h2 class="dashboard-heading">Role Sessions</h2>
+            <div class="scope-toggle" id="turn-scope-toggle">
+              <button class="is-selected" data-scope="run" type="button">Run</button>
+              <button data-scope="generation" id="generation-scope-button" type="button">Generation</button>
+            </div>
+          </div>
+          <p class="boxplot-note">箱体为 Q1–Q3，线为中位数，圆点为平均值，末端标记为回合上限。</p>
+          <div class="turn-boxplot" id="turn-boxplot"></div>
+        </section>
+        <section class="dashboard-card dashboard-suite">
+          <h2 class="dashboard-heading">Usage</h2>
+          <div class="usage-summary" id="usage-summary"></div>
+          <div class="breakdown-surface">
+            <div class="donut-summary">
+              <div class="donut-chart" id="role-usage-donut" aria-label="角色用量占比"></div>
+              <span>角色用量占比排名</span>
+            </div>
+            <div class="breakdown-table" id="role-usage-table"></div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-suite metrics-suite">
+          <h2 class="dashboard-heading">Evolution Metrics</h2>
+          <p>每代采用最后完成的 Candidate Evaluation；没有 Candidate 时使用 Incumbent。</p>
+          <div class="metrics-grid" id="evolution-metrics"></div>
+        </section>
+      </aside>
+    </main>
+    <template id="run-template">
+      <button class="run-item" type="button"><span class="run-name"></span><span class="run-meta"></span><span class="run-error"></span></button>
+    </template>
+    <template id="work-template">
+      <article class="work-card">
+        <a class="work-heading" href="#">
+          <span class="work-kind"></span><span class="work-status"></span><span class="work-time"></span>
+        </a>
+      </article>
+    </template>
+    <template id="journal-template">
+      <article class="journal-event"><div class="journal-event-heading"></div><pre class="journal-event-content"></pre></article>
+    </template>
+    <script src="/compact-flow.js"></script>
+    <script src="/metric-charts.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

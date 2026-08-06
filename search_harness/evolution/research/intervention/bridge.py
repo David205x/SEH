@@ -44,6 +44,7 @@ class InterventionContext:
     _pending_messages: list[ChatMessage] = field(default_factory=list)
     _persistent_messages: list[ChatMessage] = field(default_factory=list)
     _pending_model_input_rewrite: InterventionAction | None = None
+    _pending_context_patch: ModelInput | None = None
 
     def __post_init__(self) -> None:
         self.model_input = self.prefix.model_input
@@ -52,7 +53,9 @@ class InterventionContext:
         """Apply the Worker action selected at the retained source boundary."""
 
         before = self.model_input.to_dict()
-        if action.kind == "append_context_message":
+        if action.kind == "apply_context_patch":
+            self.model_input = _apply_context_patch(self.model_input, action)
+        elif action.kind == "append_context_message":
             message = _message_from_action(action)
             self.model_input = ModelInput(messages=(*self.model_input.messages, message))
         elif action.kind == "replace_model_input":
@@ -83,6 +86,9 @@ class InterventionContext:
                 self._pending_model_input_rewrite,
             )
             self._pending_model_input_rewrite = None
+        if self._pending_context_patch is not None:
+            current = self._pending_context_patch
+            self._pending_context_patch = None
         additions = [*self._persistent_messages, *self._pending_messages]
         self._pending_messages.clear()
         if additions:
@@ -93,6 +99,25 @@ class InterventionContext:
         """Apply one Worker action to an active branch Hook transaction."""
 
         if action.kind == "continue_without_change":
+            return
+        if action.kind == "apply_context_patch":
+            if context.phase == HookPhase.POST_PROMPT:
+                current = context.state.get("stage.model_input")
+                if not isinstance(current, ModelInput):
+                    raise TypeError("stage.model_input must be ModelInput")
+                context.state.set(
+                    "stage.model_input",
+                    _apply_context_patch(current, action),
+                )
+            elif context.phase == HookPhase.POST_TOOL:
+                self._pending_context_patch = _apply_context_patch(
+                    _live_model_input(context),
+                    action,
+                )
+            else:
+                raise ValueError(
+                    "context patch is only live-editable at post_prompt or post_tool"
+                )
             return
         if action.kind == "append_context_message":
             message = _message_from_action(action)
@@ -266,7 +291,7 @@ class InterventionHookBridge(BaseHook):
             if value is not None:
                 stage[key] = _jsonable(value)
         core = context.state.get("core")
-        return {
+        snapshot = {
             "source": {
                 "selector": {
                     "rollout_file": str(self._intervention_context.prefix.selector.rollout_file),
@@ -286,13 +311,21 @@ class InterventionHookBridge(BaseHook):
             ],
             "active_stage": stage,
             "prior_intervention_changes": list(self._intervention_context.changes),
+            "source_boundary": False,
         }
+        snapshot.update(
+            _editable_context_snapshot(
+                _live_model_input(context),
+                tool_result_active=context.phase == HookPhase.POST_TOOL,
+            )
+        )
+        return snapshot
 
 
 def initial_worker_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
     """Return the source-boundary context used for the Worker's first activation."""
 
-    return {
+    snapshot = {
         "source": {
             "selector": {
                 "rollout_file": str(prefix.selector.rollout_file),
@@ -312,7 +345,15 @@ def initial_worker_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
             key: _jsonable(value) for key, value in prefix.stage_values.items()
         },
         "prior_intervention_changes": [],
+        "source_boundary": True,
     }
+    snapshot.update(
+        _editable_context_snapshot(
+            prefix.model_input,
+            tool_result_active=prefix.selector.phase == HookPhase.POST_TOOL,
+        )
+    )
+    return snapshot
 
 
 def _boundary_core_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
@@ -331,6 +372,82 @@ def _boundary_core_snapshot(prefix: ReconstructedPrefix) -> dict[str, Any]:
         "final_answer": None,
         "error": None,
     }
+
+
+def _live_model_input(context: HookContext) -> ModelInput:
+    """Build the Student-visible continuation context at the active Hook."""
+
+    active = context.state.get("stage.model_input", None)
+    if isinstance(active, ModelInput):
+        return active
+    core = context.state.get("core")
+    model_inputs = core.get("model_inputs") if isinstance(core, dict) else None
+    if not isinstance(model_inputs, list) or not model_inputs:
+        raise ValueError("Student state has no model input for context projection")
+    latest = model_inputs[-1]
+    if not isinstance(latest, dict):
+        raise TypeError("Student model input snapshot must be an object")
+    current = _model_input(latest.get("messages"))
+    if context.phase != HookPhase.POST_TOOL:
+        return current
+
+    outputs = core.get("model_outputs") if isinstance(core, dict) else None
+    if not isinstance(outputs, list) or not outputs or not isinstance(outputs[-1], str):
+        raise ValueError("post_tool context has no current Student model output")
+    tool_result = context.state.get("stage.tool_result", None)
+    if not isinstance(tool_result, ToolResult):
+        raise TypeError("stage.tool_result must be ToolResult")
+    return ModelInput(
+        messages=(
+            *current.messages,
+            ChatMessage(role="assistant", content=outputs[-1]),
+            ChatMessage(role="user", content=tool_result.content),
+        )
+    )
+
+
+def _editable_context_snapshot(
+    model_input: ModelInput,
+    *,
+    tool_result_active: bool = False,
+) -> dict[str, Any]:
+    full_blocks = []
+    summaries = []
+    last_index = len(model_input.messages)
+    for block_id, message in enumerate(model_input.messages, start=1):
+        kind = (
+            "tool_result"
+            if tool_result_active and block_id == last_index
+            else "message"
+        )
+        full_blocks.append(
+            {
+                "block_id": block_id,
+                "kind": kind,
+                "role": message.role,
+                "content": message.content,
+            }
+        )
+        summaries.append(
+            {
+                "block_id": block_id,
+                "kind": kind,
+                "role": message.role,
+                "characters": len(message.content),
+                "summary": _content_summary(message.content),
+            }
+        )
+    return {
+        "editable_context": summaries,
+        "_editable_context_blocks": full_blocks,
+    }
+
+
+def _content_summary(content: str, *, limit: int = 120) -> str:
+    compact = " ".join(content.split())
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[: limit - 1].rstrip()}…"
 
 
 def _message_from_action(action: InterventionAction) -> ChatMessage:
@@ -375,6 +492,63 @@ def _rewrite_model_input(
     if user_instruction:
         messages.append(ChatMessage(role="user", content=user_instruction))
     return ModelInput.from_messages(messages)
+
+
+def _apply_context_patch(
+    model_input: ModelInput,
+    action: InterventionAction,
+) -> ModelInput:
+    operations = action.payload.get("operations")
+    if not isinstance(operations, list) or not operations:
+        raise ValueError("apply_context_patch requires operations")
+    messages: list[tuple[int | None, ChatMessage]] = [
+        (block_id, message)
+        for block_id, message in enumerate(model_input.messages, start=1)
+    ]
+    for operation in operations:
+        if not isinstance(operation, dict):
+            raise TypeError("context patch operation must be an object")
+        kind = operation.get("operation")
+        id_key = "anchor_block_id" if kind == "insert" else "block_id"
+        block_id = operation.get(id_key)
+        if not isinstance(block_id, int) or isinstance(block_id, bool):
+            raise TypeError(f"context patch {id_key} must be an integer")
+        position = next(
+            (
+                index
+                for index, (item_id, _) in enumerate(messages)
+                if item_id == block_id
+            ),
+            None,
+        )
+        if position is None:
+            raise ValueError(
+                f"context patch references unavailable block ID {block_id}"
+            )
+        if kind == "replace":
+            current = messages[position][1]
+            messages[position] = (
+                block_id,
+                ChatMessage(
+                    role=current.role,
+                    content=str(operation.get("content", "")),
+                ),
+            )
+        elif kind == "delete":
+            messages.pop(position)
+        elif kind == "insert":
+            insertion = ChatMessage(
+                role=str(operation.get("role", "")),
+                content=str(operation.get("content", "")),
+            )
+            if operation.get("position") == "after":
+                position += 1
+            messages.insert(position, (None, insertion))
+        else:
+            raise ValueError(f"unsupported context patch operation: {kind}")
+    if not messages:
+        raise ValueError("context patch cannot delete every block")
+    return ModelInput.from_messages([message for _, message in messages])
 
 
 def _restore_stage_value(current: Any, value: Any) -> Any:

@@ -12,6 +12,10 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from search_harness.evolution.control.controller import EvolutionController
+from search_harness.evolution.control.conformance_effects import (
+    ConformanceBatchFailed,
+    ConformanceEffects,
+)
 from search_harness.evolution.control.domain import (
     ControlState,
     EffectResult,
@@ -33,6 +37,7 @@ from search_harness.evolution.control.transitions import (
     transition_completed,
 )
 from search_harness.evolution.control.evaluation import CandidateArtifact
+from search_harness.evolution.research.roles.contracts import MechanismSpec
 from search_harness.evolution.versioning import (
     FileEdit,
     TemplateVersionStore,
@@ -208,6 +213,19 @@ class HappyPathEffects:
         raise AssertionError(f"unexpected work kind: {work.kind}")
 
 
+class RecordingProjection:
+    """Record commit notifications without interpreting Controller state."""
+
+    def __init__(self, *, fail_first: bool = False) -> None:
+        self.calls = 0
+        self.fail_first = fail_first
+
+    def update(self) -> None:
+        self.calls += 1
+        if self.fail_first and self.calls == 1:
+            raise RuntimeError("projection unavailable")
+
+
 class ReviewPipelineRuntime:
     """Return one local trial review followed by one global evidence review."""
 
@@ -367,11 +385,53 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 WorkKind.PROMOTE_CANDIDATE,
             ],
         )
+        evidence_work = next(
+            item
+            for item in effects.calls
+            if item.kind == WorkKind.REVIEW_EVIDENCE
+        )
+        self.assertEqual(
+            evidence_work.payload["trial_budget"],
+            {
+                "max_trials_per_hypothesis": 4,
+                "max_trial_assignments": 12,
+            },
+        )
         events = controller.journal.read()
         self.assertEqual(events[-1].event_type, "work_transitioned")
         self.assertTrue(
             any(event.event_type == "version_advanced" for event in events)
         )
+
+    async def test_updates_projection_after_commits_without_controlling_run(
+        self,
+    ) -> None:
+        projection = RecordingProjection(fail_first=True)
+        controller = EvolutionController(
+            run_dir=self.run_dir,
+            effects=HappyPathEffects(),
+            config=EvolutionControlConfig(max_generations=1),
+            projections=(projection,),
+        )
+
+        with self.assertLogs(
+            "search_harness.evolution.control.controller",
+            level="WARNING",
+        ):
+            controller.initialize(
+                run_id="run-with-projection",
+                initial_version="harness_v0001",
+            )
+        outcome = await controller.run()
+
+        self.assertEqual(outcome.status, "completed")
+        self.assertGreater(projection.calls, 1)
+        calls_after_completion = projection.calls
+
+        repeated_outcome = await controller.run()
+
+        self.assertEqual(repeated_outcome.status, "completed")
+        self.assertEqual(projection.calls, calls_after_completion + 1)
 
     async def test_retries_failed_effect_without_replaying_completed_work(
         self,
@@ -404,6 +464,39 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(len(incumbent_calls), 1)
         self.assertEqual([item.attempt for item in analysis_calls], [1, 2])
+
+    async def test_persists_teacher_failure_artifact_before_pausing(self) -> None:
+        effects = FailWithRoleArtifact()
+        controller = EvolutionController(
+            run_dir=self.run_dir,
+            effects=effects,
+            config=EvolutionControlConfig(max_work_retries=0),
+        )
+        controller.initialize(
+            run_id="run-role-failure",
+            initial_version="harness_v0001",
+        )
+
+        outcome = await controller.run()
+
+        self.assertEqual(outcome.status, "paused")
+        failures = list(
+            (self.run_dir / "artifacts").rglob("evidence_reviewer.failed.json")
+        )
+        self.assertEqual(len(failures), 1)
+        artifact = json.loads(failures[0].read_text(encoding="utf-8"))
+        self.assertEqual(artifact["status"], "failed")
+        failed_events = [
+            event
+            for event in controller.journal.read()
+            if event.event_type == "work_failed"
+        ]
+        self.assertEqual(
+            failed_events[-1].payload["failure_artifact"],
+            str(failures[0].resolve()),
+        )
+        self.assertEqual(failed_events[-1].payload["total_tokens"], 7)
+        self.assertEqual(outcome.total_tokens, 107)
 
     def test_candidate_revision_target_routes_after_durable_rejection(
         self,
@@ -482,6 +575,9 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             work_id="review-mechanism",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
+            input_refs={
+                "compiler_candidate_file": "candidate_workspace.json"
+            },
             payload={
                 "incumbent_metrics": _metrics(
                     accuracy=0.5,
@@ -531,6 +627,10 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             mechanism_work.payload["capability_constraints"],
             ["Use only observable trigger inputs."],
         )
+        self.assertNotIn(
+            "compiler_candidate_file",
+            mechanism_work.input_refs,
+        )
 
     def test_promotion_gate_rejects_excessive_candidate_cost(self) -> None:
         """验证模型 accept 不能越过确定性 token 成本门禁。"""
@@ -559,6 +659,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             subject_ref="generation:1",
             input_refs={
                 "compiler_artifact": "compiler.json",
+                "compiler_candidate_file": "candidate_workspace.json",
                 "conformance_rollout_file": "replay.jsonl",
                 "trial_001": "trial.json",
             },
@@ -616,6 +717,10 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             "conformance_rollout_file",
             compile_work.input_refs,
         )
+        self.assertEqual(
+            compile_work.input_refs["compiler_candidate_file"],
+            "candidate_workspace.json",
+        )
 
     def test_conformance_passes_to_full_candidate_evaluation(self) -> None:
         """验证每题存在 faithful 且无硬失败时才启动全量评估。"""
@@ -651,6 +756,29 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             plan.next_items[0].kind,
             WorkKind.EVALUATE_CANDIDATE,
         )
+
+    def test_execute_trial_rejects_removed_result_kind(self) -> None:
+        """验证 Worker 不能再绕过 Trial Review 回流 Researcher。"""
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "unknown Intervention Worker result: invalid_result",
+        ):
+            transition_completed(
+                item=WorkItem(
+                    work_id="execute-unsupported",
+                    kind=WorkKind.EXECUTE_TRIAL,
+                    subject_ref="generation:1",
+                ),
+                result=EffectResult(
+                    outcome={
+                        "output": {
+                            "result_kind": "invalid_result",
+                        }
+                    }
+                ),
+                config=EvolutionControlConfig(),
+            )
 
     def test_promotion_gate_rejects_runner_errors_without_crashing(self) -> None:
         """验证 runner_error 与缺失 token 被表示为门禁失败而非异常。"""
@@ -941,7 +1069,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             {
                 "instance_id": "controller_test_hook",
                 "entrypoint": (
-                    "components/extensions/controller_test_hook/component.py:build"
+                    "extensions/controller_test_hook/component.py:build"
                 ),
                 "config": {},
             }
@@ -953,7 +1081,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         )
         policy["components"]["controller_test_hook"] = "mutable"
         changed_files = {
-            "components/extensions/controller_test_hook/component.py": (
+            "extensions/controller_test_hook/component.py": (
                 "from __future__ import annotations\n"
                 "\n"
                 "from typing import Any\n"
@@ -1088,7 +1216,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             {
                 "instance_id": "promotion_test_hook",
                 "entrypoint": (
-                    "components/extensions/promotion_test_hook/"
+                    "extensions/promotion_test_hook/"
                     "component.py:build"
                 ),
                 "config": {},
@@ -1104,7 +1232,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             [
                 FileEdit(
                     "write",
-                    "components/extensions/promotion_test_hook/component.py",
+                    "extensions/promotion_test_hook/component.py",
                     (
                         "from search_harness.framework import "
                         "BaseHook, HookPhase\n\n"
@@ -1279,6 +1407,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                             "phase": "pre_final",
                             "trigger_condition": "First final answer.",
                             "decision_inputs": ["candidate_answer"],
+                            "runtime_inputs": ["final_decision"],
                             "decision_evaluator": "deterministic",
                             "action": "Defer once.",
                             "activation_budget": 1,
@@ -1363,11 +1492,6 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                 faithful = role_input["replicate_id"] == "r000"
                 return {
                     "output": {
-                        "trial_refs": role_input["trial_refs"],
-                        "candidate_run_ref": (
-                            f"{role_input['example_id']}/"
-                            f"{role_input['replicate_id']}"
-                        ),
                         "verdict": (
                             "faithful" if faithful else "not_observed"
                         ),
@@ -1434,12 +1558,220 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.outcome["decision"], "pass")
         self.assertEqual(len(runtime.calls), 3)
+        self.assertIn(
+            "candidate_trajectory_view",
+            runtime.calls[0]["role_input"],
+        )
+        self.assertNotIn(
+            "candidate_trajectory",
+            runtime.calls[0]["role_input"],
+        )
         self.assertEqual(result.usage["total_tokens"], 15)
         self.assertTrue(
             Path(
                 result.artifact_refs["conformance_summary_artifact"]
             ).is_file()
         )
+        finding = json.loads(
+            Path(
+                result.artifact_refs["conformance_finding_001"]
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            finding["output"]["candidate_run_ref"],
+            "example-1/r000",
+        )
+        self.assertNotIn(
+            "candidate_run_ref",
+            finding["role_artifact"]["output"],
+        )
+
+    async def test_conformance_retry_reuses_rollout_and_completed_findings(
+        self,
+    ) -> None:
+        """验证失败重试只调用尚未完成的单条 Reviewer。"""
+
+        experience_file = self.run_dir / "checkpoint_experience.jsonl"
+        experience_file.write_text(
+            json.dumps(
+                {
+                    "example_id": "example-checkpoint",
+                    "question": "Checkpoint question?",
+                    "answer": "answer",
+                    "metadata": {},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        trial_file = self.run_dir / "checkpoint_trial" / "trial.json"
+        trial_file.parent.mkdir()
+        trial_file.write_text(
+            json.dumps(
+                {
+                    "input": {"example_id": "example-checkpoint"},
+                    "resource_artifacts": {
+                        "intervention_trial": {
+                            "phase_plan": [{"phase": "pre_final"}],
+                            "activation_counts": {"pre_final": 1},
+                            "context_changes": [],
+                            "phase_effects": [],
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        mechanism = MechanismSpec.model_validate(
+            {
+                "goal": "Delay one premature final answer.",
+                "phase_rules": [
+                    {
+                        "phase": "pre_final",
+                        "trigger_condition": "First final answer.",
+                        "decision_inputs": ["candidate_answer"],
+                        "runtime_inputs": ["final_decision"],
+                        "decision_evaluator": "deterministic",
+                        "action": "Defer once.",
+                        "activation_budget": 1,
+                    }
+                ],
+                "behavioral_pseudocode": (
+                    "ON pre_final: DEFER once; then ACCEPT."
+                ),
+                "state_scope": "rollout-local",
+                "fallback": "Accept later final answers.",
+                "expected_behavior": "One visible deferral.",
+                "evidence_refs": ["trial_001"],
+            }
+        )
+
+        class ReplayBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def rollout_candidate_examples(
+                self,
+                *,
+                output_file: Path,
+                **_: object,
+            ) -> dict[str, object]:
+                self.calls += 1
+                records = [
+                    {
+                        "example": {
+                            "example_id": "example-checkpoint",
+                            "question": "Checkpoint question?",
+                        },
+                        "replicate": {
+                            "replicate_id": f"r{index:03d}",
+                            "index": index,
+                        },
+                        "run": {"status": "completed", "trace": []},
+                    }
+                    for index in range(3)
+                ]
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+                output_file.write_text(
+                    "".join(json.dumps(item) + "\n" for item in records),
+                    encoding="utf-8",
+                )
+                return {"processed_rollouts": 3}
+
+        class OneFindingFailure(RuntimeError):
+            def __init__(self) -> None:
+                super().__init__("transient review failure")
+                self.failure_artifact = {
+                    "status": "failed",
+                    "role": {"id": "conformance_reviewer", "version": 1},
+                    "transcript": [
+                        {"role": "assistant", "content": "partial review"}
+                    ],
+                    "usage": {"total_tokens": 7},
+                }
+
+        class RecoveringRuntime:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+                self.failed = False
+
+            async def run(self, **kwargs: object) -> dict[str, object]:
+                role_input = kwargs["role_input"]
+                assert isinstance(role_input, dict)
+                replicate_id = str(role_input["replicate_id"])
+                self.calls.append(replicate_id)
+                if replicate_id == "r001" and not self.failed:
+                    self.failed = True
+                    raise OneFindingFailure()
+                return {
+                    "output": {
+                        "verdict": "faithful",
+                        "observed_phases": ["pre_final"],
+                        "assessment": "The declared phase was observed.",
+                        "repair_obligation": None,
+                    },
+                    "usage": {"total_tokens": 5},
+                }
+
+        backend = ReplayBackend()
+        runtime = RecoveringRuntime()
+        effects = ConformanceEffects(
+            backend=backend,  # type: ignore[arg-type]
+            role_runner=runtime,  # type: ignore[arg-type]
+            experience_file=experience_file,
+            reviewer_template_root=Path(
+                "harness_templates/teacher/conformance_reviewer"
+            ),
+            judge_workers=3,
+        )
+        candidate = CandidateArtifact(
+            candidate_attempt_id="candidate-checkpoint",
+            parent_version="harness_v0001",
+            candidate_digest="checkpoint-digest",
+            compiler_log=self.run_dir / "compiler.json",
+            summary="checkpoint candidate",
+            validation_passed=True,
+        )
+        artifact_root = self.run_dir / "checkpoint_artifacts"
+
+        with self.assertRaises(ConformanceBatchFailed) as raised:
+            await effects.verify(
+                mechanism=mechanism,
+                trial_files=[trial_file],
+                candidate=candidate,
+                work_dir=artifact_root / "verify-attempt-1",
+            )
+
+        failure = raised.exception.failure_artifact
+        self.assertEqual(failure["stage"], "review_findings")
+        self.assertEqual(
+            failure["usage"]["total_tokens"],
+            17,
+            failure,
+        )
+        finding_failure = json.loads(
+            Path(
+                failure["finding_failures"][0]["failure_artifact"]
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            finding_failure["role_artifact"]["transcript"][0]["content"],
+            "partial review",
+        )
+
+        result = await effects.verify(
+            mechanism=mechanism,
+            trial_files=[trial_file],
+            candidate=candidate,
+            work_dir=artifact_root / "verify-attempt-2",
+        )
+
+        self.assertEqual(result.outcome["decision"], "pass")
+        self.assertEqual(result.usage["total_tokens"], 5)
+        self.assertEqual(backend.calls, 1)
+        self.assertEqual(runtime.calls.count("r000"), 1)
+        self.assertEqual(runtime.calls.count("r001"), 2)
+        self.assertEqual(runtime.calls.count("r002"), 1)
 
     async def test_review_evidence_uses_independent_trial_review_first(
         self,
@@ -1532,6 +1864,14 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                     "hypothesis_artifact": str(hypothesis_file.resolve()),
                     "trial_001": str(trial_file.resolve()),
                 },
+                payload={
+                    "trial_count": 1,
+                    "assignment_count": 1,
+                    "trial_budget": {
+                        "max_trials_per_hypothesis": 4,
+                        "max_trial_assignments": 12,
+                    },
+                },
             ),
             state=ControlState(
                 current_version="harness_v0001",
@@ -1548,6 +1888,10 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             runtime.calls[1]["role_input"]["trial_reviews"][0]["trial_ref"],
             "trial_001",
+        )
+        self.assertEqual(
+            runtime.calls[1]["role_input"]["budget"]["trials_remaining"],
+            3,
         )
         self.assertEqual(
             runtime.calls[1]["resource_config"].trial_files,
@@ -1573,6 +1917,14 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                     "trial_001": str(trial_file.resolve()),
                     "trial_002": str(second_trial.resolve()),
                     **result.artifact_refs,
+                },
+                payload={
+                    "trial_count": 2,
+                    "assignment_count": 2,
+                    "trial_budget": {
+                        "max_trials_per_hypothesis": 4,
+                        "max_trial_assignments": 12,
+                    },
                 },
             ),
             state=ControlState(
@@ -1604,6 +1956,31 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             _trial_paths(work),
             [Path("trial.json").resolve()],
         )
+
+
+class _RoleFailure(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("structured output exhausted")
+        self.failure_artifact = {
+            "schema_version": 1,
+            "status": "failed",
+            "role": {"id": "evidence_reviewer", "version": 1},
+            "transcript": [{"role": "assistant", "content": "partial"}],
+            "usage": {"total_tokens": 7},
+        }
+
+
+class FailWithRoleArtifact(HappyPathEffects):
+    async def execute(
+        self,
+        *,
+        work: WorkItem,
+        state: ControlState,
+        work_dir: Path,
+    ) -> EffectResult:
+        if work.kind == WorkKind.ANALYZE_FAILURE:
+            raise _RoleFailure()
+        return await super().execute(work=work, state=state, work_dir=work_dir)
 
 
 class FailFailureAnalysisOnce(HappyPathEffects):

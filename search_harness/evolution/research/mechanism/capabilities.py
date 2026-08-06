@@ -6,10 +6,12 @@ from typing import Any
 
 from ..roles.contracts import MechanismSpec
 from .hook_api import HOOK_API_CATALOG_VERSION, query_hook_api
+from .hook_api import runtime_input_topic_document
 from .hook_authoring import (
     HOOK_AUTHORING_API_VERSION,
     get_hook_authoring_guide,
 )
+from .runtime_inputs import REFERENCE_MODEL_GATED_FINAL_HOOK, get_runtime_input_topic
 
 
 _PHASE_SYMBOLS = {
@@ -76,32 +78,6 @@ _MODEL_SYMBOLS = (
     "HookModelResponse.json_object",
 )
 
-_SEMANTIC_INPUT_SYMBOLS = {
-    "conversation_history": (
-        "core.conversation_messages",
-        "core.tool_interactions",
-        "HookContext.trajectory",
-        "TrajectoryEvent",
-    ),
-    "conversation_history_messages": (
-        "core.conversation_messages",
-        "core.tool_interactions",
-        "HookContext.trajectory",
-        "TrajectoryEvent",
-    ),
-    "conversation_messages": (
-        "core.conversation_messages",
-        "core.tool_interactions",
-        "HookContext.trajectory",
-        "TrajectoryEvent",
-    ),
-    "prior_tool_results": (
-        "core.tool_interactions",
-        "HookContext.trajectory",
-        "TrajectoryEvent",
-    ),
-}
-
 _KEEP_CONTRACT_KEYS = frozenset(
     {
         "symbol",
@@ -150,6 +126,7 @@ def build_compiler_capability_packet(
     phase_selections = []
     phase_symbols: list[str] = []
     all_exact_inputs: list[str] = []
+    runtime_input_ids: list[str] = []
     for rule in mechanism.phase_rules:
         phase = rule.phase.strip().casefold()
         try:
@@ -166,18 +143,10 @@ def build_compiler_capability_packet(
             for value in rule.decision_inputs
             if value not in exact_inputs
         ]
-        semantic_input_mappings = []
-        for value in semantic_inputs:
-            mapped_symbols = _semantic_input_symbols(value)
-            if not mapped_symbols:
-                continue
-            phase_symbols.extend(mapped_symbols)
-            semantic_input_mappings.append(
-                {
-                    "input": value,
-                    "symbols": list(mapped_symbols),
-                }
-            )
+        for topic_id in rule.runtime_inputs:
+            topic = get_runtime_input_topic(topic_id)
+            phase_symbols.extend(topic.symbols)
+            runtime_input_ids.append(topic.topic_id)
         all_exact_inputs.extend(exact_inputs)
         phase_selections.append(
             {
@@ -186,7 +155,7 @@ def build_compiler_capability_packet(
                 "activation_budget": rule.activation_budget,
                 "exact_decision_inputs": exact_inputs,
                 "semantic_decision_inputs": semantic_inputs,
-                "semantic_input_mappings": semantic_input_mappings,
+                "runtime_inputs": list(rule.runtime_inputs),
             }
         )
     (
@@ -222,7 +191,7 @@ def build_compiler_capability_packet(
     state_access = get_hook_authoring_guide("state_access")
     manifest = get_hook_authoring_guide("manifest")
     return {
-        "packet_version": 7,
+        "packet_version": 8,
         "catalog_versions": {
             "hook_api": HOOK_API_CATALOG_VERSION,
             "authoring_guide": HOOK_AUTHORING_API_VERSION,
@@ -234,8 +203,13 @@ def build_compiler_capability_packet(
             "semantic_required_capabilities": semantic_capabilities,
             "unresolved_api_capabilities": unresolved_capabilities,
             "unresolved_symbols": unresolved_symbols,
+            "unresolved_runtime_inputs": [],
         },
         "contracts": contracts,
+        "runtime_input_documents": [
+            runtime_input_topic_document(topic_id)
+            for topic_id in dict.fromkeys(runtime_input_ids)
+        ],
         "authoring": {
             "factory_rules": [
                 *implementation["rules"][:4],
@@ -270,6 +244,12 @@ def build_compiler_capability_packet(
                 ),
             ],
             **_model_authoring([*exact_capabilities, *model_symbols]),
+            **(
+                {"reference_hook": REFERENCE_MODEL_GATED_FINAL_HOOK}
+                if _requires_model_inference(mechanism)
+                and any(rule.phase == "pre_final" for rule in mechanism.phase_rules)
+                else {}
+            ),
         },
     }
 
@@ -321,11 +301,6 @@ def _classify_required_capabilities(
         else:
             exact.append(value)
     return exact, semantic, unresolved
-
-
-def _semantic_input_symbols(value: str) -> tuple[str, ...]:
-    normalized = value.strip().casefold()
-    return _SEMANTIC_INPUT_SYMBOLS.get(normalized, ())
 
 
 def _looks_like_api_symbol(value: str) -> bool:

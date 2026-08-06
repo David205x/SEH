@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from search_harness.evolution.research.roles.contracts import (
     CandidateReview,
     CompilerResult,
-    ConformanceFinding,
+    ConformanceReview,
     EvidenceReview,
     FailureAnalystInput,
     FailureDirection,
@@ -108,7 +108,7 @@ class TeacherContractTest(unittest.TestCase):
                 "intervention_worker",
                 1,
             ).output_contract_version,
-            3,
+            4,
         )
         self.assertEqual(
             get_teacher_role(
@@ -122,7 +122,14 @@ class TeacherContractTest(unittest.TestCase):
                 "conformance_reviewer",
                 1,
             ).output_contract_id,
-            "conformance_finding",
+            "conformance_review",
+        )
+        self.assertEqual(
+            get_teacher_role(
+                "conformance_reviewer",
+                1,
+            ).output_contract_version,
+            2,
         )
 
     def test_conformance_finding_separates_fidelity_from_repair(
@@ -131,18 +138,14 @@ class TeacherContractTest(unittest.TestCase):
         """验证 faithful 必须观察 phase，失败 verdict 必须给修订义务。"""
 
         with self.assertRaises(ValidationError):
-            ConformanceFinding(
-                trial_refs=["trial_001"],
-                candidate_run_ref="example-1/r000",
+            ConformanceReview(
                 verdict="faithful",
                 observed_phases=[],
                 assessment="No phase was observed.",
                 repair_obligation=None,
             )
         with self.assertRaises(ValidationError):
-            ConformanceFinding(
-                trial_refs=["trial_001"],
-                candidate_run_ref="example-1/r001",
+            ConformanceReview(
                 verdict="not_observed",
                 observed_phases=[],
                 assessment="The mechanism was not observed.",
@@ -246,6 +249,7 @@ class TeacherContractTest(unittest.TestCase):
                 trigger_phase="pre_final",
                 trigger_condition="The first final answer is proposed.",
                 decision_inputs=["candidate answer", "rollout-local state"],
+                runtime_inputs=["final_decision", "persistent_state"],
                 decision_evaluator="deterministic",
                 action="Defer the first final answer once.",
                 behavioral_pseudocode="x" * 3001,
@@ -268,6 +272,7 @@ class TeacherContractTest(unittest.TestCase):
                         "candidate answer",
                         "rollout-local state",
                     ],
+                    "runtime_inputs": ["final_decision", "persistent_state"],
                     "decision_evaluator": "deterministic",
                     "action": "Defer the first final answer once.",
                     "state_scope": "One rollout.",
@@ -292,6 +297,7 @@ class TeacherContractTest(unittest.TestCase):
                     "trigger_phase": "pre_final",
                     "trigger_condition": "The first final answer is proposed.",
                     "decision_inputs": ["candidate answer"],
+                    "runtime_inputs": ["final_decision"],
                     "action": "Defer the first final answer once.",
                     "behavioral_pseudocode": "Defer the first final answer.",
                     "state_scope": "One rollout.",
@@ -315,6 +321,7 @@ class TeacherContractTest(unittest.TestCase):
                 trigger_phase="pre_final",
                 trigger_condition="The first final answer is proposed.",
                 decision_inputs=["candidate answer"],
+                runtime_inputs=["final_decision"],
                 decision_evaluator="teacher",  # type: ignore[arg-type]
                 action="Defer the first final answer once.",
                 behavioral_pseudocode="Defer the first final answer.",
@@ -335,22 +342,28 @@ class TeacherContractTest(unittest.TestCase):
                 unmet_phases=["post_tool"],
             )
 
-    def test_intervention_result_kind_requires_concrete_modification(
+    def test_intervention_result_kind_preserves_observed_no_change(
         self,
     ) -> None:
-        """验证 executed 与非 executed 结果均由事实修改 phase 约束。"""
+        """验证到达 phase 后的正确不干预仍是一条完成 Trial。"""
 
+        result = InterventionWorkerResult(
+            result_kind="executed",
+            activated_phases=["post_tool"],
+            modified_phases=[],
+        )
+        self.assertEqual(result.modified_phases, [])
         with self.assertRaises(ValidationError):
             InterventionWorkerResult(
                 result_kind="executed",
-                activated_phases=["post_tool"],
+                activated_phases=[],
                 modified_phases=[],
             )
         with self.assertRaises(ValidationError):
             InterventionWorkerResult(
-                result_kind="unsupported_hypothesis",
+                result_kind="invalid_result",
                 activated_phases=["post_tool"],
-                modified_phases=["post_tool"],
+                modified_phases=[],
             )
 
     def test_compiler_submission_requires_candidate_reference(self) -> None:

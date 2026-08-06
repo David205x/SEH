@@ -1,0 +1,15 @@
+{
+  "role": {
+    "id": "failure_analyst"
+  },
+  "role_budget": {
+    "max_turns": 8
+  },
+  "usage": {
+    "requests": 2,
+    "calls": [
+      {"prompt_cache_hit_tokens": 10},
+      {"prompt_cache_hit_tokens": 20}
+    ]
+  }
+}
