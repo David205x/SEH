@@ -8,6 +8,7 @@ from .runtime_config import (
     evolution_effect_values,
     read_runtime_config,
     resolve_runtime_config,
+    teacher_judge_thinking_mode,
     teacher_role_budget,
 )
 
@@ -23,5 +24,6 @@ __all__ = [
     "TeacherRoleBudget",
     "read_runtime_config",
     "resolve_runtime_config",
+    "teacher_judge_thinking_mode",
     "teacher_role_budget",
 ]

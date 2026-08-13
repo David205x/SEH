@@ -55,7 +55,15 @@
     const stopGroup = create("g", { class: "compact-stops" });
     for (const item of allStations) {
       const state = states.get(item.kind) ?? { status: "not_reached", count: 0 };
-      const group = create("g", { class: `compact-stop status-${state.status}${item.branch ? " is-branch" : ""}` });
+      const selected = options.selectedKind === item.kind;
+      const group = create("g", {
+        class: `compact-stop status-${state.status}${item.branch ? " is-branch" : ""}${selected ? " is-selected" : ""}`,
+        role: "button",
+        tabindex: "0",
+        focusable: "true",
+        "aria-label": `筛选 ${item.label} 相关事件`,
+        "aria-pressed": selected ? "true" : "false",
+      });
       group.append(create("circle", { cx: item.x, cy: item.y, r: item.branch ? 23 : 28, class: "station-halo" }));
       if (state.budget) group.append(...budgetRing(item, state.budget));
       group.append(create("circle", { cx: item.x, cy: item.y, r: item.branch ? 13 : 17, class: "station-ring" }));
@@ -66,6 +74,12 @@
         title.textContent = `${state.budget.label}: ${state.budget.used} / ${state.budget.limit} (${Math.round(state.budget.share * 100)}%)`;
         group.append(title);
       }
+      group.addEventListener("click", () => options.onSelectKind?.(item.kind));
+      group.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        options.onSelectKind?.(item.kind);
+      });
       stopGroup.append(group);
     }
     svg.append(stopGroup);

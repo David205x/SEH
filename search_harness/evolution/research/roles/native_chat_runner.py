@@ -110,8 +110,17 @@ class NativeChatRoleRunner:
             spec.role.role_id,
             default_max_tokens=config.max_tokens,
             default_max_turns=self.max_turns,
+            default_thinking_mode=config.thinking_mode,
         )
-        config = replace(config, max_tokens=budget.max_tokens)
+        config = replace(
+            config,
+            max_tokens=budget.max_tokens,
+            thinking_mode=(
+                budget.thinking_mode
+                if config.thinking_mode is not None
+                else None
+            ),
+        )
         output_tool_name = f"submit_{spec.role.output_contract_id}"
         try:
             native_result = await OpenAICompatibleToolRunner(
@@ -249,6 +258,7 @@ class NativeChatRoleRunner:
         trial_reviews: list[dict[str, Any]],
         aggregate_observations: dict[str, Any],
         budget: dict[str, Any],
+        coverage_summary: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """在同一 Reviewer transcript 中追加独立 trial 审阅。"""
 
@@ -299,6 +309,8 @@ class NativeChatRoleRunner:
             "budget": deepcopy(budget),
             "prior_obligation": previous_output.get("next_obligation"),
         }
+        if coverage_summary is not None:
+            role_input["coverage_summary"] = deepcopy(coverage_summary)
         return await self.run(
             template_root=Path(template_root),
             role_id="evidence_reviewer",
@@ -316,6 +328,7 @@ class NativeChatRoleRunner:
                         aggregate_observations
                     ),
                     "budget": deepcopy(budget),
+                    "coverage_summary": deepcopy(coverage_summary),
                 },
             ),
         )
@@ -480,6 +493,7 @@ def _continuation_input_matches(
     stable_keys = set(previous) - {
         "aggregate_observations",
         "trial_reviews",
+        "coverage_summary",
         "budget",
         "prior_obligation",
     }

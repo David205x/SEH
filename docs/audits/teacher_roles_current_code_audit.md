@@ -20,13 +20,13 @@ Candidate Reviewer 另有两个明确的能力边界：Harness diff 检查只由
 | 规范角色 | 当前内部 ID | Role contract | Output contract | 正式 Controller Runtime |
 | --- | --- | --- | --- | --- |
 | Failure Analyst | `failure_analyst` | `@1` | `failure_direction@1` | Native Chat |
-| Hypothesis Researcher | `hypothesis_researcher` | `@1` | `intervention_hypothesis@3` | Native Chat + Role Continuation |
+| Hypothesis Researcher | `hypothesis_researcher` | `@1` | `intervention_hypothesis@4` | Native Chat + Role Continuation |
 | Intervention Executor | `intervention_worker` | `@1` | `intervention_worker_result@4` | Persistent Intervention Branch |
-| Trial Reviewer | `trial_reviewer` | `@1` | `trial_review@1` | Native Chat |
+| Trial Reviewer | `trial_reviewer` | `@1` | `trial_review@2` | Native Chat |
 | Evidence Reviewer | `evidence_reviewer` | `@1` | `evidence_review@2` | Native Chat |
 | Mechanism Distiller | `mechanism_distiller` | `@1` | `mechanism_distillation@2` | Native Chat |
-| Mechanism Compiler | `compiler` | `@1` | `compiler_result@1` | Native Chat |
-| Conformance Reviewer | `conformance_reviewer` | `@1` | `conformance_review@2` | Native Chat |
+| Mechanism Compiler | `compiler` | `@1` | `compiler_result@2` | Native Chat |
+| Conformance Reviewer | `conformance_reviewer` | `@1` | `conformance_review@3` | Native Chat |
 | Candidate Reviewer | `candidate_reviewer` | `@1` | `candidate_review@2` | Native Chat |
 
 `intervention_worker` 和 `compiler` 是当前稳定内部 ID，不应在面向领域的叙述中替代 Intervention Executor 和 Mechanism Compiler。
@@ -46,11 +46,14 @@ flowchart TD
     ER -->|"ready_to_distill"| MD["Mechanism Distiller"]
     MD -->|"needs_evidence"| TS
     MD -->|"distilled"| MC["Mechanism Compiler"]
-    MC -->|"needs_revision"| MD
+    MC -->|"needs_evidence"| TS
+    MC -->|"needs_mechanism_revision / implementation_blocked"| MD
     MC --> CV["Candidate Validation"]
     CV -->|"failed"| MC
     CV --> CR["Conformance Reviewer"]
-    CR -->|"revise_implementation"| MC
+    CR -->|"revise evidence"| TS
+    CR -->|"revise mechanism"| MD
+    CR -->|"revise implementation"| MC
     CR -->|"pass"| CE["Candidate Evaluation"]
     CE --> CAR["Candidate Reviewer"]
     CAR -->|"revise evidence"| TS
@@ -341,11 +344,11 @@ Prompt 位于 `harness_templates/teacher/trial_reviewer/prompt/`。它要求逐 
   任一剩余调度预算为零时 Prompt 与资源门禁共同禁止该决定。
 - `not_distillable`：本次 Evolution Run 以 Evidence 不可蒸馏结束。
 
-Mechanism Compiler 的 `needs_revision` 也会把 capability constraint 回流到新的 Mechanism Distiller invocation。
+Mechanism Compiler 的 `needs_mechanism_revision` 或 `implementation_blocked` 会把明确的 `next_obligation` 回流到新的 Mechanism Distiller invocation；`needs_evidence` 回到 Trial Selection。
 
 ### 6.2 输入与输出
 
-输入包含冻结 Hypothesis、必须为 `ready_to_distill` 的 Evidence Review、trial refs 和 capability constraints。
+输入包含冻结 Hypothesis、必须为 `ready_to_distill` 的 Evidence Review、完整结构化 Trial Reviews、程序维护的 coverage summary、trial refs、预算和 capability constraints。
 
 终态 `MechanismDistillation` 只承担窄控制结果：
 
@@ -354,7 +357,7 @@ Mechanism Compiler 的 `needs_revision` 也会把 capability constraint 回流�
 - `rationale`
 - `next_obligation`，`needs_evidence` 必填
 
-真正的 `MechanismSpec` 由资源工具渐进构造并保存在 `validated_mechanisms`：goal、1–4 个 phase rule、behavioral pseudocode、state scope、fallback、expected behavior、Evidence refs、required capabilities、prohibited behaviors、observability 和 known limits。每条 phase rule 的 `decision_inputs` 描述语义值，非空 `runtime_inputs` 则从受控宽粒度 Topic 中声明实现所需的运行时信息类别。
+真正的 `MechanismSpec` 由资源工具渐进构造并保存在 `validated_mechanisms`：goal、1–4 个 phase rule、behavioral pseudocode、state scope、expected behavior、Evidence refs、required capabilities、prohibited behaviors、observability 和 known limits。每条 phase rule 分别声明 deterministic guards、含 positive/negative/uncertain 边界与 evidence coverage 的 decision contract、decision inputs、runtime inputs、evaluator、positive action、三个 phase-local fallback 和 activation budget。
 
 ### 6.3 工具与 Prompt
 
@@ -366,9 +369,10 @@ Mechanism Compiler 的 `needs_revision` 也会把 capability constraint 回流�
 - `add_mechanism_phase`
 - `complete_mechanism_draft`
 - `set_mechanism_constraints`
+- `probe_mechanism_evaluators`
 - `validate_mechanism_draft`
 
-Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点是把 Teacher Intervention 降为无需 Teacher 在线参与的最小 Mechanism，显式区分 deterministic 与 `hook_model` evaluator，保留必要的跨 phase 状态和 fallback，禁止用关键词/正则伪装语义判断，也禁止写具体 Python 或 Framework API。Intervention Trial 只支持触发语义与干预效果；Distiller 不要求它实例化未来 Hook model，而是把有证据支持的语义判断声明为 `hook_model`，交给 Compiler 实现。`runtime_inputs` 只选择 `task`、`conversation`、`tool`、`model_io`、`parsed_output`、`final_decision`、`trajectory`、`persistent_state` Topic；一个 `tool` Topic 会展开当前 Tool Call/Result、已完成交互历史与相关类型，不要求 Distiller 精确找 symbol。
+Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点是把 Teacher Intervention 降为无需 Teacher 在线参与的最小 Mechanism，显式区分 deterministic guard 与 evaluator，要求模糊术语形成可操作的三值边界，并禁止用关键词/正则伪装语义判断。Intervention Trial 支持语义条件与干预效果；对于 `hook_model`，Distiller 还必须用正式 Student Hook-model backend 对 evidence coverage 派生的 fixture 重复探测。Probe 记录匹配、一致性、解析失败和 usage，不设置程序通过门禁。`runtime_inputs` 仍只选择受控 Topic，Compiler 负责最终集成。
 
 ### 6.4 程序门禁与缺口
 
@@ -378,6 +382,7 @@ Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点�
 - Mechanism Distiller 接收冻结 Trial/Assignment 预算，预算耗尽时不能返回
   `needs_evidence`；
 - `distilled` 必须引用本次 Role Run 中已经 Pydantic 校验的 Mechanism Spec；
+- 含 `hook_model` phase 的 draft 在提交前必须产生对应 Probe artifact；
 - phase 唯一、evaluator 值、activation budget 和主要文本字段满足协议。
 
 但当前 `MechanismDraftStore.validate()` 只把模型提供的 `evidence_refs` 放入 Mechanism Spec 并做结构校验：
@@ -397,7 +402,9 @@ Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点�
 获得已验证 Mechanism Spec 后激活。输出：
 
 - `submitted`：进入 Candidate Attempt staging 和 Candidate Validation。
-- `needs_revision`：在 mechanism revision 预算内回到 Mechanism Distiller，`implementation_summary` 被追加为 capability constraint。
+- `needs_evidence`：回到 Trial Selection；
+- `needs_mechanism_revision` 或 `implementation_blocked`：在预算内回到 Mechanism Distiller；
+- `submitted`：进入 Candidate staging。
 
 Candidate Validation 失败会在 compiler revision 预算内创建一次新的 Mechanism Compiler invocation，并把 validation errors 作为 `validation_feedback` 输入。普通本次运行内的 deterministic validation error 应先通过 `finalize_candidate` 反馈就地修复。
 
@@ -407,10 +414,11 @@ Candidate Validation 失败会在 compiler revision 预算内创建一次新的 
 
 输出 `CompilerResult`：
 
-- `decision`: `submitted` 或 `needs_revision`
-- `candidate_ref`: `submitted` 必填，`needs_revision` 必须为空
+- `decision`: `submitted`、`needs_evidence`、`needs_mechanism_revision` 或 `implementation_blocked`
+- `candidate_ref`: `submitted` 必填，其他决定必须为空
 - `implementation_summary`
 - `unresolved_risk`
+- `next_obligation`: 非提交决定必填
 
 ### 7.3 工具、capability packet 与可写边界
 
@@ -423,9 +431,9 @@ Manifest 当前显式注册：
 - `delete_candidate_file`
 - `finalize_candidate`
 
-Role Input 绑定后，程序根据 Mechanism Spec 的受控 `runtime_inputs` 生成 source-derived capability packet v8，作为主要公开 API。每个 Topic 展开完整相关 symbol contract、Python-native type hint/docstring/注释、phase 生命周期、推荐与禁用用法；需要模型判断的通用 `pre_final` 机制还附带一个紧凑 reference Hook。`query_hook_api` 支持完整 Topic、精确 symbol 和搜索短语：Topic 与 packet 内 symbol 可无损重取，未知查询返回建议且不消耗预算，只有新的有效 symbol 查询计入最多 12 次的预算。
+Role Input 绑定后，程序根据 Mechanism Spec 的受控 `runtime_inputs` 生成 source-derived capability packet v9，作为主要公开 API。除原有 Python-native API 文档外，packet 还携带各 phase 的 guards、decision contract 和局部 fallback。`query_hook_api` 的查询与预算语义不变。
 
-Mechanism Compiler 只能修改内存 Candidate Workspace。Evolution Policy 的 fixed Component、模板路径边界、Python 语法、Manifest/Assembly 和 Hook contract 由 Candidate Validation 与 deterministic source review 检查。`finalize_candidate` 计算 diff、运行 deterministic review 和 Candidate Validation；失败返回 `repair_required`，通过才冻结 candidate ref。
+Mechanism Compiler 只能修改内存 Candidate Workspace。Evolution Policy 的 fixed Component、模板路径边界、Python 语法、Manifest/Assembly 和 Hook contract 由 Candidate Validation 与 deterministic source review 检查。Hook 校验既逐 Hook/phase 定位单体契约错误，也用全部 Candidate Hook 构造完整 Pipeline，并在同一 rollout state/store 中重复执行 tool-call、final-answer 和 error 生命周期，检查组合注册、共享状态、写权限、状态类型和重复调用的机械安全性；它不判断 Mechanism 语义。`finalize_candidate` 计算 diff、运行 deterministic review 和 Candidate Validation；失败返回 `repair_required`，通过才冻结 candidate ref。
 
 ### 7.4 Prompt 与程序后处理
 
@@ -435,7 +443,7 @@ Prompt 位于 `harness_templates/teacher/compiler/prompt/`。它把 behavioral p
 
 - `HookContext.call_model` 是 `decision_evaluator="hook_model"` rule 的必需 evaluator，不是可选增强；精确的 phase、类型、声明状态和 activation-budget guard 到达语义决策点后必须调用模型。
 - 确定性代码只能检查公共 contract 提供的精确结构条件，不得把该 rule 的语义 predicate 移入关键词、子串、正则、分数或自行发明的 pre-filter。
-- implementation constraint 若要求与声明 evaluator 冲突的语义 pre-filter，Compiler 应返回 `needs_revision` 并指出冲突，不得静默改变 Mechanism Spec。
+- implementation constraint 若要求与声明 evaluator 冲突的语义 pre-filter，Compiler 应返回 `needs_mechanism_revision` 并指出冲突，不得静默改变 Mechanism Spec。
 
 Hook 组织也改为明确的默认形状：
 
@@ -485,13 +493,13 @@ Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同
 
 - 任意 `runtime_error` 或 `implementation_mismatch` 都是全局 hard failure；
 - 每个 Example 至少一条 `faithful`；
-- 同时满足时 decision 为 `pass`，否则为 `revise_implementation`。
+- 同时满足时 decision 为 `pass`，否则为 `revise`；失败 Finding 的 Reviewer-owned `recommended_route` 决定回到 evidence、mechanism 或 implementation。
 
-失败 Candidate 先持久化 Rejection，再在 candidate revision 预算内回流 Mechanism Compiler。
+失败 Candidate 先持久化 Rejection，再在 candidate revision 预算内按聚合后的路由回流对应阶段。
 
 ### 8.2 输入与输出
 
-输入包含 Mechanism Spec、该 Example 对应 trial refs、reference observations、Example/Replicate identity 和完整 Candidate trajectory。
+输入包含 Mechanism Spec、该 Example 对应 trial refs、reference observations、Example/Replicate identity 和 lossless-for-conformance `candidate_trajectory_view`；完整 replay 仍保存在 checkpoint，但不直接进入模型上下文。
 
 模型输出 `ConformanceReview`：
 
@@ -501,10 +509,14 @@ Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同
 | `observed_phases` | 只允许 Mechanism Spec 中实际观察到的 phase |
 | `assessment` | 实现保真判断 |
 | `repair_obligation` | 非 faithful 必填；faithful 必须为空 |
+| `failure_layer` | 非 faithful 的 projection/evaluator/parsing/state/action/integration/ambiguous_spec 分类 |
+| `predicate_ref`、`expected_label`、`observed_label` | evaluator/parsing 诊断所需的三值判定信息 |
+| `decisive_input_summary` | 不复制案例文本的决定性输入摘要 |
+| `recommended_route` | `evidence`、`mechanism` 或 `implementation` |
 
 `candidate_run_ref` 与 `trial_refs` 是程序已知的路由身份，不再要求模型复制。程序将其附加到规范化 `ConformanceFinding` 后再持久化和聚合。
 
-该角色没有工具，全部 Evidence 通过输入提供。Prompt 位于 `harness_templates/teacher/conformance_reviewer/prompt/`，明确禁止以答案正确性替代实现保真，并要求独立判断 trace-visible trigger inputs：可见条件不成立且正确 no-op 可以是 `faithful`；可见条件成立但 Hook model、解析、状态或控制逻辑进入 fallback 则是 `implementation_mismatch`；证据不足则为 `inconclusive`。该判断不由确定性激活率门禁替代。
+该角色没有工具，全部 Evidence 通过输入提供。Prompt 位于 `harness_templates/teacher/conformance_reviewer/prompt/`，明确禁止以答案正确性替代实现保真，并要求 Reviewer 独立把 trace-visible decision inputs 判为 positive、negative 或 uncertain：对应 fallback 正确才可视为 conformant；positive 被 Hook model、解析、状态或控制逻辑送入 fallback 则是 `implementation_mismatch`；规格边界本身不足时标为 `ambiguous_spec` 并回到 mechanism。该判断不由确定性激活率门禁替代。
 
 ### 8.3 程序后处理
 

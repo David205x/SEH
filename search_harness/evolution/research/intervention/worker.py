@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Annotated, Any
 
 from search_harness.framework import (
@@ -39,6 +40,9 @@ class InterventionWorker:
         max_steps_per_activation: int = 8,
         system_prompt_template: str | None = None,
         client: OpenAICompatibleSyncClient | None = None,
+        activation_tool_set_factory: (
+            Callable[[object], ToolSet] | None
+        ) = None,
     ) -> None:
         if not intent.strip():
             raise ValueError("intervention intent must not be empty")
@@ -54,6 +58,7 @@ class InterventionWorker:
         self._system_prompt = _render_system_prompt(
             template=system_prompt_template,
         )
+        self._activation_tool_set_factory = activation_tool_set_factory
         self._session = OpenAICompatibleToolSession(
             config=config,
             client=client,
@@ -86,7 +91,13 @@ class InterventionWorker:
             raise ValueError("invalid phase activation budget")
         self._activation_count += 1
         activation = _ActivationState(snapshot)
-        tool_set = _ActivationTools(activation).tool_set
+        tool_set = (
+            self._activation_tool_set_factory(activation)
+            if self._activation_tool_set_factory is not None
+            else _ActivationTools(activation).tool_set
+        )
+        if not isinstance(tool_set, ToolSet):
+            raise TypeError("activation tool-set factory must return ToolSet")
         runtime = ToolExecutor(tool_set.tools)
         step = snapshot.get("current_step")
         active_observation = _active_observation(snapshot)

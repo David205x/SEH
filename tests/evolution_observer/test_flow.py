@@ -2,7 +2,12 @@
 
 import unittest
 
-from evolution_observer.flow import project_generation_flows
+from evolution_observer.flow import (
+    FLOW_NODES,
+    filter_node_events,
+    node_work_kinds,
+    project_generation_flows,
+)
 from evolution_observer.models import ObservedEvent, ObservedWorkItem
 
 
@@ -70,6 +75,69 @@ class GenerationFlowTests(unittest.TestCase):
         }
         self.assertEqual(generation_two["evaluate_incumbent"]["count"], 1)
         self.assertEqual(generation_two["analyze_failure"]["count"], 0)
+
+    def test_maps_every_known_work_kind_to_a_nearby_node(self) -> None:
+        known_work_kinds = {
+            "evaluate_incumbent",
+            "analyze_failure",
+            "research_hypothesis",
+            "select_trial",
+            "execute_trial",
+            "review_evidence",
+            "distill_mechanism",
+            "compile_candidate",
+            "stage_candidate",
+            "verify_conformance",
+            "evaluate_candidate",
+            "review_candidate",
+            "promote_candidate",
+            "reject_candidate",
+        }
+        mapped_work_kinds = {
+            str(work_kind)
+            for node in FLOW_NODES
+            for work_kind in node["work_kinds"]
+        }
+
+        self.assertEqual(mapped_work_kinds, known_work_kinds)
+        self.assertEqual(
+            node_work_kinds("execute_trial"),
+            {"select_trial", "execute_trial"},
+        )
+        self.assertEqual(
+            node_work_kinds("review_candidate"),
+            {"review_candidate", "reject_candidate"},
+        )
+
+    def test_promotion_filter_includes_version_advanced(self) -> None:
+        promotion = _work("promote", "promote_candidate", 1, 1)
+        unrelated = _work("analysis", "analyze_failure", 1, 2)
+        version_advanced = ObservedEvent(
+            sequence=3,
+            event_type="version_advanced",
+            created_at_utc="2026-08-04T00:00:03Z",
+            payload={"generation": 1, "version_id": "harness_v0002"},
+        )
+        next_generation = ObservedEvent(
+            sequence=4,
+            event_type="version_advanced",
+            created_at_utc="2026-08-04T00:00:04Z",
+            payload={"generation": 2, "version_id": "harness_v0003"},
+        )
+
+        filtered = filter_node_events(
+            [
+                promotion.events[0],
+                unrelated.events[0],
+                version_advanced,
+                next_generation,
+            ],
+            [promotion, unrelated],
+            "promote_candidate",
+            1,
+        )
+
+        self.assertEqual([event.sequence for event in filtered], [1, 3])
 
 
 def _work(

@@ -192,6 +192,7 @@ class EvolutionControlConfig:
 
     max_generations: int = 1
     max_trials_per_hypothesis: int = 4
+    trial_batch_size: int = 3
     max_trial_assignments: int = 12
     max_hypothesis_revisions: int = 2
     max_mechanism_revisions: int = 2
@@ -207,12 +208,18 @@ class EvolutionControlConfig:
         positive = {
             "max_generations": self.max_generations,
             "max_trials_per_hypothesis": self.max_trials_per_hypothesis,
+            "trial_batch_size": self.trial_batch_size,
             "max_trial_assignments": self.max_trial_assignments,
             "max_work_items": self.max_work_items,
         }
         for name, value in positive.items():
             if value < 1:
                 raise ValueError(f"{name} must be positive")
+        if self.trial_batch_size > self.max_trials_per_hypothesis:
+            raise ValueError(
+                "trial_batch_size must not exceed "
+                "max_trials_per_hypothesis"
+            )
         non_negative = {
             "max_hypothesis_revisions": self.max_hypothesis_revisions,
             "max_mechanism_revisions": self.max_mechanism_revisions,

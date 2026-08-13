@@ -55,6 +55,7 @@ def build_builtin_tool(
         "complete_mechanism_draft": _complete_mechanism_draft,
         "set_mechanism_constraints": _set_mechanism_constraints,
         "validate_mechanism_draft": _validate_mechanism_draft,
+        "probe_mechanism_evaluators": _probe_mechanism_evaluators,
         "list_intervention_timeline": _list_intervention_timeline,
         "inspect_intervention_prefix": _inspect_intervention_prefix,
         "run_intervention_branch": _run_intervention_branch,
@@ -382,7 +383,10 @@ def _get_trial_event(resources: TeacherResources) -> CallableTool:
 def _create_mechanism_draft(resources: TeacherResources) -> CallableTool:
     @tool(name="create_mechanism_draft")
     def invoke(
-        goal: Annotated[str, ToolArg("General Student behavior the mechanism must cause.")],
+        goal: Annotated[
+            str,
+            ToolArg("General Student behavior the mechanism must cause."),
+        ],
     ) -> ToolResult:
         """Create an empty no-Teacher mechanism draft."""
 
@@ -406,9 +410,47 @@ def _add_mechanism_phase(resources: TeacherResources) -> CallableTool:
             str,
             ToolArg("Student Hook phase where this rule observes state."),
         ],
-        trigger_condition: Annotated[
+        guards: Annotated[
+            list[str],
+            ToolArg(
+                "Deterministic state and budget conditions checked before "
+                "the decision evaluator; use an empty list when none apply."
+            ),
+        ],
+        predicate: Annotated[
             str,
-            ToolArg("Observable, case-independent activation condition."),
+            ToolArg("The single case-independent question the evaluator decides."),
+        ],
+        positive_rule: Annotated[
+            str,
+            ToolArg("Operational boundary that requires the phase action."),
+        ],
+        negative_rule: Annotated[
+            str,
+            ToolArg("Operational boundary that requires a non-trigger result."),
+        ],
+        uncertain_rule: Annotated[
+            str,
+            ToolArg("Observable boundary where neither other rule is justified."),
+        ],
+        positive_evidence: Annotated[
+            list[str],
+            ToolArg(
+                "Case-independent observed categories labeled positive."
+            ),
+        ],
+        negative_evidence: Annotated[
+            list[str],
+            ToolArg(
+                "Case-independent observed categories labeled negative."
+            ),
+        ],
+        uncertain_evidence: Annotated[
+            list[str],
+            ToolArg(
+                "Observed boundary categories labeled uncertain; use an "
+                "empty list when no uncertain Trial was observed."
+            ),
         ],
         decision_inputs: Annotated[
             list[str],
@@ -435,6 +477,18 @@ def _add_mechanism_phase(resources: TeacherResources) -> CallableTool:
             str,
             ToolArg("One short sentence describing this phase-local action."),
         ],
+        fallback_negative: Annotated[
+            str,
+            ToolArg("Exact phase behavior for a negative evaluator label."),
+        ],
+        fallback_uncertain: Annotated[
+            str,
+            ToolArg("Safe phase behavior for an uncertain evaluator label."),
+        ],
+        fallback_budget_exhausted: Annotated[
+            str,
+            ToolArg("Exact phase behavior after its activation budget is used."),
+        ],
         activation_budget: Annotated[
             int,
             ToolArg(
@@ -448,11 +502,21 @@ def _add_mechanism_phase(resources: TeacherResources) -> CallableTool:
         resources.mechanisms.add_phase(
             draft_id=draft_id,
             phase=phase,
-            trigger_condition=trigger_condition,
+            guards=guards,
+            predicate=predicate,
+            positive_rule=positive_rule,
+            negative_rule=negative_rule,
+            uncertain_rule=uncertain_rule,
+            positive_evidence=positive_evidence,
+            negative_evidence=negative_evidence,
+            uncertain_evidence=uncertain_evidence,
             decision_inputs=decision_inputs,
             runtime_inputs=runtime_inputs,
             decision_evaluator=decision_evaluator,
             action=action,
+            fallback_negative=fallback_negative,
+            fallback_uncertain=fallback_uncertain,
+            fallback_budget_exhausted=fallback_budget_exhausted,
             activation_budget=activation_budget,
         )
         return _json_result(
@@ -481,10 +545,6 @@ def _complete_mechanism_draft(resources: TeacherResources) -> CallableTool:
             str,
             ToolArg("State retained by the mechanism and its lifetime."),
         ],
-        fallback: Annotated[
-            str,
-            ToolArg("Safe behavior when the decision cannot be made."),
-        ],
         expected_behavior: Annotated[
             str,
             ToolArg("Observable Student process effect after activation."),
@@ -496,7 +556,6 @@ def _complete_mechanism_draft(resources: TeacherResources) -> CallableTool:
             draft_id=draft_id,
             behavioral_pseudocode=behavioral_pseudocode,
             state_scope=state_scope,
-            fallback=fallback,
             expected_behavior=expected_behavior,
         )
         return _json_result(
@@ -528,6 +587,42 @@ def _validate_mechanism_draft(resources: TeacherResources) -> CallableTool:
         return _json_result(
             "validate_mechanism_draft",
             {"mechanism_ref": mechanism_ref, "validated": True},
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _probe_mechanism_evaluators(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="probe_mechanism_evaluators")
+    def invoke(
+        draft_id: Annotated[
+            str,
+            ToolArg("Completed mechanism draft ID to probe."),
+        ],
+        evidence_refs: Annotated[
+            list[str],
+            ToolArg("Trial references supporting the draft labels."),
+        ],
+        repetitions: Annotated[
+            int,
+            ToolArg(
+                "Repeated classifications per labeled fixture.",
+                minimum=1,
+                maximum=3,
+            ),
+        ] = 3,
+    ) -> ToolResult:
+        """Run the production Hook model on every labeled decision fixture."""
+
+        return _json_result(
+            "probe_mechanism_evaluators",
+            resources.probe_mechanism_evaluators(
+                draft_id=draft_id,
+                evidence_refs=evidence_refs,
+                repetitions=repetitions,
+            ),
         )
 
     return CallableTool.from_callable(invoke)

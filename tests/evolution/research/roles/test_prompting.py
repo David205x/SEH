@@ -6,7 +6,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
+from search_harness.evolution.research.roles.contracts import EvidenceReview
 from search_harness.evolution.research.roles.prompting import load_prompt_spec
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
 class TeacherPromptSpecTest(TestCase):
@@ -66,3 +70,68 @@ class TeacherPromptSpecTest(TestCase):
                         "continuations": {"review": "review.md"},
                     },
                 )
+
+    def test_evidence_revision_prompt_preserves_existing_protocol(self) -> None:
+        """Reviewer 在自由文本字段内按稳定顺序交接修订约束。"""
+
+        prompt = (
+            PROJECT_ROOT
+            / "harness_templates"
+            / "teacher"
+            / "evidence_reviewer"
+            / "prompt"
+            / "system.md"
+        ).read_text(encoding="utf-8")
+
+        labels = (
+            "Observed failure:",
+            "Required revision:",
+            "Must preserve:",
+            "Claim limit:",
+        )
+        positions = [prompt.index(label) for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("existing free-text fields", prompt)
+        self.assertIn("leave\n`next_obligation` empty", prompt)
+        self.assertEqual(
+            set(EvidenceReview.model_fields),
+            {
+                "decision",
+                "phase_findings",
+                "assessment",
+                "key_risk",
+                "next_obligation",
+            },
+        )
+
+    def test_researcher_revision_prompt_uses_feedback_before_trials(self) -> None:
+        """Researcher 优先应用 Reviewer 结论并按需逐层读取 Trial。"""
+
+        prompt_root = (
+            PROJECT_ROOT
+            / "harness_templates"
+            / "teacher"
+            / "hypothesis_researcher"
+            / "prompt"
+        )
+        combined = "\n".join(
+            [
+                (prompt_root / "system.md").read_text(encoding="utf-8"),
+                (prompt_root / "continuations" / "evidence_reviewer.md")
+                .read_text(encoding="utf-8"),
+            ]
+        )
+
+        self.assertIn("When the supplied constraints are sufficient", combined)
+        tool_positions = [
+            combined.index(tool)
+            for tool in (
+                "`list_trial_evidence`",
+                "`get_trial_evidence`",
+                "`get_trial_event`",
+            )
+        ]
+        self.assertEqual(tool_positions, sorted(tool_positions))
+        self.assertIn("never copy a case answer", combined)
+        self.assertIn("When the decision is `revise`", combined)
+        self.assertIn("without inventing missing labels", combined)

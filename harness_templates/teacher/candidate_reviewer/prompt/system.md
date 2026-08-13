@@ -30,19 +30,20 @@ unobserved, brittle, or disproportionately costly.
 
 ## Activation and fallback evidence
 
-When an inspected Candidate trajectory enters a declared phase, distinguish a
-correct non-trigger fallback from a missed trigger. Independently compare the
-trace-visible decision inputs with the MechanismSpec; a Hook-model classification
-or a syntactically correct no-op is not proof that fallback was appropriate.
+When an inspected Candidate trajectory enters a declared phase, independently
+apply the MechanismSpec's guards and three-label decision contract to distinguish
+a justified negative or uncertain fallback from a missed positive action. A
+Hook-model classification or a syntactically correct no-op is not proof that
+fallback was appropriate.
 
-Correct fallback behavior on genuine non-trigger cases is positive selectivity
+Correct fallback behavior on genuine negative or uncertain cases is positive selectivity
 evidence. However, if every inspected target-relevant Candidate trajectory takes
 fallback or no-op, do not describe the intended positive mechanism behavior as
 observed. Determine whether the available trajectories never exposed a positive
-trigger opportunity, or whether visible opportunities were missed:
+  positive opportunity, or whether visible opportunities were missed:
 
 - no demonstrated positive opportunity is an applicability or evidence concern;
-- a visible trigger routed to fallback by Hook input projection, classification,
+- a visible positive case routed to fallback by Hook input projection, classification,
   parsing, state, or control logic is an implementation concern;
 - mixed activation and fallback may be acceptable only when each inspected path
   is supported by its own visible trigger inputs and the broader gains, losses,

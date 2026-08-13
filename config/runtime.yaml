@@ -28,17 +28,21 @@ models:
     seed: 42
     thinking_mode: disabled                   # 控制概要模型是否启用供应商支持的 thinking 模式
 
-# 每个 Teacher Role 独立控制单次响应预算与合法终态前的回合上限
+# 每个 Teacher Role 独立控制单次响应预算、合法终态前的回合上限与 thinking
 teacher_roles:
-  failure_analyst: {max_tokens: 8192, max_turns: 20}
-  hypothesis_researcher: {max_tokens: 8192, max_turns: 20}
-  intervention_worker: {max_tokens: 8192, max_turns: 20}
-  trial_reviewer: {max_tokens: 8192, max_turns: 20}
-  evidence_reviewer: {max_tokens: 8192, max_turns: 20}
-  mechanism_distiller: {max_tokens: 8192, max_turns: 20}
-  compiler: {max_tokens: 8192, max_turns: 20}
-  candidate_reviewer: {max_tokens: 8192, max_turns: 20}
-  conformance_reviewer: {max_tokens: 8192, max_turns: 20}
+  failure_analyst: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  hypothesis_researcher: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  intervention_worker: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  trial_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  evidence_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  mechanism_distiller: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  compiler: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  candidate_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  conformance_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+
+# Teacher Judge 是评估组件而非 Teacher Role，单独控制；默认关闭以降低判分成本
+teacher_judge:
+  thinking_mode: disabled
 
 timeline:
   enabled: true                               # 控制 Evolution Controller 是否自动维护 Experiment Observer Timeline
@@ -47,17 +51,18 @@ timeline:
 evolution:
   control:
     max_generations: 5                        # 一次 Evolution Run 最多推进的 Generation 数
-    max_trials_per_hypothesis: 5              # 一个冻结 Hypothesis 最多保留的成功 Trial 数
+    max_trials_per_hypothesis: 12              # 一个冻结 Hypothesis 最多保留的成功 Trial 数
+    trial_batch_size: 4                       # 每轮 Evidence Review 前最多并发执行的 Trial Assignment 数
     max_trial_assignments: 15                 # 为一个 Hypothesis 选择 Trial Assignment 的总次数上限
     max_hypothesis_revisions: 5               # 同一研究方向允许修订 Hypothesis 的次数
-    max_mechanism_revisions: 3                # Mechanism 因证据或能力反馈而重新蒸馏的次数
-    max_compiler_revisions: 3                 # Compiler 因实现或验证反馈而重新编译的次数
-    max_candidate_revisions: 3                # Candidate 被审查后进入下一轮修改的次数
+    max_mechanism_revisions: 5                # Mechanism 因证据或能力反馈而重新蒸馏的次数
+    max_compiler_revisions: 10                # Compiler 因实现或验证反馈而重新编译的次数
+    max_candidate_revisions: 10               # Candidate 被审查后进入下一轮修改的次数
     max_work_retries: 3                       # 单个失败 WorkItem 可执行的自动重试次数
-    max_work_items: 80                        # 一次 Evolution Run 最多执行的 WorkItem 总数
+    max_work_items: 200                       # 一次 Evolution Run 最多执行的 WorkItem 总数
     max_total_tokens: null                    # 整个 Evolution Run 的累计 token 上限；null 表示不限制
     min_accuracy_delta: -0.02                 # Candidate 相对基线可被晋升的最低准确率增量
-    max_total_token_ratio: 3.0                # Candidate 总 token 相对基线可被晋升的最大倍数
+    max_total_token_ratio: 5.0                # Candidate 总 token 相对基线可被晋升的最大倍数
   effects:
     student_max_steps: 20                     # 每条 Student rollout 最多执行的 Agent Loop 步数
     teacher_max_turns: 20                     # 没有角色专用配置时 Teacher Role 的回合数后备上限

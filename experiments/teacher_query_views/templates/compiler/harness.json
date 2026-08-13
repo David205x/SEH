@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "harness_id": "shadow_teacher_compiler_authoring_v3",
+  "tools": [
+    {"instance_id": "list_harness_files", "entrypoint": "tools/component.py:build", "config": {"kind": "list_harness_files"}},
+    {"instance_id": "read_harness_file", "entrypoint": "tools/component.py:build", "config": {"kind": "read_harness_file"}},
+    {"instance_id": "query_hook_api", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_query_hook_api"}},
+    {"instance_id": "write_candidate_file", "entrypoint": "tools/component.py:build", "config": {"kind": "write_candidate_file"}},
+    {"instance_id": "delete_candidate_file", "entrypoint": "tools/component.py:build", "config": {"kind": "delete_candidate_file"}},
+    {"instance_id": "finalize_candidate", "entrypoint": "tools/component.py:build", "config": {"kind": "finalize_candidate"}}
+  ],
+  "prompt": {"instance_id": "compiler", "entrypoint": "prompt/component.py:build", "config": {}},
+  "output": {"instance_id": "role_contract", "entrypoint": "output/component.py:build", "config": {}},
+  "extensions": []
+}

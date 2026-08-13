@@ -309,6 +309,12 @@ class ConformanceEffects:
                                     "activation observable in the complete "
                                     "Candidate rollout."
                                 ),
+                                "failure_layer": "integration",
+                                "decisive_input_summary": (
+                                    "The review named no declared mechanism "
+                                    "phase observable in this rollout."
+                                ),
+                                "recommended_route": "implementation",
                             }
                         )
                     finding = ConformanceFinding.model_validate(
@@ -468,6 +474,8 @@ def summarize_conformance_review(
     return {
         "decision": summary.get("decision"),
         "finding_counts": summary.get("finding_counts"),
+        "failure_layer_counts": summary.get("failure_layer_counts"),
+        "recommended_route_counts": summary.get("recommended_route_counts"),
         "example_count": len(per_example),
         "passed_example_count": passed,
     }
@@ -577,7 +585,7 @@ def _suite_fingerprint(
     experience_file: Path,
 ) -> str:
     payload = {
-        "conformance_input_schema": 2,
+        "conformance_input_schema": 3,
         "candidate_attempt_id": candidate.candidate_attempt_id,
         "candidate_digest": candidate.candidate_digest,
         "mechanism": mechanism.model_dump(mode="json"),

@@ -118,6 +118,82 @@ def build(config, context):
     return InvalidTraceAttributeHook()
 '''
 
+DUPLICATE_PIPELINE_HOOK = '''\
+from search_harness.framework import BaseHook, HookPhase
+
+class DuplicatePipelineHook(BaseHook):
+    def __init__(self):
+        super().__init__(
+            hook_id="shared_pipeline_id",
+            phases=frozenset({HookPhase.PRE_PROMPT}),
+        )
+
+    def handle(self, context):
+        pass
+
+def build(config, context):
+    return DuplicatePipelineHook()
+'''
+
+SECOND_INVOCATION_FAILURE_HOOK = '''\
+from search_harness.framework import BaseHook, HookPhase, StateRef
+
+_COUNT = StateRef(
+    key="extension.second_invocation.count",
+    owner="second_invocation",
+    value_type=int,
+    writers=frozenset({"second_invocation"}),
+    default=0,
+)
+
+class SecondInvocationHook(BaseHook):
+    def __init__(self):
+        super().__init__(
+            hook_id="second_invocation",
+            phases=frozenset({HookPhase.POST_TOOL}),
+            state_refs=(_COUNT,),
+        )
+
+    def handle(self, context):
+        count = context.state.get(_COUNT.key)
+        if count >= 1:
+            raise RuntimeError("second post_tool invocation failed")
+        context.state.set(_COUNT.key, count + 1)
+
+def build(config, context):
+    return SecondInvocationHook()
+'''
+
+CROSS_PHASE_STATE_FAILURE_HOOK = '''\
+from search_harness.framework import BaseHook, HookPhase, StateRef
+
+_READY = StateRef(
+    key="extension.cross_phase.ready",
+    owner="cross_phase",
+    value_type=bool,
+    writers=frozenset({"cross_phase"}),
+    default=False,
+)
+
+class CrossPhaseStateHook(BaseHook):
+    def __init__(self):
+        super().__init__(
+            hook_id="cross_phase",
+            phases=frozenset({HookPhase.POST_TOOL, HookPhase.PRE_FINAL}),
+            state_refs=(_READY,),
+        )
+
+    def handle(self, context):
+        if context.phase == HookPhase.POST_TOOL:
+            context.state.set(_READY.key, True)
+            return
+        if context.state.get(_READY.key):
+            raise RuntimeError("post_tool state reached pre_final")
+
+def build(config, context):
+    return CrossPhaseStateHook()
+'''
+
 
 class CandidateWorkspaceTest(TestCase):
     def test_transaction_rolls_back_all_file_changes(self) -> None:
@@ -403,6 +479,87 @@ class TemplateVersionStoreTest(TestCase):
                 "Hook contract failed for invalid_trace_attribute at post_prompt"
                 in error
                 and "kind" in error
+                for error in report.errors
+            ),
+            report.errors,
+        )
+
+    def test_validation_rejects_combined_pipeline_hook_id_conflict(self) -> None:
+        """验证单个 Hook 合法但完整 Pipeline 的重复 ID 会被拒绝。"""
+
+        with TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            store = TemplateVersionStore(base / "versions")
+            first = store.initialize(_make_template_root(base))
+            workspace = store.open_workspace(first.version_id)
+            workspace.add_extension(
+                instance_id="pipeline_hook_one",
+                files={"component.py": DUPLICATE_PIPELINE_HOOK},
+            )
+            workspace.add_extension(
+                instance_id="pipeline_hook_two",
+                files={"component.py": DUPLICATE_PIPELINE_HOOK},
+            )
+
+            report = store.validate(workspace)
+
+        self.assertFalse(report.passed)
+        self.assertTrue(
+            any(
+                "Hook pipeline construction failed" in error
+                and "duplicate hook_id" in error
+                for error in report.errors
+            ),
+            report.errors,
+        )
+
+    def test_validation_reuses_rollout_state_across_phase_invocations(self) -> None:
+        """验证 lifecycle smoke 会复用状态并重复执行订阅 phase。"""
+
+        with TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            store = TemplateVersionStore(base / "versions")
+            first = store.initialize(_make_template_root(base))
+            workspace = store.open_workspace(first.version_id)
+            workspace.add_extension(
+                instance_id="second_invocation",
+                files={"component.py": SECOND_INVOCATION_FAILURE_HOOK},
+            )
+
+            report = store.validate(workspace)
+
+        self.assertFalse(report.passed)
+        self.assertTrue(
+            any(
+                "Hook pipeline lifecycle failed" in error
+                and "iteration 2, phase post_tool" in error
+                and "second post_tool invocation failed" in error
+                for error in report.errors
+            ),
+            report.errors,
+        )
+
+    def test_validation_carries_state_between_lifecycle_phases(self) -> None:
+        """验证 tool branch 写入的状态会进入后续 final branch。"""
+
+        with TemporaryDirectory() as tmpdir:
+            base = Path(tmpdir)
+            store = TemplateVersionStore(base / "versions")
+            first = store.initialize(_make_template_root(base))
+            workspace = store.open_workspace(first.version_id)
+            workspace.add_extension(
+                instance_id="cross_phase",
+                files={"component.py": CROSS_PHASE_STATE_FAILURE_HOOK},
+            )
+
+            report = store.validate(workspace)
+
+        self.assertFalse(report.passed)
+        self.assertTrue(
+            any(
+                "Hook pipeline lifecycle failed" in error
+                and "iteration 3, phase pre_final" in error
+                and "post_tool state reached pre_final" in error
                 for error in report.errors
             ),
             report.errors,

@@ -52,6 +52,13 @@
       }
     },
     {
+      "instance_id": "probe_mechanism_evaluators",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "probe_mechanism_evaluators"
+      }
+    },
+    {
       "instance_id": "validate_mechanism_draft",
       "entrypoint": "tools/runtime/component.py:build",
       "config": {

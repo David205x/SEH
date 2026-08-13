@@ -4,24 +4,79 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import ObservedWorkItem
+from .models import ObservedEvent, ObservedWorkItem
 
 
 FLOW_NODES = (
-    ("evaluate_incumbent", "Incumbent Evaluation"),
-    ("analyze_failure", "Failure Analyst"),
-    ("research_hypothesis", "Hypothesis Researcher"),
-    ("execute_trial", "Intervention Executor"),
-    ("trial_reviewer", "Trial Reviewer"),
-    ("review_evidence", "Evidence Review"),
-    ("distill_mechanism", "Mechanism Distiller"),
-    ("compile_candidate", "Mechanism Compiler"),
-    ("stage_candidate", "Candidate Validation"),
-    ("verify_conformance", "Conformance Review"),
-    ("evaluate_candidate", "Candidate Evaluation"),
-    ("review_candidate", "Candidate Review"),
-    ("promote_candidate", "Promotion"),
+    {
+        "kind": "evaluate_incumbent",
+        "label": "Incumbent Evaluation",
+        "work_kinds": ("evaluate_incumbent",),
+    },
+    {
+        "kind": "analyze_failure",
+        "label": "Failure Analyst",
+        "work_kinds": ("analyze_failure",),
+    },
+    {
+        "kind": "research_hypothesis",
+        "label": "Hypothesis Researcher",
+        "work_kinds": ("research_hypothesis",),
+    },
+    {
+        "kind": "execute_trial",
+        "label": "Intervention Executor",
+        "work_kinds": ("select_trial", "execute_trial"),
+    },
+    {
+        "kind": "trial_reviewer",
+        "label": "Trial Reviewer",
+        "work_kinds": ("review_evidence",),
+    },
+    {
+        "kind": "review_evidence",
+        "label": "Evidence Review",
+        "work_kinds": ("review_evidence",),
+    },
+    {
+        "kind": "distill_mechanism",
+        "label": "Mechanism Distiller",
+        "work_kinds": ("distill_mechanism",),
+    },
+    {
+        "kind": "compile_candidate",
+        "label": "Mechanism Compiler",
+        "work_kinds": ("compile_candidate",),
+    },
+    {
+        "kind": "stage_candidate",
+        "label": "Candidate Validation",
+        "work_kinds": ("stage_candidate",),
+    },
+    {
+        "kind": "verify_conformance",
+        "label": "Conformance Review",
+        "work_kinds": ("verify_conformance",),
+    },
+    {
+        "kind": "evaluate_candidate",
+        "label": "Candidate Evaluation",
+        "work_kinds": ("evaluate_candidate",),
+    },
+    {
+        "kind": "review_candidate",
+        "label": "Candidate Review",
+        "work_kinds": ("review_candidate", "reject_candidate"),
+    },
+    {
+        "kind": "promote_candidate",
+        "label": "Promotion",
+        "work_kinds": ("promote_candidate",),
+        "event_types": ("version_advanced",),
+    },
 )
+
+NODE_FILTERS = {str(node["kind"]): node for node in FLOW_NODES}
 
 ROUTE_BUDGETS = (
     (
@@ -118,14 +173,86 @@ def _flow_projection(
     budgets = _budget_projection(route_usage, limits)
     return [
         {
-            "kind": kind,
-            "label": label,
-            "status": _node_status(by_kind.get(kind, [])),
-            "count": len(by_kind.get(kind, [])),
-            "budget": budgets.get(kind),
+            "kind": node["kind"],
+            "label": node["label"],
+            "work_kinds": list(node["work_kinds"]),
+            "event_types": list(node.get("event_types", ())),
+            "status": _node_status(by_kind.get(str(node["kind"]), [])),
+            "count": len(by_kind.get(str(node["kind"]), [])),
+            "budget": budgets.get(str(node["kind"])),
         }
-        for kind, label in FLOW_NODES
+        for node in FLOW_NODES
     ]
+
+
+def node_work_kinds(node_kind: str) -> frozenset[str]:
+    """返回一个可视化节点覆盖的 WorkKind 集合。"""
+
+    node = NODE_FILTERS.get(node_kind)
+    if node is None:
+        raise ValueError(f"unknown flow node: {node_kind}")
+    return frozenset(str(kind) for kind in node["work_kinds"])
+
+
+def filter_node_events(
+    events: list[ObservedEvent],
+    works: list[ObservedWorkItem],
+    node_kind: str,
+    generation: int | None,
+) -> list[ObservedEvent]:
+    """筛选节点 WorkItem 生命周期及直接归属的 Control Event。"""
+
+    node = NODE_FILTERS.get(node_kind)
+    if node is None:
+        raise ValueError(f"unknown flow node: {node_kind}")
+    work_kinds = node_work_kinds(node_kind)
+    work_ids = {
+        work.work_id
+        for work in works
+        if (generation is None or work.generation == generation)
+        and work.kind in work_kinds
+    }
+    event_types = frozenset(
+        str(event_type) for event_type in node.get("event_types", ())
+    )
+    return [
+        event
+        for event in events
+        if _event_matches_node(
+            event,
+            work_ids,
+            event_types,
+            generation,
+        )
+    ]
+
+
+def _event_matches_node(
+    event: ObservedEvent,
+    work_ids: set[str],
+    event_types: frozenset[str],
+    generation: int | None,
+) -> bool:
+    work_id = _control_event_work_id(event)
+    if work_id is not None:
+        return work_id in work_ids
+    return (
+        event.event_type in event_types
+        and (
+            generation is None
+            or event.payload.get("generation") == generation
+        )
+    )
+
+
+def _control_event_work_id(event: ObservedEvent) -> str | None:
+    if event.event_type == "work_scheduled":
+        work = event.payload.get("work")
+        if isinstance(work, dict) and isinstance(work.get("work_id"), str):
+            return work["work_id"]
+        return None
+    work_id = event.payload.get("work_id")
+    return work_id if isinstance(work_id, str) else None
 
 
 def _budget_projection(

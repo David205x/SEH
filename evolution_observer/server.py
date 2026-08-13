@@ -12,7 +12,11 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from .artifacts import ArtifactProjector
 from .discovery import RunDiscovery
-from .flow import project_generation_flows
+from .flow import (
+    filter_node_events,
+    node_work_kinds,
+    project_generation_flows,
+)
 from .journal import JournalProjector
 from .statistics import project_run_statistics
 
@@ -70,22 +74,44 @@ class ObserverService:
         run_name: str,
         category: str | None,
         status: str | None,
+        node_kind: str | None,
+        generation: int | None,
     ) -> dict[str, object]:
         events, pending_tail = self._events(run_name)
         works = self.journal.project_work_items(events)
+        selected_kinds = (
+            node_work_kinds(node_kind)
+            if node_kind is not None
+            else None
+        )
         filtered = [
             work
             for work in works
             if (category is None or work.category == category)
             and (status is None or work.status == status)
+            and (selected_kinds is None or work.kind in selected_kinds)
+            and (generation is None or work.generation == generation)
         ]
         return {
             "works": [work.to_dict() for work in filtered],
             "pending_journal_tail": pending_tail,
         }
 
-    def journal_events(self, run_name: str) -> dict[str, object]:
+    def journal_events(
+        self,
+        run_name: str,
+        node_kind: str | None,
+        generation: int | None,
+    ) -> dict[str, object]:
         events, pending_tail = self._events(run_name)
+        if node_kind is not None:
+            works = self.journal.project_work_items(events)
+            events = filter_node_events(
+                events,
+                works,
+                node_kind,
+                generation,
+            )
         return {
             "events": [event.to_dict() for event in reversed(events)],
             "pending_journal_tail": pending_tail,
@@ -172,9 +198,16 @@ def _handler_for(service: ObserverService) -> type[BaseHTTPRequestHandler]:
                     run_name,
                     params.get("category"),
                     params.get("status"),
+                    params.get("node"),
+                    _optional_positive_int(params.get("generation")),
                 )
             if endpoint == "journal":
-                return service.journal_events(run_name)
+                params = _query_params(query)
+                return service.journal_events(
+                    run_name,
+                    params.get("node"),
+                    _optional_positive_int(params.get("generation")),
+                )
             if endpoint == "refresh-state":
                 return service.refresh_state(run_name)
             return None
@@ -232,6 +265,18 @@ def _handler_for(service: ObserverService) -> type[BaseHTTPRequestHandler]:
 def _query_params(query: str) -> dict[str, str]:
     parsed = parse_qs(query, keep_blank_values=True)
     return {key: values[0] for key, values in parsed.items() if values}
+
+
+def _optional_positive_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise ValueError(f"expected a positive integer, got {value!r}") from exc
+    if number < 1:
+        raise ValueError(f"expected a positive integer, got {value!r}")
+    return number
 
 
 def _work_counts(works) -> dict[str, int]:

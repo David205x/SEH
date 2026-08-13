@@ -18,6 +18,7 @@ from search_harness.evolution.research.roles.contracts import (
     InterventionWorkerResult,
     MechanismSpec,
     MechanismDistillation,
+    TrialReview,
     get_teacher_role,
 )
 
@@ -94,7 +95,7 @@ class TeacherContractTest(unittest.TestCase):
                 "hypothesis_researcher",
                 1,
             ).output_contract_version,
-            3,
+            4,
         )
         self.assertEqual(
             get_teacher_role(
@@ -119,6 +120,13 @@ class TeacherContractTest(unittest.TestCase):
         )
         self.assertEqual(
             get_teacher_role(
+                "trial_reviewer",
+                1,
+            ).output_contract_version,
+            2,
+        )
+        self.assertEqual(
+            get_teacher_role(
                 "conformance_reviewer",
                 1,
             ).output_contract_id,
@@ -127,6 +135,13 @@ class TeacherContractTest(unittest.TestCase):
         self.assertEqual(
             get_teacher_role(
                 "conformance_reviewer",
+                1,
+            ).output_contract_version,
+            3,
+        )
+        self.assertEqual(
+            get_teacher_role(
+                "compiler",
                 1,
             ).output_contract_version,
             2,
@@ -143,6 +158,49 @@ class TeacherContractTest(unittest.TestCase):
                 observed_phases=[],
                 assessment="No phase was observed.",
                 repair_obligation=None,
+            )
+
+    def test_conformance_evaluator_failure_requires_decision_labels(
+        self,
+    ) -> None:
+        """验证 evaluator 诊断携带谓词、期望标签和实际标签。"""
+
+        review = ConformanceReview(
+            verdict="implementation_mismatch",
+            observed_phases=["pre_final"],
+            assessment="The Hook model returned the wrong decision label.",
+            repair_obligation="Repair the bounded evaluator.",
+            predicate_ref="pre_final.answer_support",
+            expected_label="negative",
+            observed_label="positive",
+            failure_layer="evaluator",
+            decisive_input_summary=(
+                "The candidate explicitly declines to assert an answer."
+            ),
+            recommended_route="mechanism",
+        )
+
+        self.assertEqual(review.failure_layer, "evaluator")
+        self.assertEqual(review.recommended_route, "mechanism")
+
+    def test_ambiguous_conformance_spec_routes_to_mechanism(self) -> None:
+        """验证规格歧义不能被伪装成实现修订。"""
+
+        with self.assertRaises(ValidationError):
+            ConformanceReview(
+                verdict="inconclusive",
+                observed_phases=["pre_final"],
+                assessment="The predicate lacks a decision boundary.",
+                repair_obligation="Define the semantic boundary.",
+                predicate_ref="pre_final.answer_support",
+                expected_label="unavailable",
+                observed_label="unavailable",
+                failure_layer="ambiguous_spec",
+                decisive_input_summary=(
+                    "The available rule does not distinguish refusal from an "
+                    "asserted answer."
+                ),
+                recommended_route="implementation",
             )
         with self.assertRaises(ValidationError):
             ConformanceReview(
@@ -217,6 +275,24 @@ class TeacherContractTest(unittest.TestCase):
 
         self.assertEqual(review.decision, "ready_to_distill")
         self.assertEqual(review.phase_findings[1].status, "inconclusive")
+
+    def test_trial_review_rejects_duplicate_predicate_phases(self) -> None:
+        """验证一条 Trial 对同一 phase 只能形成一个结构化判定。"""
+
+        observation = {
+            "phase": "post_tool",
+            "predicate_label": "positive",
+            "decisive_observation": "The required fact was absent.",
+            "phase_execution": "intervention_applied",
+            "observed_effect": "The Student searched again.",
+            "outcome_evidence": None,
+        }
+        with self.assertRaises(ValidationError):
+            TrialReview(
+                trial_ref="trial_001",
+                predicate_observations=[observation, observation],
+                assessment="The phase activated once.",
+            )
 
     def test_distilled_result_requires_mechanism_reference(self) -> None:
         """验证蒸馏成功不能只靠文字声明而缺少已验证机制引用。"""

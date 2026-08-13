@@ -171,6 +171,16 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
 
         review = {
             "trial_ref": "trial_001",
+            "predicate_observations": [
+                {
+                    "phase": "post_tool",
+                    "predicate_label": "positive",
+                    "decisive_observation": "The evidence gap was visible.",
+                    "phase_execution": "intervention_applied",
+                    "observed_effect": "The Student searched again.",
+                    "outcome_evidence": None,
+                }
+            ],
             "assessment": "The intervention effect is visible.",
         }
         client = ReplayClient(
@@ -495,11 +505,21 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "draft_id": "mechanism_draft_001",
                     "phase": "post_tool",
-                    "trigger_condition": "A required relation is unsupported.",
+                    "guards": [],
+                    "predicate": "Is a required relation unsupported?",
+                    "positive_rule": "The required relation is absent.",
+                    "negative_rule": "The required relation is present.",
+                    "uncertain_rule": "The inputs cannot establish either boundary.",
+                    "positive_evidence": ["A required relation was absent."],
+                    "negative_evidence": ["A required relation was present."],
+                    "uncertain_evidence": [],
                     "decision_inputs": ["question", "latest tool result"],
                     "runtime_inputs": ["task", "tool", "persistent_state"],
                     "decision_evaluator": "deterministic",
                     "action": "Append a generic evidence-gap instruction.",
+                    "fallback_negative": "Leave the decision unchanged.",
+                    "fallback_uncertain": "Leave the decision unchanged.",
+                    "fallback_budget_exhausted": "Leave the decision unchanged.",
                     "activation_budget": 1,
                 },
             ),
@@ -520,7 +540,6 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                         "  do nothing when uncertain"
                     ),
                     "state_scope": "Until the next model generation.",
-                    "fallback": "Do nothing when uncertain.",
                     "expected_behavior": "Perform a relevant follow-up retrieval.",
                 },
             ),
@@ -679,6 +698,32 @@ def _distiller_input() -> dict[str, Any]:
             "assessment": "The same mechanism produced the target behavior.",
             "key_risk": None,
             "next_obligation": None,
+        },
+        "trial_reviews": [
+            {
+                "trial_ref": "trial_001",
+                "predicate_observations": [
+                    {
+                        "phase": "post_tool",
+                        "predicate_label": "positive",
+                        "decisive_observation": "The target relation was absent.",
+                        "phase_execution": "intervention_applied",
+                        "observed_effect": "The Student searched again.",
+                        "outcome_evidence": "A follow-up tool call was recorded.",
+                    }
+                ],
+                "assessment": "The intervention produced a follow-up search.",
+            }
+        ],
+        "coverage_summary": {
+            "required_distinct_examples": 3,
+            "required_positive_per_phase": 2,
+            "required_negative_per_phase": 2,
+            "observed_distinct_examples": 3,
+            "phase_coverage": [],
+            "unmet_requirements": [],
+            "special_obligations": [],
+            "default_requirements_met": True,
         },
         "evidence_refs": ["trial_001"],
         "budget": _review_budget(trials_used=1),

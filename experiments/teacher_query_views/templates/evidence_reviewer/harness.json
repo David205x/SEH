@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "shadow_teacher_evidence_reviewer_input_view_v1",
+  "tools": [],
+  "prompt": {
+    "instance_id": "evidence_reviewer",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md",
+      "continuations": {
+        "trial_reviews": "continuations/trial_reviews.md"
+      }
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

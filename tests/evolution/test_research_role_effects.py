@@ -141,12 +141,28 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
                 previous_artifact={"output": hypothesis.outcome["output"]},
                 feedback_source="evidence_reviewer",
                 feedback={"decision": "revise"},
-                trial_files=[],
+                trial_files=[root / "trial_001" / "trial.json"],
                 work_dir=root / "continued",
             )
             distilled = await effects.distill_mechanism(
                 hypothesis=continued.outcome["output"],
                 review={"decision": "ready_to_distill"},
+                trial_reviews=[
+                    {
+                        "trial_ref": "trial_001",
+                        "assessment": "The intervention was observed.",
+                    }
+                ],
+                coverage_summary={
+                    "required_distinct_examples": 3,
+                    "required_positive_per_phase": 2,
+                    "required_negative_per_phase": 2,
+                    "observed_distinct_examples": 3,
+                    "phase_coverage": [],
+                    "unmet_requirements": [],
+                    "special_obligations": [],
+                    "default_requirements_met": True,
+                },
                 trial_files=[root / "trial_001" / "trial.json"],
                 budget={
                     "max_trials_per_hypothesis": 5,
@@ -195,3 +211,7 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(len(runner.continuations), 1)
+        self.assertEqual(
+            runner.continuations[0]["trial_files"],
+            [root / "trial_001" / "trial.json"],
+        )

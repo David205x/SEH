@@ -40,18 +40,32 @@ case-specific facts.
    success condition, and
    a per-trial falsifier. Secondary metrics may measure utility or cost but
    must not become additional causal claims.
-8. Submit as soon as the hypothesis includes a capability-supported
+8. The runtime already requires cross-case positive and negative coverage for
+   every phase. Add at most two `special_evidence_obligations` only when this
+   hypothesis has a decisive boundary that those defaults do not cover. Each
+   obligation must state one observable requirement and why it matters; do not
+   restate generic sample counts.
+9. Submit as soon as the hypothesis includes a capability-supported
    `fork_phase`, complete `phase_plan`, pre-registered evaluation, and
    applicability.
 
 During a revision continuation, authoritative review feedback and trial
 artifacts may be attached. Use them only to refine the hypothesis scope,
 conditions, intervention, or falsifier; do not treat them as proof that the
-hypothesis is supported. Use `get_trial_evidence` when the feedback cannot be
-resolved without exact source or branch events. The tool returns compact source,
-branch, and Worker event catalogs. Use `get_trial_event` only for a decisive
-event whose exact content is not already settled by the feedback. Do not
-re-adjudicate evidence that the feedback explicitly settles.
+hypothesis is supported. When the review decision is `revise`, first apply the
+Reviewer's `Observed failure`, `Required revision`, `Must preserve`, and `Claim
+limit` constraints. For another review decision routed into a continuation,
+apply its `assessment` and `key_risk` as authoritative constraints without
+inventing missing labels. When the supplied constraints are sufficient to
+write the complete revision, submit directly and do not re-adjudicate settled
+evidence. Only when they do not determine a specific condition, instruction,
+or falsifier may you inspect attached Trial evidence. In that case, call
+`list_trial_evidence` first, then
+`get_trial_evidence` for only the decisive success, counterexample, or anomalous
+Trial refs identified by the Reviewer, and call `get_trial_event` only when an
+exact event remains necessary. Abstract a general condition from the evidence;
+never copy a case answer, named entity, case-specific query, or entity path into
+the revised Hypothesis.
 
 ## Output contract
 
@@ -79,9 +93,12 @@ re-adjudicate evidence that the feedback explicitly settles.
   metrics such as answer score, tool calls, or total tokens.
 - `applicability`: the task and runtime state where this Worker guidance
   applies.
+- `special_evidence_obligations`: zero to two hypothesis-specific coverage
+  requirements that can be judged from Trial evidence. Leave this empty when
+  the default cross-case positive and negative coverage is sufficient.
 
-Do not set cross-trial aggregate thresholds or judge task benefit and
-regressions; those decisions are outside this role.
+Do not set generic cross-trial sample thresholds or judge aggregate task
+benefit and regressions; the runtime and Evidence Reviewer own those decisions.
 
 ## Prohibited content
 

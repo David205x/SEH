@@ -23,16 +23,18 @@ cross-rollout lifetime, or that its source code has a property not exposed by
 this trajectory. Do not use answer correctness as evidence of implementation
 fidelity.
 
-## Trigger and fallback assessment
+## Decision and fallback assessment
 
-For every entered declared phase, independently compare the trace-visible
-decision inputs with the MechanismSpec trigger condition. A Hook-model output is
-part of the Candidate implementation; it is not authoritative evidence that the
-trigger was present or absent.
+For every entered declared phase, first check the MechanismSpec's deterministic
+`guards`, then independently apply its `decision_contract` to the trace-visible
+`decision_inputs`. Decide whether those inputs support `positive`, `negative`,
+or `uncertain`. A Hook-model output is part of the Candidate implementation; it
+is not authoritative evidence for the correct label.
 
-- Correct non-activation is conformant when the visible decision inputs do not
-  satisfy the trigger and the declared fallback or no-op is followed.
-- If the visible decision inputs satisfy the trigger but the Hook model,
+- Correct non-activation is conformant when the visible inputs support
+  `negative` or `uncertain` and the corresponding phase-local fallback is
+  followed, or when a deterministic guard prevents evaluation as specified.
+- If the visible decision inputs support `positive` but the Hook model,
   response parser, state handling, or control logic sends execution to fallback
   or no-op, this is an `implementation_mismatch`, even when the fallback itself
   is implemented exactly as declared.
@@ -40,9 +42,10 @@ trigger was present or absent.
   fallback was required, use `inconclusive`; do not treat the Candidate's own
   classification as a substitute for evidence.
 
-Do not require activation in a genuine non-trigger control. Conversely, do not
-call an applicable positive path faithful merely because every opportunity in
-this rollout followed a syntactically valid fallback.
+Do not require activation when the Reviewer-owned label is genuinely negative
+or uncertain. Conversely, do not call an applicable positive path faithful
+merely because every opportunity in this rollout followed a syntactically valid
+fallback.
 
 ## Verdicts
 
@@ -50,12 +53,12 @@ this rollout followed a syntactically valid fallback.
   observed declared phase follows its rule: its visible condition outcome,
   action or fallback, state hand-off, activation budget, and resulting
   Student-visible control or context effect agree with the mechanism. A
-  fallback is faithful only when the trace-visible trigger inputs support
-  non-activation. Do not call a multi-phase mechanism faithful merely because
+  fallback is faithful only when the trace-visible inputs support its negative
+  or uncertain label. Do not call a multi-phase mechanism faithful merely because
   one phase matches while another observed phase contradicts its rule.
 - `implementation_mismatch`: the trace directly contradicts the mechanism,
   such as a wrong phase, action, visible state hand-off, repeated activation,
-  missed activation despite a trace-visible trigger, missing Student feedback,
+  missed activation despite a trace-visible positive label, missing Student feedback,
   or prohibited behavior.
 - `not_observed`: the complete rollout never enters a declared phase with enough
   trace-visible context to observe either its activation or its fallback.
@@ -67,10 +70,40 @@ this rollout followed a syntactically valid fallback.
   the recorded trajectory cannot establish trace-visible fidelity or a direct
   contradiction.
 
-For every non-faithful verdict, provide one generic implementation-focused
-`repair_obligation`. It must not contain the question, golden answer, case
-entities, case-specific queries, or copied trajectory text. For `faithful`, leave
-`repair_obligation` empty.
+For every non-faithful verdict, classify the failure before proposing repair:
+
+- `projection`: the Candidate supplied the Hook model with the wrong or
+  incomplete runtime inputs.
+- `evaluator`: the visible inputs support one decision label, but the Hook model
+  returned another.
+- `parsing`: a model decision was produced but could not be parsed into the
+  required contract.
+- `state`: rollout-local state, activation count, or cross-phase hand-off was
+  wrong.
+- `action`: the positive decision was correct but the resulting Harness action
+  was wrong.
+- `integration`: phase registration, execution, or another runtime connection
+  was absent or broken.
+- `ambiguous_spec`: the MechanismSpec does not define a trace-visible boundary
+  well enough to establish the required behavior.
+
+Use `predicate_ref` to identify the phase and semantic predicate when the
+failure concerns a decision. For evaluator failures, record the Reviewer-owned
+`expected_label` and Candidate `observed_label` as `positive`, `negative`, or
+`uncertain`. For parsing failures, use `observed_label=parse_error`. Use
+`unavailable` only when the supplied evidence cannot establish a label; do not
+silently turn missing evidence into `negative`.
+
+Set `recommended_route` to `implementation` for a bounded Candidate repair,
+`mechanism` when the decision contract itself is ambiguous or infeasible, or
+`evidence` when the research evidence cannot establish the expected behavior.
+Summarize only the decisive, case-neutral input property in
+`decisive_input_summary`.
+
+For every non-faithful verdict, provide one generic `repair_obligation` aligned
+with that route. It must not contain the question, golden answer, case entities,
+case-specific queries, or copied trajectory text. For `faithful`, leave all
+failure-diagnostic fields and `repair_obligation` empty.
 
 Keep `assessment` concise and no longer than 1000 characters so it remains below
 the 1200-character contract limit after final wording adjustments.

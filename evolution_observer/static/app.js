@@ -1,6 +1,6 @@
 const state = {
   runs: [], selectedRun: null, journalVisible: false, overview: null,
-  selectedGeneration: null, turnScope: "run",
+  selectedGeneration: null, selectedFlowNode: null, turnScope: "run",
 };
 
 const elements = {
@@ -17,6 +17,7 @@ const elements = {
   evolutionMetrics: document.querySelector("#evolution-metrics"),
   journalList: document.querySelector("#journal-list"), category: document.querySelector("#category-filter"),
   status: document.querySelector("#status-filter"), journalToggle: document.querySelector("#journal-toggle"),
+  nodeFilterClear: document.querySelector("#node-filter-clear"),
   refreshNow: document.querySelector("#refresh-now"), runTemplate: document.querySelector("#run-template"),
   workTemplate: document.querySelector("#work-template"), journalTemplate: document.querySelector("#journal-template"),
 };
@@ -25,6 +26,7 @@ elements.refreshNow.addEventListener("click", refreshSelectedRun);
 elements.category.addEventListener("change", loadWorks);
 elements.status.addEventListener("change", loadWorks);
 elements.journalToggle.addEventListener("click", toggleJournal);
+elements.nodeFilterClear.addEventListener("click", () => selectFlowNode(null));
 elements.turnScopeToggle.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-scope]");
   if (!button) return;
@@ -48,6 +50,7 @@ async function loadRuns() {
 async function selectRun(runName) {
   if (state.selectedRun !== runName) {
     state.selectedGeneration = null;
+    state.selectedFlowNode = null;
     state.turnScope = "run";
   }
   state.selectedRun = runName; renderRuns(); await refreshSelectedRun();
@@ -70,13 +73,27 @@ async function loadWorks() {
   const params = new URLSearchParams();
   if (elements.category.value) params.set("category", elements.category.value);
   if (elements.status.value) params.set("status", elements.status.value);
+  if (state.selectedFlowNode) {
+    params.set("node", state.selectedFlowNode);
+    if (state.selectedGeneration != null) {
+      params.set("generation", state.selectedGeneration);
+    }
+  }
   const suffix = params.size ? `?${params}` : "";
   try { const payload = await requestJson(`${runUrl("works")}${suffix}`); renderWorks(payload.works ?? []); }
   catch (error) { elements.workList.replaceChildren(emptyState(`无法读取进展：${error.message}`)); }
 }
 
 async function loadJournal() {
-  try { const payload = await requestJson(runUrl("journal")); renderJournal(payload.events ?? []); }
+  const params = new URLSearchParams();
+  if (state.selectedFlowNode) {
+    params.set("node", state.selectedFlowNode);
+    if (state.selectedGeneration != null) {
+      params.set("generation", state.selectedGeneration);
+    }
+  }
+  const suffix = params.size ? `?${params}` : "";
+  try { const payload = await requestJson(`${runUrl("journal")}${suffix}`); renderJournal(payload.events ?? []); }
   catch (error) { elements.journalList.replaceChildren(emptyState(`无法读取 Journal：${error.message}`)); }
 }
 
@@ -105,6 +122,7 @@ function renderOverview(overview) {
   }
   renderGenerationTabs();
   renderSelectedGenerationFlow();
+  renderNodeFilter();
   renderStatistics(overview.statistics, overview);
 }
 
@@ -123,11 +141,14 @@ function renderGenerationTabs() {
   elements.generationTabs.replaceChildren(fragment);
 }
 
-function selectGeneration(generation) {
+async function selectGeneration(generation) {
   state.selectedGeneration = generation;
   renderGenerationTabs();
   renderSelectedGenerationFlow();
+  renderNodeFilter();
   renderRoleTurns();
+  await loadWorks();
+  if (state.journalVisible) await loadJournal();
 }
 
 function renderSelectedGenerationFlow() {
@@ -137,8 +158,34 @@ function renderSelectedGenerationFlow() {
   window.CompactEvolutionFlowRenderer.render(
     elements.compactFlow,
     selected?.flow ?? state.overview?.flow ?? [],
-    { hasNextGeneration: selected?.has_next_generation ?? false },
+    {
+      hasNextGeneration: selected?.has_next_generation ?? false,
+      selectedKind: state.selectedFlowNode,
+      onSelectKind: selectFlowNode,
+    },
   );
+}
+
+async function selectFlowNode(nodeKind) {
+  state.selectedFlowNode = nodeKind === state.selectedFlowNode ? null : nodeKind;
+  renderSelectedGenerationFlow();
+  renderNodeFilter();
+  await loadWorks();
+  if (state.journalVisible) await loadJournal();
+}
+
+function renderNodeFilter() {
+  const selected = (state.overview?.generation_flows ?? [])
+    .find((item) => item.generation === state.selectedGeneration)
+    ?.flow.find((node) => node.kind === state.selectedFlowNode);
+  if (!selected) {
+    elements.nodeFilterClear.classList.add("is-hidden");
+    elements.nodeFilterClear.textContent = "";
+    return;
+  }
+  elements.nodeFilterClear.textContent = `G${state.selectedGeneration} · ${selected.label} ×`;
+  elements.nodeFilterClear.title = "清除节点筛选";
+  elements.nodeFilterClear.classList.remove("is-hidden");
 }
 
 function renderStatistics(statistics, overview) {
@@ -325,6 +372,13 @@ function renderWorks(works) {
   for (const work of works) {
     const node = elements.workTemplate.content.firstElementChild.cloneNode(true);
     node.classList.add(`category-${work.category}`);
+    const firstSequence = work.events[0]?.sequence;
+    const lastSequence = work.events.at(-1)?.sequence;
+    const number = node.querySelector(".work-number");
+    number.textContent = firstSequence == null ? "#—" : `#${firstSequence}`;
+    number.title = firstSequence == null
+      ? "未记录 Journal sequence"
+      : `Journal #${firstSequence}${lastSequence !== firstSequence ? `–#${lastSequence}` : ""}`;
     node.querySelector(".work-kind").textContent = work.kind;
     node.querySelector(".work-status").innerHTML = `<span class="status status-${work.status}">${statusLabel(work.status)}</span>`;
     node.querySelector(".work-time").textContent = work.ended_at_utc ?? work.started_at_utc ?? work.events.at(-1)?.created_at_utc ?? "未记录";

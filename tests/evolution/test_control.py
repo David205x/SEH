@@ -22,11 +22,13 @@ from search_harness.evolution.control.domain import (
     EvolutionControlConfig,
     WorkItem,
     WorkKind,
+    project_events,
 )
 from search_harness.evolution.control.effects import (
     LocalControlEffects,
     LocalControlEffectsConfig,
     _trial_paths,
+    _uses_legacy_mechanism_contract,
 )
 from search_harness.evolution.control.journal import (
     ControlArtifactStore,
@@ -87,11 +89,14 @@ class HappyPathEffects:
             return EffectResult(
                 outcome={
                     "status": "selected",
-                    "assignment": {
-                        "example_id": "example-1",
-                        "replicate_id": "r000",
-                        "prefix_id": 1,
-                    },
+                    "selection_mode": "fresh",
+                    "assignments": [
+                        {
+                            "example_id": "example-1",
+                            "replicate_id": "r000",
+                            "prefix_id": 1,
+                        }
+                    ],
                     "assignment_count": 1,
                     "used_assignments": ["example-1/r000/1"],
                 }
@@ -264,6 +269,32 @@ class ReviewPipelineRuntime:
 
 
 class LegacyControlArtifactTest(unittest.TestCase):
+    def test_legacy_mechanism_requires_redistillation_before_compile(self) -> None:
+        self.assertTrue(
+            _uses_legacy_mechanism_contract(
+                {
+                    "phase_rules": [
+                        {
+                            "phase": "post_tool",
+                            "trigger_condition": "Evidence is missing.",
+                        }
+                    ]
+                }
+            )
+        )
+        self.assertFalse(
+            _uses_legacy_mechanism_contract(
+                {
+                    "phase_rules": [
+                        {
+                            "phase": "post_tool",
+                            "decision_contract": {"predicate": "Question?"},
+                        }
+                    ]
+                }
+            )
+        )
+
     def test_reads_legacy_attempt_names_without_rewriting_file(self) -> None:
         root = SCRATCH_ROOT / f"legacy-{uuid4().hex}"
         journal_path = root / "events.jsonl"
@@ -394,6 +425,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             evidence_work.payload["trial_budget"],
             {
                 "max_trials_per_hypothesis": 4,
+                "trial_batch_size": 3,
                 "max_trial_assignments": 12,
             },
         )
@@ -401,6 +433,146 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[-1].event_type, "work_transitioned")
         self.assertTrue(
             any(event.event_type == "version_advanced" for event in events)
+        )
+
+    async def test_stops_before_work_without_persisting_pause(self) -> None:
+        """调试边界保留正式队列，并可由普通 run 继续。"""
+
+        effects = HappyPathEffects()
+        controller = EvolutionController(
+            run_dir=self.run_dir,
+            effects=effects,
+            config=EvolutionControlConfig(max_generations=1),
+        )
+        controller.initialize(
+            run_id="run-stop-before-distiller",
+            initial_version="harness_v0001",
+        )
+
+        stopped = await controller.run(
+            stop_before=frozenset({WorkKind.DISTILL_MECHANISM})
+        )
+
+        self.assertEqual(stopped.status, "running")
+        state = project_events(controller.journal.read())
+        self.assertEqual(len(state.queued), 1)
+        self.assertIs(
+            state.queued[0].item.kind,
+            WorkKind.DISTILL_MECHANISM,
+        )
+        self.assertFalse(
+            any(
+                event.event_type in {"run_paused", "run_completed"}
+                for event in controller.journal.read()
+            )
+        )
+        self.assertNotIn(
+            WorkKind.DISTILL_MECHANISM,
+            [item.kind for item in effects.calls],
+        )
+
+        completed = await controller.run()
+
+        self.assertEqual(completed.status, "completed")
+        self.assertIn(
+            WorkKind.DISTILL_MECHANISM,
+            [item.kind for item in effects.calls],
+        )
+
+    async def test_calls_evidence_reviewer_once_for_a_three_trial_batch(
+        self,
+    ) -> None:
+        """Evidence Reviewer 调用次数按批次而不是按成功 Trial 增长。"""
+
+        class BatchedHappyPathEffects(HappyPathEffects):
+            async def execute(
+                self,
+                *,
+                work: WorkItem,
+                state: ControlState,
+                work_dir: Path,
+            ) -> EffectResult:
+                if work.kind not in {
+                    WorkKind.SELECT_TRIAL,
+                    WorkKind.EXECUTE_TRIAL,
+                }:
+                    return await super().execute(
+                        work=work,
+                        state=state,
+                        work_dir=work_dir,
+                    )
+                self.calls.append(work)
+                if work.kind == WorkKind.EXECUTE_TRIAL:
+                    assignments = work.payload["pending_assignments"]
+                    return EffectResult(
+                        outcome={
+                            "results": [
+                                {
+                                    "assignment_key": (
+                                        f"{assignment['example_id']}/"
+                                        f"{assignment['replicate_id']}/"
+                                        f"{assignment['prefix_id']}"
+                                    ),
+                                    "output": {"result_kind": "executed"},
+                                    "artifact_key": (
+                                        f"worker_artifact_{index:03d}"
+                                    ),
+                                }
+                                for index, assignment in enumerate(
+                                    assignments,
+                                    start=1,
+                                )
+                            ]
+                        },
+                        artifact_refs={
+                            f"worker_artifact_{index:03d}": (
+                                f"trial-{index}.json"
+                            )
+                            for index in range(1, len(assignments) + 1)
+                        },
+                    )
+                assignments = [
+                    {
+                        "example_id": f"example-{index}",
+                        "replicate_id": "r000",
+                        "prefix_id": 1,
+                    }
+                    for index in range(1, 4)
+                ]
+                return EffectResult(
+                    outcome={
+                        "status": "selected",
+                        "selection_mode": "fresh",
+                        "assignments": assignments,
+                        "assignment_count": 3,
+                        "used_assignments": [
+                            f"example-{index}/r000/1"
+                            for index in range(1, 4)
+                        ],
+                    }
+                )
+
+        effects = BatchedHappyPathEffects()
+        controller = EvolutionController(
+            run_dir=self.run_dir,
+            effects=effects,
+            config=EvolutionControlConfig(max_generations=1),
+        )
+        controller.initialize(
+            run_id="run-batched-review",
+            initial_version="harness_v0001",
+        )
+
+        outcome = await controller.run()
+
+        self.assertEqual(outcome.status, "completed")
+        self.assertEqual(
+            sum(item.kind == WorkKind.EXECUTE_TRIAL for item in effects.calls),
+            1,
+        )
+        self.assertEqual(
+            sum(item.kind == WorkKind.REVIEW_EVIDENCE for item in effects.calls),
+            1,
         )
 
     async def test_updates_projection_after_commits_without_controlling_run(
@@ -632,6 +804,232 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             mechanism_work.input_refs,
         )
 
+    def test_candidate_reject_starts_new_research_attempt(self) -> None:
+        """验证真正拒绝只放弃当前方向，并复用 incumbent 开始新研究。"""
+
+        review_work = WorkItem(
+            work_id="review-reject",
+            kind=WorkKind.REVIEW_CANDIDATE,
+            subject_ref="generation:1",
+            input_refs={
+                "report_dir": "incumbent-report",
+                "rollout_file": "incumbent-rollouts.jsonl",
+                "candidate_report_dir": "candidate-report",
+                "mechanism_file": "mechanism.json",
+            },
+            payload={
+                "generation": 1,
+                "version_id": "harness_v0001",
+                "research_attempt": 1,
+                "incumbent_metrics": _metrics(accuracy=0.5, tokens=100),
+                "candidate_metrics": _metrics(accuracy=0.5, tokens=150),
+                "validation_summary": {"passed": True},
+                "candidate_attempt_id": "candidate_attempt-1",
+                "trial_count": 3,
+                "compiler_revision": 2,
+            },
+        )
+        review_result = EffectResult(
+            outcome={
+                "output": {
+                    "recommendation": "reject",
+                    "observed_effect": "The mechanism over-triggered.",
+                    "reason": "The research direction causes broad regressions.",
+                    "next_obligation": None,
+                    "revision_target": None,
+                }
+            }
+        )
+
+        reject_work = transition_completed(
+            item=review_work,
+            result=review_result,
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        next_plan = transition_completed(
+            item=reject_work,
+            result=EffectResult(
+                outcome={
+                    "status": "rejected",
+                    "candidate_attempt_id": "candidate_attempt-1",
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        next_work = next_plan.next_items[0]
+        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
+        self.assertEqual(next_work.payload["research_attempt"], 2)
+        self.assertEqual(next_work.payload["generation"], 1)
+        self.assertEqual(next_work.payload["version_id"], "harness_v0001")
+        self.assertIn(
+            "different bounded failure pattern",
+            next_work.payload["analysis_focus"],
+        )
+        self.assertLessEqual(len(next_work.payload["analysis_focus"]), 300)
+        self.assertNotIn("trial_count", next_work.payload)
+        self.assertNotIn("compiler_revision", next_work.payload)
+        self.assertEqual(
+            next_work.input_refs,
+            {
+                "report_dir": "incumbent-report",
+                "rollout_file": "incumbent-rollouts.jsonl",
+            },
+        )
+
+    def test_promotion_gate_reject_starts_new_research_attempt(self) -> None:
+        """验证 Reviewer accept 被门禁拒绝后也重新选择研究方向。"""
+
+        review_work = WorkItem(
+            work_id="review-gate-reject",
+            kind=WorkKind.REVIEW_CANDIDATE,
+            subject_ref="generation:1",
+            input_refs={
+                "report_dir": "incumbent-report",
+                "rollout_file": "incumbent-rollouts.jsonl",
+            },
+            payload={
+                "generation": 1,
+                "version_id": "harness_v0001",
+                "research_attempt": 1,
+                "incumbent_metrics": _metrics(accuracy=0.5, tokens=100),
+                "candidate_metrics": _metrics(accuracy=0.6, tokens=400),
+                "validation_summary": {"passed": True},
+                "candidate_attempt_id": "candidate_attempt-1",
+            },
+        )
+        reject_work = transition_completed(
+            item=review_work,
+            result=EffectResult(
+                outcome={
+                    "output": {
+                        "recommendation": "accept",
+                        "observed_effect": "Accuracy improved.",
+                        "reason": "The mechanism is effective.",
+                        "next_obligation": None,
+                        "revision_target": None,
+                    }
+                }
+            ),
+            config=EvolutionControlConfig(max_total_token_ratio=3.0),
+        ).next_items[0]
+        next_work = transition_completed(
+            item=reject_work,
+            result=EffectResult(
+                outcome={
+                    "status": "rejected",
+                    "candidate_attempt_id": "candidate_attempt-1",
+                }
+            ),
+            config=EvolutionControlConfig(max_total_token_ratio=3.0),
+        ).next_items[0]
+
+        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
+        self.assertIn("token ratio", next_work.payload["analysis_focus"])
+        self.assertNotIn(
+            "mechanism is effective",
+            next_work.payload["analysis_focus"],
+        )
+
+    def test_unchanged_rejected_candidate_skips_validation_revision(self) -> None:
+        """验证重复被拒 digest 不消耗 Compiler validation revision。"""
+
+        plan = transition_completed(
+            item=WorkItem(
+                work_id="stage-unchanged-rejected",
+                kind=WorkKind.STAGE_CANDIDATE,
+                subject_ref="generation:1",
+                input_refs={
+                    "report_dir": "incumbent-report",
+                    "rollout_file": "incumbent-rollouts.jsonl",
+                    "compiler_artifact": "compiler.json",
+                    "mechanism_file": "mechanism.json",
+                },
+                payload={
+                    "generation": 1,
+                    "version_id": "harness_v0001",
+                    "research_attempt": 1,
+                    "incumbent_metrics": _metrics(accuracy=0.5, tokens=100),
+                    "compiler_revision": 4,
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "status": "unchanged_rejected_candidate",
+                    "candidate_attempt_id": "candidate_attempt-1",
+                    "candidate_digest": "candidate-digest",
+                    "rejection_reason": "Conformance replay failed.",
+                    "prior_validation": {"passed": True, "errors": []},
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        next_work = plan.next_items[0]
+        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
+        self.assertEqual(next_work.payload["research_attempt"], 2)
+        self.assertNotIn("compiler_revision", next_work.payload)
+        self.assertNotIn("validation_feedback", next_work.payload)
+        self.assertNotIn("compiler_artifact", next_work.input_refs)
+
+    def test_compiler_routes_explicit_upstream_decisions(self) -> None:
+        """验证 Compiler 的证据与机制请求返回对应职责层。"""
+
+        base_work = WorkItem(
+            work_id="compile-upstream",
+            kind=WorkKind.COMPILE_CANDIDATE,
+            subject_ref="generation:1",
+            input_refs={
+                "compiler_candidate_file": "candidate_workspace.json",
+                "mechanism_file": "mechanism.json",
+            },
+            payload={
+                "trial_count": 1,
+                "assignment_count": 1,
+                "mechanism_revision": 0,
+            },
+        )
+        evidence_plan = transition_completed(
+            item=base_work,
+            result=EffectResult(
+                outcome={
+                    "output": {
+                        "decision": "needs_evidence",
+                        "implementation_summary": "Evidence is incomplete.",
+                        "next_obligation": "Add a negative predicate example.",
+                    }
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+        mechanism_plan = transition_completed(
+            item=base_work,
+            result=EffectResult(
+                outcome={
+                    "output": {
+                        "decision": "implementation_blocked",
+                        "implementation_summary": "The predicate is ambiguous.",
+                        "next_obligation": "Define the uncertain label.",
+                    }
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        evidence_work = evidence_plan.next_items[0]
+        self.assertEqual(evidence_work.kind, WorkKind.SELECT_TRIAL)
+        self.assertEqual(
+            evidence_work.payload["prior_obligation"],
+            "Add a negative predicate example.",
+        )
+        self.assertNotIn("compiler_candidate_file", evidence_work.input_refs)
+        mechanism_work = mechanism_plan.next_items[0]
+        self.assertEqual(mechanism_work.kind, WorkKind.DISTILL_MECHANISM)
+        self.assertEqual(
+            mechanism_work.payload["capability_constraints"],
+            ["Define the uncertain label."],
+        )
+
     def test_promotion_gate_rejects_excessive_candidate_cost(self) -> None:
         """验证模型 accept 不能越过确定性 token 成本门禁。"""
 
@@ -670,10 +1068,17 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         )
         result = EffectResult(
             outcome={
-                "decision": "revise_implementation",
+                "decision": "revise",
                 "summary": {
-                    "decision": "revise_implementation",
+                    "decision": "revise",
                     "finding_counts": {"not_observed": 3},
+                    "recommended_route": "implementation",
+                    "route_feedback": {
+                        "implementation": [
+                            "Ensure the pre_final Hook produces an observable "
+                            "action."
+                        ]
+                    },
                     "per_example": {
                         "example-1": {
                             "faithful_count": 0,
@@ -721,6 +1126,64 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             compile_work.input_refs["compiler_candidate_file"],
             "candidate_workspace.json",
         )
+
+    def test_conformance_mechanism_diagnosis_routes_to_distiller(self) -> None:
+        """Reviewer-owned ambiguous-spec diagnosis bypasses Compiler repair."""
+
+        work = WorkItem(
+            work_id="verify-conformance-mechanism",
+            kind=WorkKind.VERIFY_CONFORMANCE,
+            subject_ref="generation:1",
+            input_refs={
+                "compiler_artifact": "compiler.json",
+                "compiler_candidate_file": "candidate_workspace.json",
+                "mechanism_file": "mechanism.json",
+            },
+            payload={
+                "candidate_attempt_id": "candidate_attempt-1",
+                "candidate_revision": 0,
+            },
+        )
+        result = EffectResult(
+            outcome={
+                "decision": "revise",
+                "summary": {
+                    "decision": "revise",
+                    "finding_counts": {"inconclusive": 3},
+                    "recommended_route": "mechanism",
+                    "route_feedback": {
+                        "mechanism": [
+                            "Define the positive and uncertain boundary."
+                        ]
+                    },
+                    "per_example": {},
+                    "finding_refs": [],
+                },
+            },
+        )
+
+        reject_work = transition_completed(
+            item=work,
+            result=result,
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        next_work = transition_completed(
+            item=reject_work,
+            result=EffectResult(
+                outcome={
+                    "status": "rejected",
+                    "candidate_attempt_id": "candidate_attempt-1",
+                }
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+
+        self.assertEqual(next_work.kind, WorkKind.DISTILL_MECHANISM)
+        self.assertEqual(
+            next_work.payload["capability_constraints"],
+            ["Define the positive and uncertain boundary."],
+        )
+        self.assertNotIn("compiler_candidate_file", next_work.input_refs)
 
     def test_conformance_passes_to_full_candidate_evaluation(self) -> None:
         """验证每题存在 faithful 且无硬失败时才启动全量评估。"""
@@ -779,6 +1242,314 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 ),
                 config=EvolutionControlConfig(),
             )
+
+    def test_batch_assignments_execute_in_order_before_one_review(self) -> None:
+        """批次顺序消费 executed/unsuitable Assignment 后只进入一次总评。"""
+
+        assignments = [
+            {
+                "example_id": f"example-{index}",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            }
+            for index in range(1, 4)
+        ]
+        selected_plan = transition_completed(
+            item=WorkItem(
+                work_id="select-batch",
+                kind=WorkKind.SELECT_TRIAL,
+                subject_ref="generation:1",
+                payload={
+                    "trial_count": 0,
+                    "assignment_count": 0,
+                    "used_assignments": [],
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "status": "selected",
+                    "selection_mode": "fresh",
+                    "assignments": assignments,
+                    "assignment_count": 3,
+                    "used_assignments": [
+                        f"example-{index}/r000/1" for index in range(1, 4)
+                    ],
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+        first = selected_plan.next_items[0]
+        self.assertEqual(first.payload["assignment"], assignments[0])
+        self.assertEqual(first.payload["pending_assignments"], assignments)
+
+        second_plan = transition_completed(
+            item=first,
+            result=EffectResult(
+                outcome={"output": {"result_kind": "executed"}},
+                artifact_refs={"worker_artifact": "trial-one.json"},
+            ),
+            config=EvolutionControlConfig(),
+        )
+        second = WorkItem.from_dict(second_plan.next_items[0].to_dict())
+        self.assertEqual(second.kind, WorkKind.EXECUTE_TRIAL)
+        self.assertEqual(second.payload["assignment"], assignments[1])
+        self.assertEqual(second.payload["trial_count"], 1)
+
+        third_plan = transition_completed(
+            item=second,
+            result=EffectResult(
+                outcome={
+                    "output": {"result_kind": "unsuitable_assignment"}
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+        third = third_plan.next_items[0]
+        self.assertEqual(third.kind, WorkKind.EXECUTE_TRIAL)
+        self.assertEqual(third.payload["assignment"], assignments[2])
+        self.assertEqual(third.payload["trial_count"], 1)
+
+        review_plan = transition_completed(
+            item=third,
+            result=EffectResult(
+                outcome={"output": {"result_kind": "executed"}},
+                artifact_refs={"worker_artifact": "trial-three.json"},
+            ),
+            config=EvolutionControlConfig(),
+        )
+        review = review_plan.next_items[0]
+        self.assertEqual(review.kind, WorkKind.REVIEW_EVIDENCE)
+        self.assertEqual(review.payload["trial_count"], 2)
+        self.assertEqual(review.input_refs["trial_001"], "trial-one.json")
+        self.assertEqual(review.input_refs["trial_002"], "trial-three.json")
+        for field in (
+            "assignment",
+            "pending_assignments",
+            "batch_assignment_count",
+            "batch_executed_count",
+        ):
+            self.assertNotIn(field, review.payload)
+
+    def test_parallel_trial_batch_commits_once_in_assignment_order(self) -> None:
+        """并发 Effect 的有序结果通过一次 Transition 进入 Evidence Review。"""
+
+        assignments = [
+            {
+                "example_id": f"example-{index}",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            }
+            for index in range(1, 4)
+        ]
+        execute = transition_completed(
+            item=WorkItem(
+                work_id="select-parallel-batch",
+                kind=WorkKind.SELECT_TRIAL,
+                subject_ref="generation:1",
+                payload={
+                    "trial_count": 0,
+                    "assignment_count": 0,
+                    "used_assignments": [],
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "status": "selected",
+                    "selection_mode": "fresh",
+                    "assignments": assignments,
+                    "assignment_count": 3,
+                    "used_assignments": [
+                        f"example-{index}/r000/1" for index in range(1, 4)
+                    ],
+                }
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        review = transition_completed(
+            item=execute,
+            result=EffectResult(
+                outcome={
+                    "results": [
+                        {
+                            "assignment_key": f"example-{index}/r000/1",
+                            "output": {
+                                "result_kind": (
+                                    "unsuitable_assignment"
+                                    if index == 2
+                                    else "executed"
+                                )
+                            },
+                            "artifact_key": f"worker_artifact_{index:03d}",
+                        }
+                        for index in range(1, 4)
+                    ]
+                },
+                artifact_refs={
+                    f"worker_artifact_{index:03d}": f"trial-{index}.json"
+                    for index in range(1, 4)
+                },
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+
+        self.assertEqual(review.kind, WorkKind.REVIEW_EVIDENCE)
+        self.assertEqual(review.payload["trial_count"], 2)
+        self.assertEqual(review.input_refs["trial_001"], "trial-1.json")
+        self.assertEqual(review.input_refs["trial_002"], "trial-3.json")
+        self.assertNotIn("pending_assignments", review.payload)
+
+    def test_selected_batch_cannot_exceed_remaining_trial_budget(self) -> None:
+        """Controller 独立拒绝越过剩余 Trial 预算的 Selector 输出。"""
+
+        assignments = [
+            {
+                "example_id": f"example-{index}",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            }
+            for index in range(1, 3)
+        ]
+        with self.assertRaisesRegex(ValueError, "remaining Trial budget"):
+            transition_completed(
+                item=WorkItem(
+                    work_id="select-over-trial-budget",
+                    kind=WorkKind.SELECT_TRIAL,
+                    subject_ref="generation:1",
+                    payload={
+                        "trial_count": 3,
+                        "assignment_count": 0,
+                        "used_assignments": [],
+                    },
+                ),
+                result=EffectResult(
+                    outcome={
+                        "status": "selected",
+                        "selection_mode": "fresh",
+                        "assignments": assignments,
+                        "assignment_count": 2,
+                        "used_assignments": [
+                            f"example-{index}/r000/1"
+                            for index in range(1, 3)
+                        ],
+                    }
+                ),
+                config=EvolutionControlConfig(),
+            )
+
+    def test_empty_batch_reselects_without_evidence_review(self) -> None:
+        """整批 Assignment 均不适用时继续选择且不调度空 Evidence Review。"""
+
+        assignments = [
+            {
+                "example_id": "example-1",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            },
+            {
+                "example_id": "example-2",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            },
+        ]
+        first = transition_completed(
+            item=WorkItem(
+                work_id="select-empty-batch",
+                kind=WorkKind.SELECT_TRIAL,
+                subject_ref="generation:1",
+                payload={"trial_count": 0, "assignment_count": 0},
+            ),
+            result=EffectResult(
+                outcome={
+                    "status": "selected",
+                    "selection_mode": "fresh",
+                    "assignments": assignments,
+                    "assignment_count": 2,
+                    "used_assignments": [
+                        "example-1/r000/1",
+                        "example-2/r000/1",
+                    ],
+                }
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        second = transition_completed(
+            item=first,
+            result=EffectResult(
+                outcome={
+                    "output": {"result_kind": "unsuitable_assignment"}
+                }
+            ),
+            config=EvolutionControlConfig(),
+        ).next_items[0]
+        next_plan = transition_completed(
+            item=second,
+            result=EffectResult(
+                outcome={
+                    "output": {"result_kind": "unsuitable_assignment"}
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertEqual(next_plan.next_items[0].kind, WorkKind.SELECT_TRIAL)
+        self.assertEqual(next_plan.next_items[0].payload["trial_count"], 0)
+
+    def test_revised_hypothesis_resets_batch_and_old_evidence_refs(self) -> None:
+        """Researcher 提交新版后清空旧 Trial、Coverage、计数与批次队列。"""
+
+        plan = transition_completed(
+            item=WorkItem(
+                work_id="research-revision-reset",
+                kind=WorkKind.RESEARCH_HYPOTHESIS,
+                subject_ref="generation:1",
+                input_refs={
+                    "rollout_file": "rollouts.jsonl",
+                    "report_dir": "report",
+                    "failure_artifact": "failure.json",
+                    "hypothesis_artifact": "old-hypothesis.json",
+                    "trial_001": "old-trial.json",
+                    "trial_review_001_artifact": "old-review.json",
+                    "coverage_summary_artifact": "old-coverage.json",
+                },
+                payload={
+                    "hypothesis_revision": 1,
+                    "trial_count": 1,
+                    "assignment_count": 2,
+                    "used_assignments": ["example-1/r000/1"],
+                    "prior_obligation": "Old obligation",
+                    "assignment": {"example_id": "example-2"},
+                    "pending_assignments": [{"example_id": "example-2"}],
+                    "batch_assignment_count": 1,
+                    "batch_executed_count": 0,
+                    "research_continuation": {"feedback_source": "review"},
+                },
+            ),
+            result=EffectResult(
+                outcome={"output": {"fork_phase": "post_tool"}},
+                artifact_refs={"hypothesis_artifact": "new-hypothesis.json"},
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        selected = plan.next_items[0]
+        self.assertEqual(selected.kind, WorkKind.SELECT_TRIAL)
+        self.assertEqual(
+            selected.input_refs,
+            {
+                "rollout_file": "rollouts.jsonl",
+                "report_dir": "report",
+                "failure_artifact": "failure.json",
+                "hypothesis_artifact": "new-hypothesis.json",
+            },
+        )
+        self.assertEqual(selected.payload["trial_count"], 0)
+        self.assertEqual(selected.payload["assignment_count"], 0)
+        self.assertEqual(selected.payload["used_assignments"], [])
+        self.assertIsNone(selected.payload["prior_obligation"])
+        self.assertEqual(selected.payload["pending_assignments"], [])
+        self.assertEqual(selected.payload["batch_assignment_count"], 0)
+        self.assertEqual(selected.payload["batch_executed_count"], 0)
+        self.assertEqual(selected.payload["hypothesis_revision"], 1)
 
     def test_promotion_gate_rejects_runner_errors_without_crashing(self) -> None:
         """验证 runner_error 与缺失 token 被表示为门禁失败而非异常。"""
@@ -1055,6 +1826,73 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call["role_id"], "failure_analyst")
         self.assertEqual(call["role_version"], 1)
 
+    async def test_execute_trial_dispatches_whole_batch_with_rollout_limit(
+        self,
+    ) -> None:
+        """Local Effect 将 pending batch 一次性交给受限并发执行器。"""
+
+        class RecordingInterventionEffects:
+            def __init__(self) -> None:
+                self.calls: list[dict[str, Any]] = []
+
+            async def execute_batch(self, **values: Any) -> EffectResult:
+                self.calls.append(values)
+                return EffectResult(outcome={"results": []})
+
+        hypothesis_file = self.run_dir / "hypothesis.json"
+        hypothesis_file.write_text(
+            json.dumps({"output": {"fork_phase": "post_tool"}}),
+            encoding="utf-8",
+        )
+        rollout_file = self.run_dir / "rollouts.jsonl"
+        rollout_file.write_text("", encoding="utf-8")
+        assignments = [
+            {
+                "example_id": f"example-{index}",
+                "replicate_id": "r000",
+                "prefix_id": 1,
+            }
+            for index in range(1, 3)
+        ]
+        effects = LocalControlEffects(
+            store=self.store,
+            config=LocalControlEffectsConfig(
+                experience_file=self.run_dir / "experience.jsonl",
+                rollout_workers=2,
+                show_progress=False,
+            ),
+        )
+        intervention = RecordingInterventionEffects()
+        with patch.object(
+            effects,
+            "_intervention_effects",
+            return_value=intervention,
+        ):
+            await effects.execute(
+                work=WorkItem(
+                    work_id="execute-parallel-trials",
+                    kind=WorkKind.EXECUTE_TRIAL,
+                    subject_ref="generation:1",
+                    input_refs={
+                        "hypothesis_artifact": str(hypothesis_file),
+                        "rollout_file": str(rollout_file),
+                    },
+                    payload={
+                        "assignment": assignments[0],
+                        "pending_assignments": assignments,
+                    },
+                ),
+                state=ControlState(
+                    current_version="harness_v0001",
+                    status="running",
+                ),
+                work_dir=self.run_dir / "execute-parallel-trials",
+            )
+
+        self.assertEqual(len(intervention.calls), 1)
+        self.assertEqual(intervention.calls[0]["assignments"], assignments)
+        self.assertEqual(intervention.calls[0]["max_workers"], 2)
+
     async def test_stage_candidate_is_idempotent_by_candidate_digest(
         self,
     ) -> None:
@@ -1197,6 +2035,30 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(pending), 1)
         self.store.resume_candidate_attempt(pending[0].candidate_attempt_id).reject(
             "test cleanup"
+        )
+        repeated_rejected = await effects.execute(
+            work=WorkItem(
+                work_id="stage-rejected-digest",
+                kind=WorkKind.STAGE_CANDIDATE,
+                subject_ref="generation:1",
+                input_refs={
+                    "compiler_artifact": str(compiler_artifact.resolve())
+                },
+            ),
+            state=state,
+            work_dir=self.run_dir / "rejected",
+        )
+        self.assertEqual(
+            repeated_rejected.outcome["status"],
+            "unchanged_rejected_candidate",
+        )
+        self.assertEqual(
+            repeated_rejected.outcome["candidate_attempt_id"],
+            pending[0].candidate_attempt_id,
+        )
+        self.assertEqual(
+            repeated_rejected.outcome["prior_validation"]["passed"],
+            True,
         )
 
     async def test_candidate_version_effects_promote_and_reject(
@@ -1507,6 +2369,17 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                             None
                             if faithful
                             else "Make the activation observable."
+                        ),
+                        "failure_layer": (
+                            None if faithful else "integration"
+                        ),
+                        "decisive_input_summary": (
+                            None
+                            if faithful
+                            else "No declared phase behavior was observable."
+                        ),
+                        "recommended_route": (
+                            None if faithful else "implementation"
                         ),
                     },
                     "usage": {"total_tokens": 5},

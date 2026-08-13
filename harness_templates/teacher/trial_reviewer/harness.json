@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "harness_id": "teacher_trial_reviewer_v1",
+  "harness_id": "teacher_trial_reviewer_v2",
   "tools": [
     {
       "instance_id": "get_trial_evidence",

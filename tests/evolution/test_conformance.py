@@ -81,7 +81,7 @@ class ConformanceAggregationTest(unittest.TestCase):
             finding_refs=["finding-0", "finding-1", "finding-2"],
         )
 
-        self.assertEqual(summary.decision, "revise_implementation")
+        self.assertEqual(summary.decision, "revise")
         self.assertIn(
             "Repair implementation_mismatch.",
             summary.compiler_feedback,
@@ -108,7 +108,7 @@ class ConformanceAggregationTest(unittest.TestCase):
             finding_refs=[f"finding-{index}" for index in range(6)],
         )
 
-        self.assertEqual(summary.decision, "revise_implementation")
+        self.assertEqual(summary.decision, "revise")
         self.assertFalse(summary.per_example["example-2"]["passed"])
 
     def test_trajectory_view_keeps_decision_evidence_without_snapshots(
@@ -249,5 +249,14 @@ def _finding(
             None
             if verdict == "faithful"
             else f"Repair {verdict}."
+        ),
+        failure_layer=(None if verdict == "faithful" else "integration"),
+        decisive_input_summary=(
+            None
+            if verdict == "faithful"
+            else "The declared behavior was not established in this rollout."
+        ),
+        recommended_route=(
+            None if verdict == "faithful" else "implementation"
         ),
     )

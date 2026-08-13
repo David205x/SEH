@@ -151,7 +151,12 @@ def build_compiler_capability_packet(
         phase_selections.append(
             {
                 "phase": phase,
+                "guards": list(rule.guards),
                 "decision_evaluator": rule.decision_evaluator,
+                "decision_contract": rule.decision_contract.model_dump(
+                    mode="json"
+                ),
+                "fallback": rule.fallback.model_dump(mode="json"),
                 "activation_budget": rule.activation_budget,
                 "exact_decision_inputs": exact_inputs,
                 "semantic_decision_inputs": semantic_inputs,
@@ -191,7 +196,7 @@ def build_compiler_capability_packet(
     state_access = get_hook_authoring_guide("state_access")
     manifest = get_hook_authoring_guide("manifest")
     return {
-        "packet_version": 8,
+        "packet_version": 9,
         "catalog_versions": {
             "hook_api": HOOK_API_CATALOG_VERSION,
             "authoring_guide": HOOK_AUTHORING_API_VERSION,

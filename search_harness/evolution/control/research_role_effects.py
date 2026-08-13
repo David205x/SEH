@@ -115,6 +115,8 @@ class ResearchRoleEffects:
         *,
         hypothesis: dict[str, Any],
         review: dict[str, Any],
+        trial_reviews: list[dict[str, Any]],
+        coverage_summary: dict[str, Any],
         trial_files: list[Path],
         budget: dict[str, Any],
         capability_constraints: list[Any],
@@ -127,6 +129,8 @@ class ResearchRoleEffects:
             role_input={
                 "hypothesis": hypothesis,
                 "review": review,
+                "trial_reviews": trial_reviews,
+                "coverage_summary": coverage_summary,
                 "evidence_refs": [
                     path.parent.name for path in trial_files
                 ],
@@ -134,7 +138,8 @@ class ResearchRoleEffects:
                 "capability_constraints": capability_constraints,
             },
             resource_config=TeacherResourceConfig(
-                trial_files=trial_files
+                trial_files=trial_files,
+                hook_probe_env_file=self.env_file,
             ),
         )
         output = MechanismDistillation.model_validate(

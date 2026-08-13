@@ -59,6 +59,7 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 | --- | --- |
 | `max_generations` | 一个 Run 最多推进的 Generation 数 |
 | `max_trials_per_hypothesis` | 一个冻结 Hypothesis 最多允许产生的成功 Trial 数 |
+| `trial_batch_size` | 每次 Evidence Review 前最多选择并并发执行的 Trial Assignment 数；必须为正数且不大于 `max_trials_per_hypothesis` |
 | `max_trial_assignments` | 为得到 Trial 最多允许选择的 Assignment 数 |
 | `max_hypothesis_revisions` | Hypothesis 的最大修改次数 |
 | `max_mechanism_revisions` | Mechanism 的最大修改次数 |
@@ -78,9 +79,9 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 | --- | --- |
 | `student_max_steps` | 单次 Student Run 的最大步骤数 |
 | `teacher_max_turns` | 缺少角色专用配置时的 Teacher Role Session 回合上限 |
-| `rollout_workers` | Rollout 并发数 |
+| `rollout_workers` | Evaluation Rollout、Conformance replay 与 Intervention Trial 的并发上限 |
 | `rollouts_per_example` | 每个样本的 Rollout 次数 |
-| `judge_workers` | Judge 并发数 |
+| `judge_workers` | Evaluation Judge、Conformance Reviewer 与 Trial Reviewer 的并发上限 |
 | `candidate_error_streak_limit` | Candidate 连续出现相同运行错误时提前停止评估的阈值 |
 
 `evolve start` 和专用 research-to-candidate 实验入口在创建 Run 时读取这些值，并分别
@@ -88,7 +89,7 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 内已经冻结的值；修改全局配置不会静默改变进行中的实验。上述字段不再提供同名 CLI
 参数，CLI 只保留数据选择和 `--no-teacher-judge`、`--no-progress` 等本次启动行为开关。
 
-## Teacher Role 预算
+## Teacher Role 生成控制
 
 `teacher_roles` 必须为每个活动 Teacher Role 独立声明：
 
@@ -96,19 +97,34 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 evidence_reviewer:
   max_tokens: 12288
   max_turns: 20
+  thinking_mode: enabled
 ```
 
 - `max_tokens`：该角色每次模型响应可使用的最大 token 数，会覆盖
   `models.teacher.max_tokens`。
 - `max_turns`：一次角色调用在没有合法终态输出前最多允许的模型回合数。
+- `thinking_mode`：独立控制该角色是否启用 provider 支持的 thinking；可取
+  `enabled` 或 `disabled`，缺省时继承 `models.teacher.thinking_mode`。
 
 当前活动角色为 `failure_analyst`、`hypothesis_researcher`、
 `intervention_worker`、`trial_reviewer`、`evidence_reviewer`、
 `mechanism_distiller`、`compiler`、`candidate_reviewer` 和
-`conformance_reviewer`。Role Artifact 的 `role_budget` 记录实际采用的两项预算。
+`conformance_reviewer`。Role Artifact 的模型 provenance 记录实际 thinking 设置；
+`role_budget` 继续记录 token 和回合预算。
 
 `evolution.effects.teacher_max_turns` 是缺少角色配置时的通用后备值；活动角色配置存在
 时以 `teacher_roles.<role_id>.max_turns` 为准。
+
+Teacher Judge 是评估组件而不是 Teacher Role，使用独立开关：
+
+```yaml
+teacher_judge:
+  thinking_mode: disabled
+```
+
+该值缺省时继承 `models.teacher.thinking_mode`。当前正式配置默认关闭 Judge thinking，
+但不改变其余 Teacher Role 的设置。角色与 Judge 的覆盖只会在模型 profile 已声明
+provider 支持 thinking 时发送，切换到不支持该扩展的 OpenAI-compatible API 时不会误发。
 
 ## 其他配置
 

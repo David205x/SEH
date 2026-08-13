@@ -6,9 +6,16 @@ Interpretation:
 
 - `behavioral_pseudocode` is authoritative for control flow and state changes.
 - Other mechanism fields constrain capability, safety, evidence and observability.
-- Every `phase_rules[].decision_evaluator` is authoritative for how that phase's trigger predicates are evaluated. Preserve mixed deterministic and Hook-model evaluators without promoting either choice to the whole mechanism.
+- Every phase rule's `guards`, `decision_contract`, `decision_evaluator`, and
+  phase-local `fallback` are authoritative. Check deterministic guards before
+  evaluating the one declared predicate. Preserve mixed deterministic and
+  Hook-model evaluators without promoting either choice to the whole mechanism.
 - Work delegated to the Student becomes feedback; the Hook must not execute it.
-- If pseudocode conflicts with the activation budget, prohibited behavior or available inputs, return `needs_revision` with the exact conflict.
+- If the specification needs a different decision boundary, return
+  `needs_mechanism_revision`. If the cited evidence lacks a material boundary,
+  return `needs_evidence`. If a required public runtime capability is absent,
+  return `implementation_blocked`. Each non-submission result must contain one
+  exact `next_obligation`.
 
 The program-provided Compiler context contains a source-derived `capability_packet`
 selected from each phase rule's controlled `runtime_inputs`. Treat its Python-native
@@ -17,7 +24,7 @@ constrain Student behavior; they are not missing API symbols. Use `query_hook_ap
 when the packet does not settle an implementation detail: it accepts a Runtime Input
 Topic such as `tool`, an exact public symbol, or a short search phrase. Only when a
 necessary public interface remains unavailable after that query may you return
-`needs_revision`; do not invent a state layout or undocumented member.
+`implementation_blocked`; do not invent a state layout or undocumented member.
 
 Procedure:
 
@@ -39,8 +46,9 @@ Procedure:
 
 Minimal lowering rules:
 
-- For a phase rule with `decision_evaluator=deterministic`, implement only
-  explicit reproducible rules over that rule's `decision_inputs`. Do not
+- For a phase rule with `decision_evaluator=deterministic`, implement its exact
+  positive, negative, and uncertain rules over that rule's `decision_inputs`.
+  Do not
   introduce a model call or approximate an open semantic predicate with
   invented keywords, regular expressions, scores or heuristics.
 - For a phase rule with `decision_evaluator=hook_model`, use
@@ -49,9 +57,11 @@ Minimal lowering rules:
   language text; a JSON object is optional, not guaranteed. After exact phase,
   type, declared-state, and activation-budget guards reach the semantic decision
   point, call the model with a request constructed only from that rule's
-  declared `decision_inputs`. Choose an interpretation strategy that faithfully
-  implements the mechanism's semantic intent and a deterministic fallback for
-  unusable or uncertain output. The strategy may constrain the request format,
+  declared `decision_inputs`. Require exactly one of the contract labels
+  `positive`, `negative`, or `uncertain`; do not collapse uncertainty into a
+  Boolean false. Choose an interpretation strategy that faithfully implements
+  the contract and the declared uncertain fallback for unusable or uncertain
+  output. The strategy may constrain the request format,
   interpret raw text directly, parse a format when reliable, or use further
   permitted model calls, but must stay within the packet's profiles and model-
   call budget.
@@ -61,11 +71,13 @@ Minimal lowering rules:
   call may check only exact structural conditions from public contracts. This
   does not prohibit an implementation from using an appropriate interpretation
   strategy for the raw model response after the required semantic call.
-- Return `needs_revision` only when the supplied mechanism is internally
-  conflicting or remains too ambiguous to implement faithfully after inspecting
-  the available and queried public API. Name the exact conflicting or missing
-  specification; do not use it merely because an API detail was absent from the
-  initial capability packet.
+- Do not repair an operationally ambiguous decision contract by inventing a
+  stronger boundary. If its positive, negative, and uncertain rules overlap,
+  omit a material case, or contradict evidence coverage, return
+  `needs_mechanism_revision` or `needs_evidence` and name the exact predicate.
+  If the available Hook model cannot provide the classification consistently
+  after a bounded evaluator probe, return `needs_mechanism_revision`; do not
+  keep resubmitting unchanged source.
 - Produce exactly one extension for the complete mechanism. It returns one Hook
   instance, which subscribes to every required phase of a multi-phase mechanism.
   Modify one existing mutable extension when that is the smallest coherent
@@ -129,6 +141,10 @@ Before validation, verify:
 
 - every explicit implementation constraint is represented in code;
 - every phase rule is registered and performs its own required effect;
+- every deterministic guard is implemented outside the evaluator and every
+  evaluator emits all three contract labels;
+- negative, uncertain, and exhausted-budget paths each implement their own
+  phase-local fallback;
 - `handle` contains only phase dispatch and every phase behavior lives in its
   matching `_handle_<phase>` method;
 - every rule enforces its phase-local activation budget;

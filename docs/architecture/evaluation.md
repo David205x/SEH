@@ -12,6 +12,10 @@ Evaluation 将“执行 Student”与“判断结果”分开。Rollout 阶段�
 
 当前任务 Evaluator 是 HotpotQA evaluator：先做规范化精确匹配和 token F1。静态规则无法确定时，可选 Teacher Binary Judge 使用 `TEACHER_*` 模型给出二元判断。Teacher Judgment 是评估能力，不是 Teacher Role，也不参与进化路由。
 
+HotpotQA Teacher Judge 对语义边界采用严格规则：预测中出现相互矛盾实体时判错；
+地理上下位关系不视为兼容粒度，broader location 也不视为 alias；题目使用
+“approximately”时仍采用零数值容差，并尊重 reference answer 的原意。
+
 判分结果按两层聚合：
 
 - per-rollout：每个 replicate 的正确性、静态/Teacher 决策和执行指标。

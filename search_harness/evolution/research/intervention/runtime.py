@@ -25,6 +25,7 @@ from search_harness.evaluation import (
     HotpotQAEvaluator,
     StaticDecision,
     TeacherBinaryJudge,
+    build_teacher_judge_model,
 )
 from search_harness.integrations.openai_compatible import (
     OpenAICompatibleConfig,
@@ -81,12 +82,14 @@ class InterventionRunner:
         teacher_config: OpenAICompatibleConfig | None = None,
         teacher_client: OpenAICompatibleSyncClient | None = None,
         judge_model: OpenAICompatibleModel | None = None,
+        worker_type: type[InterventionWorker] = InterventionWorker,
     ) -> None:
         self.config = config or InterventionRuntimeConfig()
         self._student_model = student_model
         self._teacher_config = teacher_config
         self._teacher_client = teacher_client
         self._judge_model = judge_model
+        self._worker_type = worker_type
 
     def run(
         self,
@@ -128,7 +131,7 @@ class InterventionRunner:
             model_role=self.config.teacher_model_role,
             intervention_timeout=True,
         )
-        worker = InterventionWorker(
+        worker = self._worker_type(
             config=teacher_config,
             client=self._teacher_client,
             intent=intent,
@@ -187,10 +190,9 @@ class InterventionRunner:
 
         judge = None
         if self.config.teacher_judge:
-            judge_model = self._judge_model or _build_model(
+            judge_model = self._judge_model or build_teacher_judge_model(
                 env_file=self.config.env_file,
                 model_role=self.config.teacher_model_role,
-                intervention_timeout=True,
             )
             judge = TeacherBinaryJudge(judge_model, HotpotQAEvaluator())
         comparison = _evaluate_effect(

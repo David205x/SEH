@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "harness_id": "shadow_teacher_mechanism_distiller_dossier_v1",
+  "tools": [
+    {
+      "instance_id": "get_distillation_trial_detail",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "get_distillation_trial_detail"}
+    },
+    {
+      "instance_id": "create_mechanism_draft",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "create_mechanism_draft"}
+    },
+    {
+      "instance_id": "add_mechanism_phase",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "add_mechanism_phase"}
+    },
+    {
+      "instance_id": "complete_mechanism_draft",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "complete_mechanism_draft"}
+    },
+    {
+      "instance_id": "set_mechanism_constraints",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "set_mechanism_constraints"}
+    },
+    {
+      "instance_id": "probe_mechanism_evaluators",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "probe_mechanism_evaluators"}
+    },
+    {
+      "instance_id": "validate_mechanism_draft",
+      "entrypoint": "tools/component.py:build",
+      "config": {"kind": "validate_mechanism_draft"}
+    }
+  ],
+  "prompt": {
+    "instance_id": "mechanism_distiller",
+    "entrypoint": "prompt/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

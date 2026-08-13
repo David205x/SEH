@@ -32,7 +32,11 @@ def initial_work(*, run_id: str, version_id: str) -> WorkItem:
         work_id=_stable_id(run_id, "initial", WorkKind.EVALUATE_INCUMBENT),
         kind=WorkKind.EVALUATE_INCUMBENT,
         subject_ref=f"generation:1:{version_id}",
-        payload={"generation": 1, "version_id": version_id},
+        payload={
+            "generation": 1,
+            "version_id": version_id,
+            "research_attempt": 1,
+        },
     )
 
 
@@ -131,10 +135,14 @@ class _CompletedTransition:
                 "assignment_count": 0,
                 "used_assignments": [],
                 "prior_obligation": None,
+                "pending_assignments": [],
+                "batch_assignment_count": 0,
+                "batch_executed_count": 0,
                 "trial_budget": {
                     "max_trials_per_hypothesis": (
                         self.config.max_trials_per_hypothesis
                     ),
+                    "trial_batch_size": self.config.trial_batch_size,
                     "max_trial_assignments": (
                         self.config.max_trial_assignments
                     ),
@@ -160,57 +168,266 @@ class _CompletedTransition:
         if status != "selected":
             raise ValueError(f"unknown trial selection status: {status}")
         payload = _context(self.item)
-        payload["assignment"] = _required_object(
+        selection_mode = _required_string(
             self.result.outcome,
-            "assignment",
+            "selection_mode",
         )
-        payload["assignment_count"] = int(
-            self.result.outcome.get(
-                "assignment_count",
-                payload.get("assignment_count", 0),
+        if selection_mode not in {"fresh", "reuse"}:
+            raise ValueError(
+                f"unknown trial selection mode: {selection_mode}"
             )
-        )
-        payload["used_assignments"] = _required_list(
+        raw_assignments = _required_list(
             self.result.outcome,
+            "assignments",
+        )
+        assignments = [
+            _required_list_object(raw_assignments, index, "assignments")
+            for index in range(len(raw_assignments))
+        ]
+        if not assignments:
+            raise ValueError("selected trial batch must contain assignments")
+        previous_count = _non_negative_payload_int(
+            payload,
+            "assignment_count",
+        )
+        trial_count = _non_negative_payload_int(payload, "trial_count")
+        if len(assignments) > self.config.trial_batch_size:
+            raise ValueError(
+                "selected trial batch exceeds trial_batch_size"
+            )
+        if trial_count + len(assignments) > (
+            self.config.max_trials_per_hypothesis
+        ):
+            raise ValueError(
+                "selected trial batch exceeds the remaining Trial budget"
+            )
+        output_count = _non_negative_payload_int(
+            self.result.outcome,
+            "assignment_count",
+        )
+        expected_count = previous_count + len(assignments)
+        if expected_count > self.config.max_trial_assignments:
+            raise ValueError(
+                "selected trial batch exceeds the remaining Assignment budget"
+            )
+        if output_count != expected_count:
+            raise ValueError(
+                "Selector assignment_count differs from the deterministic "
+                "batch increment"
+            )
+        previous_used = _string_list(
+            payload.get("used_assignments", []),
             "used_assignments",
         )
+        selected_keys = [_assignment_key(item) for item in assignments]
+        if len(selected_keys) != len(set(selected_keys)):
+            raise ValueError("selected trial batch contains duplicate assignments")
+        output_used = _string_list(
+            self.result.outcome.get("used_assignments"),
+            "used_assignments",
+        )
+        expected_used = sorted({*previous_used, *selected_keys})
+        if output_used != expected_used:
+            raise ValueError(
+                "Selector used_assignments differs from the deterministic "
+                "Assignment set"
+            )
+        previous_examples = {
+            _assignment_key_parts(key)[0] for key in previous_used
+        }
+        extends_coverage = any(
+            str(assignment["example_id"]) not in previous_examples
+            for assignment in assignments
+        )
+        expected_mode = "fresh" if extends_coverage else "reuse"
+        if selection_mode != expected_mode:
+            raise ValueError(
+                "selection_mode does not match example coverage expansion"
+            )
+        payload["pending_assignments"] = assignments
+        payload["batch_assignment_count"] = len(assignments)
+        payload["batch_executed_count"] = 0
+        payload["assignment"] = dict(assignments[0])
+        payload["assignment_count"] = expected_count
+        payload["used_assignments"] = expected_used
         return self._one(
             WorkKind.EXECUTE_TRIAL,
-            f"assignment:{payload['assignment_count']}",
+            f"batch:{payload['assignment_count']}",
             refs=self.item.input_refs,
             payload=payload,
         )
 
     def on_execute_trial(self) -> TransitionPlan:
+        if "results" in self.result.outcome:
+            return self._on_execute_trial_batch()
         output = _required_object(self.result.outcome, "output")
         result_kind = _required_string(output, "result_kind")
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
-        if result_kind == "unsuitable_assignment":
-            if int(payload.get("assignment_count", 0)) >= (
-                self.config.max_trial_assignments
-            ):
-                return TransitionPlan(
-                    complete_reason="Trial assignment budget was exhausted."
-                )
+        if result_kind not in {"executed", "unsuitable_assignment"}:
+            raise ValueError(f"unknown Intervention Worker result: {result_kind}")
+        assignment = _required_object(payload, "assignment")
+        pending = _pending_assignments(payload, assignment)
+        if pending[0] != assignment:
+            raise ValueError(
+                "current assignment differs from pending batch head"
+            )
+        batch_assignment_count = _optional_non_negative_payload_int(
+            payload,
+            "batch_assignment_count",
+            len(pending),
+        )
+        batch_executed_count = _optional_non_negative_payload_int(
+            payload,
+            "batch_executed_count",
+            0,
+        )
+        if batch_assignment_count < len(pending):
+            raise ValueError(
+                "batch_assignment_count is smaller than pending assignments"
+            )
+        processed_count = batch_assignment_count - len(pending)
+        if batch_executed_count > processed_count:
+            raise ValueError(
+                "batch_executed_count exceeds processed assignments"
+            )
+
+        if result_kind == "executed":
+            trial_count = int(payload.get("trial_count", 0)) + 1
+            payload["trial_count"] = trial_count
+            trial_ref = self.result.artifact_refs.get("worker_artifact")
+            if trial_ref is None:
+                raise ValueError("executed trial result lacks worker_artifact")
+            refs[f"trial_{trial_count:03d}"] = trial_ref
+            batch_executed_count += 1
+
+        pending = pending[1:]
+        payload["pending_assignments"] = pending
+        payload["batch_executed_count"] = batch_executed_count
+        payload.pop("assignment", None)
+        if pending:
+            payload["assignment"] = dict(pending[0])
+            processed_count = batch_assignment_count - len(pending)
             return self._one(
-                WorkKind.SELECT_TRIAL,
-                "assignment_unsuitable",
+                WorkKind.EXECUTE_TRIAL,
+                f"batch_assignment:{processed_count + 1}",
                 refs=refs,
                 payload=payload,
             )
-        if result_kind != "executed":
-            raise ValueError(f"unknown Intervention Worker result: {result_kind}")
 
-        trial_count = int(payload.get("trial_count", 0)) + 1
-        payload["trial_count"] = trial_count
-        trial_ref = self.result.artifact_refs.get("worker_artifact")
-        if trial_ref is None:
-            raise ValueError("executed trial result lacks worker_artifact")
-        refs[f"trial_{trial_count:03d}"] = trial_ref
+        _clear_batch_state(payload)
+        if batch_executed_count > 0:
+            return self._one(
+                WorkKind.REVIEW_EVIDENCE,
+                f"batch_executed:{batch_executed_count}",
+                refs=refs,
+                payload=payload,
+            )
+        if int(payload.get("assignment_count", 0)) >= (
+            self.config.max_trial_assignments
+        ):
+            return TransitionPlan(
+                complete_reason="Trial assignment budget was exhausted."
+            )
+        if int(payload.get("trial_count", 0)) >= (
+            self.config.max_trials_per_hypothesis
+        ):
+            return TransitionPlan(
+                complete_reason="Per-hypothesis trial budget was exhausted."
+            )
         return self._one(
-            WorkKind.REVIEW_EVIDENCE,
-            f"trial_executed:{trial_count}",
+            WorkKind.SELECT_TRIAL,
+            "batch_without_trial",
+            refs=refs,
+            payload=payload,
+        )
+
+    def _on_execute_trial_batch(self) -> TransitionPlan:
+        """Commit one ordered parallel batch as a single durable transition."""
+
+        payload = _context(self.item)
+        assignment = _required_object(payload, "assignment")
+        pending = _pending_assignments(payload, assignment)
+        if pending[0] != assignment:
+            raise ValueError(
+                "current assignment differs from pending batch head"
+            )
+        raw_results = _required_list(self.result.outcome, "results")
+        results = [
+            _required_list_object(raw_results, index, "results")
+            for index in range(len(raw_results))
+        ]
+        if len(results) != len(pending):
+            raise ValueError(
+                "parallel Trial result count differs from pending assignments"
+            )
+        batch_assignment_count = _optional_non_negative_payload_int(
+            payload,
+            "batch_assignment_count",
+            len(pending),
+        )
+        if batch_assignment_count != len(pending):
+            raise ValueError(
+                "parallel Trial batch size differs from pending assignments"
+            )
+
+        refs = dict(self.item.input_refs)
+        trial_count = _non_negative_payload_int(payload, "trial_count")
+        batch_executed_count = 0
+        for index, (current, result) in enumerate(
+            zip(pending, results, strict=True),
+            start=1,
+        ):
+            expected_key = _assignment_key(current)
+            if _required_string(result, "assignment_key") != expected_key:
+                raise ValueError(
+                    "parallel Trial results do not preserve Assignment order"
+                )
+            output = _required_object(result, "output")
+            result_kind = _required_string(output, "result_kind")
+            if result_kind not in {"executed", "unsuitable_assignment"}:
+                raise ValueError(
+                    "unknown Intervention Worker result: "
+                    f"{result_kind}"
+                )
+            artifact_key = _required_string(result, "artifact_key")
+            expected_artifact_key = f"worker_artifact_{index:03d}"
+            if artifact_key != expected_artifact_key:
+                raise ValueError(
+                    "parallel Trial artifact keys do not preserve batch order"
+                )
+            artifact_ref = self.result.artifact_refs.get(artifact_key)
+            if artifact_ref is None:
+                raise ValueError(
+                    f"parallel Trial result lacks {artifact_key}"
+                )
+            if result_kind == "executed":
+                trial_count += 1
+                batch_executed_count += 1
+                refs[f"trial_{trial_count:03d}"] = artifact_ref
+
+        payload["trial_count"] = trial_count
+        _clear_batch_state(payload)
+        if batch_executed_count > 0:
+            return self._one(
+                WorkKind.REVIEW_EVIDENCE,
+                f"parallel_batch_executed:{batch_executed_count}",
+                refs=refs,
+                payload=payload,
+            )
+        if int(payload.get("assignment_count", 0)) >= (
+            self.config.max_trial_assignments
+        ):
+            return TransitionPlan(
+                complete_reason="Trial assignment budget was exhausted."
+            )
+        if trial_count >= self.config.max_trials_per_hypothesis:
+            return TransitionPlan(
+                complete_reason="Per-hypothesis trial budget was exhausted."
+            )
+        return self._one(
+            WorkKind.SELECT_TRIAL,
+            "parallel_batch_without_trial",
             refs=refs,
             payload=payload,
         )
@@ -312,7 +529,40 @@ class _CompletedTransition:
         decision = _required_string(output, "decision")
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
-        if decision == "needs_revision":
+        if decision == "needs_evidence":
+            refs.pop("compiler_candidate_file", None)
+            if int(payload.get("trial_count", 0)) >= (
+                self.config.max_trials_per_hypothesis
+            ):
+                return TransitionPlan(
+                    complete_reason=(
+                        "Compiler requested more evidence after the trial "
+                        "budget was exhausted."
+                    )
+                )
+            if int(payload.get("assignment_count", 0)) >= (
+                self.config.max_trial_assignments
+            ):
+                return TransitionPlan(
+                    complete_reason=(
+                        "Compiler requested more evidence after the assignment "
+                        "budget was exhausted."
+                    )
+                )
+            payload["prior_obligation"] = _required_string(
+                output,
+                "next_obligation",
+            )
+            return self._one(
+                WorkKind.SELECT_TRIAL,
+                "compiler_needs_evidence",
+                refs=refs,
+                payload=payload,
+            )
+        if decision in {
+            "needs_mechanism_revision",
+            "implementation_blocked",
+        }:
             refs.pop("compiler_candidate_file", None)
             revision = int(payload.get("mechanism_revision", 0)) + 1
             if revision > self.config.max_mechanism_revisions:
@@ -325,7 +575,7 @@ class _CompletedTransition:
             payload["mechanism_revision"] = revision
             constraints = list(payload.get("capability_constraints", []))
             constraints.append(
-                _required_string(output, "implementation_summary")
+                _required_string(output, "next_obligation")
             )
             payload["capability_constraints"] = constraints
             return self._one(
@@ -369,6 +619,19 @@ class _CompletedTransition:
                 refs=refs,
                 payload=payload,
             )
+        if status == "unchanged_rejected_candidate":
+            reason = self.result.outcome.get("rejection_reason")
+            detail = (
+                str(reason).strip()
+                if isinstance(reason, str) and reason.strip()
+                else "the Compiler resubmitted an unchanged rejected Candidate"
+            )
+            return self._new_research_attempt(
+                refs=refs,
+                payload=payload,
+                rejection_reason=detail,
+                route="unchanged_rejected_candidate",
+            )
         if status != "valid":
             raise ValueError(f"unknown candidate stage status: {status}")
         payload.update(
@@ -407,13 +670,26 @@ class _CompletedTransition:
                 refs=refs,
                 payload=payload,
             )
-        if decision != "revise_implementation":
+        if decision not in {"revise", "revise_implementation"}:
             raise ValueError(
                 f"unknown conformance decision: {decision}"
             )
         revision = int(payload.get("candidate_revision", 0)) + 1
         payload["candidate_revision"] = revision
-        feedback = summary.get("compiler_feedback")
+        target = summary.get("recommended_route", "implementation")
+        if target not in {"evidence", "mechanism", "implementation"}:
+            target = "implementation"
+        route_feedback = summary.get("route_feedback")
+        selected_feedback = (
+            route_feedback.get(target)
+            if isinstance(route_feedback, dict)
+            else None
+        )
+        feedback = (
+            selected_feedback
+            if isinstance(selected_feedback, list)
+            else summary.get("compiler_feedback")
+        )
         obligations = (
             [str(value) for value in feedback if str(value).strip()]
             if isinstance(feedback, list)
@@ -430,7 +706,7 @@ class _CompletedTransition:
         )
         payload["after_rejection"] = (
             {
-                "target": "implementation",
+                "target": target,
                 "obligation": obligation,
             }
             if revision <= self.config.max_candidate_revisions
@@ -501,8 +777,10 @@ class _CompletedTransition:
                 }
             else:
                 payload["after_rejection"] = None
+            payload["start_new_research_attempt"] = False
         else:
             payload["after_rejection"] = None
+            payload["start_new_research_attempt"] = True
         return self._one(
             WorkKind.REJECT_CANDIDATE,
             f"promotion_gate_failed:{recommendation}",
@@ -532,6 +810,7 @@ class _CompletedTransition:
             payload={
                 "generation": next_generation,
                 "version_id": version_id,
+                "research_attempt": 1,
             },
             parent_work_id=self.item.work_id,
         )
@@ -543,6 +822,18 @@ class _CompletedTransition:
     def on_reject_candidate(self) -> TransitionPlan:
         after = self.item.payload.get("after_rejection")
         if not isinstance(after, dict):
+            if self.item.payload.get("start_new_research_attempt") is True:
+                return self._new_research_attempt(
+                    refs=_merge_refs(
+                        self.item.input_refs,
+                        self.result.artifact_refs,
+                    ),
+                    payload=_context(self.item),
+                    rejection_reason=_candidate_rejection_reason(
+                        self.item.payload
+                    ),
+                    route="candidate_rejected",
+                )
             return TransitionPlan(
                 complete_reason="Candidate was rejected by review or promotion gate."
             )
@@ -603,6 +894,38 @@ class _CompletedTransition:
             f"candidate_revision:{target}",
             refs=refs,
             payload=payload,
+        )
+
+    def _new_research_attempt(
+        self,
+        *,
+        refs: dict[str, str],
+        payload: dict[str, Any],
+        rejection_reason: str,
+        route: str,
+    ) -> TransitionPlan:
+        """Abandon one rejected direction while reusing incumbent evidence."""
+
+        attempt = int(payload.get("research_attempt", 1)) + 1
+        next_refs = {
+            key: value
+            for key, value in refs.items()
+            if key in {"report_dir", "rollout_file"}
+        }
+        next_payload = {
+            key: payload[key]
+            for key in ("generation", "version_id", "incumbent_metrics")
+            if key in payload
+        }
+        next_payload["research_attempt"] = attempt
+        next_payload["analysis_focus"] = _alternate_failure_focus(
+            rejection_reason
+        )
+        return self._one(
+            WorkKind.ANALYZE_FAILURE,
+            f"research_attempt:{attempt}:{route}",
+            refs=next_refs,
+            payload=next_payload,
         )
 
     def _research_revision(
@@ -690,11 +1013,138 @@ def _without_prefix(
     }
 
 
+def _candidate_rejection_reason(payload: dict[str, Any]) -> str:
+    review = payload.get("candidate_review")
+    if isinstance(review, dict):
+        recommendation = review.get("recommendation")
+        reason = review.get("reason")
+        if (
+            recommendation == "reject"
+            and isinstance(reason, str)
+            and reason.strip()
+        ):
+            return reason.strip()
+    gate = payload.get("promotion_gate")
+    if isinstance(gate, dict):
+        reasons = gate.get("reasons")
+        if isinstance(reasons, list):
+            joined = "; ".join(
+                str(reason).strip()
+                for reason in reasons
+                if str(reason).strip()
+            )
+            if joined:
+                return joined
+    if isinstance(review, dict):
+        reason = review.get("reason")
+        if isinstance(reason, str) and reason.strip():
+            return reason.strip()
+    return "the Candidate was rejected by review or the promotion gate"
+
+
+def _alternate_failure_focus(rejection_reason: str) -> str:
+    prefix = (
+        "Select a different bounded failure pattern supported directly by "
+        "the incumbent trajectories. Do not continue the rejected research "
+        "direction. The previous Candidate was rejected because: "
+    )
+    return (prefix + rejection_reason.strip())[:300]
+
+
 def _required_object(value: dict[str, Any], name: str) -> dict[str, Any]:
     item = value.get(name)
     if not isinstance(item, dict):
         raise TypeError(f"{name} must be an object")
     return dict(item)
+
+
+def _required_list_object(
+    values: list[Any],
+    index: int,
+    name: str,
+) -> dict[str, Any]:
+    item = values[index]
+    if not isinstance(item, dict):
+        raise TypeError(f"{name}[{index}] must be an object")
+    return dict(item)
+
+
+def _pending_assignments(
+    payload: dict[str, Any],
+    current_assignment: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Load one active queue, including legacy single-assignment work."""
+
+    raw_pending = payload.get("pending_assignments")
+    if raw_pending is None:
+        return [dict(current_assignment)]
+    if not isinstance(raw_pending, list) or not raw_pending:
+        raise ValueError("active Trial work requires pending assignments")
+    return [
+        _required_list_object(raw_pending, index, "pending_assignments")
+        for index in range(len(raw_pending))
+    ]
+
+
+def _clear_batch_state(payload: dict[str, Any]) -> None:
+    """Remove queue-local state before aggregate Evidence Review or reselection."""
+
+    for name in (
+        "assignment",
+        "pending_assignments",
+        "batch_assignment_count",
+        "batch_executed_count",
+    ):
+        payload.pop(name, None)
+
+
+def _assignment_key(assignment: dict[str, Any]) -> str:
+    example_id = _required_string(assignment, "example_id")
+    replicate_id = _required_string(assignment, "replicate_id")
+    prefix_id = assignment.get("prefix_id")
+    if not isinstance(prefix_id, int) or isinstance(prefix_id, bool) or prefix_id < 1:
+        raise TypeError("prefix_id must be a positive integer")
+    return f"{example_id}/{replicate_id}/{prefix_id}"
+
+
+def _assignment_key_parts(assignment_key: str) -> tuple[str, str, int]:
+    parts = assignment_key.split("/")
+    if len(parts) != 3 or any(not part for part in parts):
+        raise ValueError(
+            "Assignment keys must use example_id/replicate_id/prefix_id format"
+        )
+    try:
+        prefix_id = int(parts[2])
+    except ValueError as exc:
+        raise ValueError("Assignment key prefix_id must be an integer") from exc
+    if prefix_id < 1:
+        raise ValueError("Assignment key prefix_id must be positive")
+    return parts[0], parts[1], prefix_id
+
+
+def _non_negative_payload_int(value: dict[str, Any], name: str) -> int:
+    item = value.get(name)
+    if not isinstance(item, int) or isinstance(item, bool) or item < 0:
+        raise TypeError(f"{name} must be a non-negative integer")
+    return item
+
+
+def _optional_non_negative_payload_int(
+    value: dict[str, Any],
+    name: str,
+    default: int,
+) -> int:
+    if name not in value:
+        return default
+    return _non_negative_payload_int(value, name)
+
+
+def _string_list(value: object, name: str) -> list[str]:
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item for item in value
+    ):
+        raise TypeError(f"{name} must be a list of non-empty strings")
+    return list(value)
 
 
 def _required_payload_object(

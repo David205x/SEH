@@ -10,6 +10,7 @@ from search_harness.datasets import DatasetExample
 from search_harness.evaluation import (
     HotpotQAEvaluator,
     TeacherBinaryJudge,
+    build_teacher_judge_model,
     evaluate_rollout_file,
     write_evaluation_report,
 )
@@ -267,10 +268,7 @@ class LocalEvaluationBackend:
         judge_factory = None
         if self.config.teacher_judge:
             judge_factory = lambda: TeacherBinaryJudge(
-                OpenAICompatibleModel.from_env(
-                    self.config.env_file,
-                    prefix="TEACHER",
-                ),
+                build_teacher_judge_model(env_file=self.config.env_file),
                 evaluator,
             )
         report = evaluate_rollout_file(

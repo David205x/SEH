@@ -13,6 +13,7 @@ from .domain import (
     EffectResult,
     EvolutionControlConfig,
     WorkItem,
+    WorkKind,
     effect_total_tokens,
     project_events,
 )
@@ -88,8 +89,12 @@ class EvolutionController:
             ]
         )
 
-    async def run(self) -> ControlOutcome:
-        """Execute or resume the agenda until completion, pause, or error budget."""
+    async def run(
+        self,
+        *,
+        stop_before: frozenset[WorkKind] = frozenset(),
+    ) -> ControlOutcome:
+        """Execute the agenda, optionally returning before selected work kinds."""
 
         self._update_projections()
         state = self._state()
@@ -141,6 +146,9 @@ class EvolutionController:
                     {"reason": "Controller agenda drained."},
                 )
                 return self._outcome(self._state())
+
+            if queued[0].item.kind in stop_before:
+                return self._outcome(state)
 
             record = queued[0]
             work = record.item

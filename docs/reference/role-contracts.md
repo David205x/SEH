@@ -5,25 +5,25 @@ Teacher Role 的输入、输出与版本由 `search_harness/evolution/research/r
 | 规范角色 | 内部 `role_id@version` | Output contract |
 | --- | --- | --- |
 | Failure Analyst | `failure_analyst@1` | `failure_direction@1` |
-| Hypothesis Researcher | `hypothesis_researcher@1` | `intervention_hypothesis@3` |
+| Hypothesis Researcher | `hypothesis_researcher@1` | `intervention_hypothesis@4` |
 | Intervention Executor | `intervention_worker@1` | `intervention_worker_result@4` |
-| Trial Reviewer | `trial_reviewer@1` | `trial_review@1` |
+| Trial Reviewer | `trial_reviewer@1` | `trial_review@2` |
 | Evidence Reviewer | `evidence_reviewer@1` | `evidence_review@2` |
 | Mechanism Distiller | `mechanism_distiller@1` | `mechanism_distillation@2` |
-| Mechanism Compiler | `compiler@1` | `compiler_result@1` |
-| Conformance Reviewer | `conformance_reviewer@1` | `conformance_review@2` |
+| Mechanism Compiler | `compiler@1` | `compiler_result@2` |
+| Conformance Reviewer | `conformance_reviewer@1` | `conformance_review@3` |
 | Candidate Reviewer | `candidate_reviewer@1` | `candidate_review@2` |
 
 ## 职责与终态
 
 - Failure Analyst 从 incumbent Evaluation 选择有证据引用的失败方向。
-- Hypothesis Researcher 输出带 phase plan、成功条件和 falsifier 的可证伪干预假设。
+- Hypothesis Researcher 输出带 phase plan、成功条件和 falsifier 的可证伪干预假设；程序提供通用跨案例正负覆盖要求，Researcher 只在默认要求不足时补充至多两项假设特有证据义务。Evidence Reviewer 要求修订时，Researcher 优先直接应用反馈约束；只有反馈不足以确定具体 condition、instruction 或 falsifier 时，才按 `list_trial_evidence`、`get_trial_evidence`、必要时 `get_trial_event` 的顺序读取旧 Trial。旧 Trial 只用于修订诊断，不计入新版 Hypothesis 的 Evidence。
 - Intervention Executor 在冻结 prefix 上使用数字编号的 Editable Context Block 执行分支实验；其结果由程序从跨 phase transcript 提取，不能通过通用 standalone role runner 伪造。目标 phase 已到达且 Worker 正确选择 `continue_without_change` 时，Trial 仍以 `executed` 保留，`modified_phases` 为空；只有目标 phase 未到达时才视为 `unsuitable_assignment`。
-- Trial Reviewer 对单条完整 intervention trajectory 作事实性分析。
-- Evidence Reviewer 聚合 trial review，并接收当前 trial/assignment 上限、已用与剩余预算；返回 `continue`、`revise`、`reject` 或 `ready_to_distill`。任一剩余调度预算为零时，`continue` 被 Prompt 与程序输出门禁共同禁止，必须对当前假设作出终局判断。
-- Mechanism Distiller 接收与 Evidence Reviewer 相同的 Trial/Assignment 预算，返回 `distilled`、`needs_evidence` 或 `not_distillable`；预算耗尽时程序禁止 `needs_evidence`。每条 phase rule 还必须选择受控 `runtime_inputs` Topic，由 capability packet 展开完整 API 文档；它可以把有证据支持的语义触发器声明为 `decision_evaluator=hook_model`，但不负责实例化或验证未来 Hook model。
-- Mechanism Compiler 返回 `submitted` 或 `needs_revision`；提交必须引用 Candidate Artifact。`decision_evaluator=hook_model` 的真实模型调用只在 Compiler 生成的 Candidate 中实现。
-- Conformance Reviewer 对 Candidate rollout 与参考 trial 作逐例保真判断；输入使用 `candidate_trajectory_view`，保留问题、工具证据、解析动作、Hook-model 输出、Hook change、预算状态与最终结果，省略重复 `model_input`、reasoning、usage 和无关运行事件。它独立比较 trace-visible trigger inputs 与 Mechanism Spec，区分正确 non-trigger fallback 和遗漏正向触发，不能把 Hook-model classification 当作权威事实。模型只返回 verdict、observed phases、assessment 与 repair obligation，Controller 为规范化 Finding 附加 run/trial 身份。
+- Trial Reviewer 对单条完整 intervention trajectory 作事实性分析，并为每个冻结 phase 记录 `positive`、`negative` 或 `uncertain` predicate label、决定性观察、实际执行状态、直接行为效果和独立的 outcome evidence。标签描述 activation predicate 是否成立，不把干预成功与触发条件混为一谈。
+- Evidence Reviewer 聚合 trial review，并接收当前 trial/assignment 上限、已用与剩余预算以及程序维护的证据覆盖摘要；返回 `continue`、`revise`、`reject` 或 `ready_to_distill`。默认要求至少覆盖 3 个不同案例，并为每个 phase 从不同案例收集至少 2 个正例和 2 个负例；同题 replicate 只用于判断稳定性，不增加覆盖计数。默认覆盖未满足时程序禁止 `ready_to_distill`，任一剩余调度预算为零时程序也禁止 `continue`，角色必须缩小或否定当前结论，而不能把缺失证据降格为已蒸馏机制的限制。`revise` 时，Reviewer 在现有自由文本 `assessment` 中按 Observed failure、Required revision、Must preserve、Claim limit 的顺序组织反馈；`phase_findings` 保留局部判断，`key_risk` 保留首要风险，`next_obligation` 只服务于 `continue`。这些标签不新增或改变 `evidence_review@2` 字段。
+- Mechanism Distiller 接收完整结构化 Trial Review、程序生成的 coverage summary 以及与 Evidence Reviewer 相同的 Trial/Assignment 预算，返回 `distilled`、`needs_evidence` 或 `not_distillable`；预算耗尽时程序禁止 `needs_evidence`。每个 phase 必须分别声明确定性 `guards`、三值 `decision_contract`、语义输入、evaluator、positive action 和 negative/uncertain/budget-exhausted fallback。`decision_contract` 中模糊概念必须给出可观察的操作边界，并把已观察证据分类为 positive、negative、uncertain；不得用 `known_limits` 抵消更强的正文承诺。对 `hook_model` evaluator，Distiller 必须先运行正式 backend 的重复 Probe，再决定收窄契约、补证据或提交；Probe 每个标签最多取两个 fixture、每项最多重复三次，且不替角色作通过判断。
+- Mechanism Compiler 返回 `submitted`、`needs_evidence`、`needs_mechanism_revision` 或 `implementation_blocked`；后三者必须给出一个 `next_obligation`，提交必须引用 Candidate Artifact。Compiler 只实现冻结的 evaluator 输入投影、提示、三值解析、状态和动作，不负责把含糊机制重新解释成可运行规则。
+- Conformance Reviewer 对 Candidate rollout 与参考 trial 作逐例保真判断；输入使用 `candidate_trajectory_view`，保留问题、工具证据、解析动作、Hook-model 输出、Hook change、预算状态与最终结果，省略重复 `model_input`、reasoning、usage 和无关运行事件。它独立把 trace-visible decision inputs 对照 Mechanism Spec 判为 positive、negative 或 uncertain，区分正确 fallback 和遗漏正向动作，不能把 Hook-model classification 当作权威事实。非 faithful 结果必须标明 `failure_layer`、决定性输入摘要、修复义务和 `recommended_route`；evaluator/parsing 问题还要给出 predicate 与期望/实际标签。Controller 聚合这些角色判断并回流到 evidence、mechanism 或 implementation。
 - Candidate Reviewer 返回 `accept`、`revise` 或 `reject`；它不能用形式上的 conformance 或 fallback-only 行为替代正向机制证据，`revise` 必须给出 evidence、mechanism 或 implementation 目标和下一义务。
 
 ## 运行与资源
@@ -42,6 +42,6 @@ Intervention Worker 不解析文本工具 envelope。每次 activation 将当前
 
 字段级 JSON Schema 以运行时 `model_json_schema()` 和 artifact 中的 `schema_digest` 为准；本文不复制完整 Schema，避免与代码双重维护。
 
-`runtime_inputs` 是非空、去重的受控字符串数组，可选值为 `task`、`conversation`、`tool`、`model_io`、`parsed_output`、`final_decision`、`trajectory`、`persistent_state`。它表达实现需要的运行时信息类别，不表达具体 API；`decision_inputs` 仍只描述机制语义需要的值。Capability packet v8 按 Topic 加载完整相关 symbol contract、Python-native reference、phase 生命周期、推荐用法与禁用用法，并可附带通用 reference Hook。`query_hook_api` 可按 Topic、精确 symbol 或搜索短语查询；Topic 与 packet 内 symbol 的重取不消耗查询预算，未知查询返回建议，只有新的有效 symbol 查询计入最多 12 次的预算。
+`runtime_inputs` 是非空、去重的受控字符串数组，可选值为 `task`、`conversation`、`tool`、`model_io`、`parsed_output`、`final_decision`、`trajectory`、`persistent_state`。它表达实现需要的运行时信息类别，不表达具体 API；`decision_inputs` 仍只描述机制语义需要的值。Capability packet v9 按 Topic 加载完整相关 symbol contract、Python-native reference、phase 生命周期、推荐用法与禁用用法，并包含 phase 的 guards、三值 decision contract 与局部 fallback；它可附带通用 reference Hook。`query_hook_api` 可按 Topic、精确 symbol 或搜索短语查询；Topic 与 packet 内 symbol 的重取不消耗查询预算，未知查询返回建议，只有新的有效 symbol 查询计入最多 12 次的预算。
 
 逐角色的实际路由、资源义务、Prompt 边界、程序后处理和审计关注项见[当前 Teacher Roles 代码分析](../audits/teacher_roles_current_code_audit.md)。

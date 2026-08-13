@@ -12,8 +12,10 @@ from search_harness._internal.runtime_config import (
     evolution_effect_values,
     legacy_runtime_values,
     read_runtime_config,
+    teacher_judge_thinking_mode,
     teacher_role_budget,
 )
+from search_harness.evolution.control.domain import EvolutionControlConfig
 
 
 class RuntimeConfigTest(unittest.TestCase):
@@ -44,6 +46,7 @@ class RuntimeConfigTest(unittest.TestCase):
         effects = evolution_effect_values(config)
 
         self.assertEqual(control["max_trials_per_hypothesis"], 5)
+        self.assertEqual(control["trial_batch_size"], 3)
         self.assertEqual(control["max_trial_assignments"], 14)
         self.assertEqual(effects["rollouts_per_example"], 3)
         self.assertEqual(effects["candidate_error_streak_limit"], 3)
@@ -53,6 +56,22 @@ class RuntimeConfigTest(unittest.TestCase):
         config["evolution"]["control"]["max_trial_assignments"] = 4
         with self.assertRaisesRegex(ValueError, "must be at least"):
             evolution_control_values(config)
+
+    def test_rejects_trial_batch_larger_than_trial_budget(self) -> None:
+        config = _evolution_config()
+        config["evolution"]["control"]["trial_batch_size"] = 6
+
+        with self.assertRaisesRegex(ValueError, "must not exceed"):
+            evolution_control_values(config)
+
+    def test_control_config_validates_trial_batch_size(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must be positive"):
+            EvolutionControlConfig(trial_batch_size=0)
+        with self.assertRaisesRegex(ValueError, "must not exceed"):
+            EvolutionControlConfig(
+                max_trials_per_hypothesis=2,
+                trial_batch_size=3,
+            )
 
     def test_rejects_incomplete_evolution_effect_settings(self) -> None:
         config = _evolution_config()
@@ -93,10 +112,15 @@ class RuntimeConfigTest(unittest.TestCase):
     def test_resolves_each_teacher_role_budget_independently(self) -> None:
         config = {
             "teacher_roles": {
-                "trial_reviewer": {"max_tokens": 4096, "max_turns": 8},
+                "trial_reviewer": {
+                    "max_tokens": 4096,
+                    "max_turns": 8,
+                    "thinking_mode": "disabled",
+                },
                 "evidence_reviewer": {
                     "max_tokens": 12288,
                     "max_turns": 20,
+                    "thinking_mode": "enabled",
                 },
             }
         }
@@ -114,11 +138,53 @@ class RuntimeConfigTest(unittest.TestCase):
             default_max_turns=3,
         )
 
-        self.assertEqual((trial.max_tokens, trial.max_turns), (4096, 8))
         self.assertEqual(
-            (evidence.max_tokens, evidence.max_turns),
-            (12288, 20),
+            (trial.max_tokens, trial.max_turns, trial.thinking_mode),
+            (4096, 8, "disabled"),
         )
+        self.assertEqual(
+            (
+                evidence.max_tokens,
+                evidence.max_turns,
+                evidence.thinking_mode,
+            ),
+            (12288, 20, "enabled"),
+        )
+
+    def test_teacher_role_thinking_inherits_and_validates(self) -> None:
+        inherited = teacher_role_budget(
+            {},
+            "failure_analyst",
+            default_max_tokens=1024,
+            default_max_turns=3,
+            default_thinking_mode="enabled",
+        )
+        self.assertEqual("enabled", inherited.thinking_mode)
+
+        with self.assertRaisesRegex(ValueError, "thinking_mode"):
+            teacher_role_budget(
+                {"teacher_roles": {"failure_analyst": {"thinking_mode": "auto"}}},
+                "failure_analyst",
+                default_max_tokens=1024,
+                default_max_turns=3,
+            )
+
+    def test_teacher_judge_thinking_is_independent(self) -> None:
+        self.assertEqual(
+            "disabled",
+            teacher_judge_thinking_mode(
+                {"teacher_judge": {"thinking_mode": "disabled"}},
+                default="enabled",
+            ),
+        )
+        self.assertEqual(
+            "enabled",
+            teacher_judge_thinking_mode({}, default="enabled"),
+        )
+        with self.assertRaisesRegex(ValueError, "thinking_mode"):
+            teacher_judge_thinking_mode(
+                {"teacher_judge": {"thinking_mode": "auto"}}
+            )
 
 
 def _evolution_config() -> dict[str, Any]:
@@ -127,6 +193,7 @@ def _evolution_config() -> dict[str, Any]:
             "control": {
                 "max_generations": 5,
                 "max_trials_per_hypothesis": 5,
+                "trial_batch_size": 3,
                 "max_trial_assignments": 14,
                 "max_hypothesis_revisions": 2,
                 "max_mechanism_revisions": 2,

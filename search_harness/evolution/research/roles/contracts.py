@@ -65,6 +65,13 @@ class HypothesisEvaluationSpec(TeacherPayload):
         return self
 
 
+class HypothesisEvidenceObligation(TeacherPayload):
+    """Researcher 为当前假设补充的一项特有证据义务。"""
+
+    obligation: str = Field(min_length=1, max_length=240)
+    rationale: str = Field(min_length=1, max_length=240)
+
+
 HookPhaseName = Literal[
     "post_prompt",
     "post_model",
@@ -95,6 +102,10 @@ class InterventionHypothesis(TeacherPayload):
     )
     evaluation: HypothesisEvaluationSpec
     applicability: str = Field(min_length=1, max_length=300)
+    special_evidence_obligations: list[HypothesisEvidenceObligation] = Field(
+        default_factory=list,
+        max_length=2,
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -138,6 +149,11 @@ class InterventionHypothesis(TeacherPayload):
             raise ValueError(
                 "intervention fork_phase must match the first phase_plan item"
             )
+        obligations = [
+            item.obligation for item in self.special_evidence_obligations
+        ]
+        if len(obligations) != len(set(obligations)):
+            raise ValueError("special evidence obligations must be unique")
         return self
 
     @property
@@ -215,18 +231,100 @@ class EvidenceReview(TeacherPayload):
 
 
 DecisionEvaluator = Literal["deterministic", "hook_model"]
+DecisionLabel = Literal["positive", "negative", "uncertain"]
+
+
+class MechanismDecisionEvidence(TeacherPayload):
+    """支持判定边界的去案例化正例、负例和不确定类。"""
+
+    positive: list[str] = Field(min_length=1, max_length=4)
+    negative: list[str] = Field(min_length=1, max_length=4)
+    uncertain: list[str] = Field(default_factory=list, max_length=4)
+
+
+class MechanismDecisionContract(TeacherPayload):
+    """一个 phase 中可被实现和独立探测的单一判定任务。"""
+
+    predicate: str = Field(min_length=1)
+    positive_rule: str = Field(min_length=1)
+    negative_rule: str = Field(min_length=1)
+    uncertain_rule: str = Field(min_length=1)
+    output_labels: list[DecisionLabel] = Field(min_length=3, max_length=3)
+    evidence_coverage: MechanismDecisionEvidence
+
+    @model_validator(mode="after")
+    def validate_output_labels(self) -> "MechanismDecisionContract":
+        expected = ["positive", "negative", "uncertain"]
+        if self.output_labels != expected:
+            raise ValueError(
+                "decision contract output_labels must be exactly "
+                "positive, negative, uncertain in that order"
+            )
+        return self
+
+
+class MechanismPhaseFallback(TeacherPayload):
+    """一个 phase 对非触发、不确定和预算耗尽的明确行为。"""
+
+    negative: str = Field(min_length=1)
+    uncertain: str = Field(min_length=1)
+    budget_exhausted: str = Field(min_length=1)
 
 
 class MechanismPhaseRule(TeacherPayload):
     """一个可由 Student Harness 实现的 phase 局部决策与动作。"""
 
     phase: HookPhaseName
-    trigger_condition: str = Field(min_length=1)
+    guards: list[str] = Field(default_factory=list)
+    decision_contract: MechanismDecisionContract
     decision_inputs: list[str] = Field(min_length=1)
     runtime_inputs: list[RuntimeInputId] = Field(min_length=1)
     decision_evaluator: DecisionEvaluator
     action: str = Field(min_length=1)
+    fallback: MechanismPhaseFallback
     activation_budget: int = Field(default=1, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_rule(cls, value: object) -> object:
+        """把历史自由文本触发和回退投影到结构化 phase 协议。"""
+
+        if not isinstance(value, dict):
+            return value
+        normalized = dict(value)
+        trigger = normalized.pop("trigger_condition", None)
+        if "decision_contract" not in normalized and isinstance(trigger, str):
+            normalized["decision_contract"] = {
+                "predicate": trigger,
+                "positive_rule": trigger,
+                "negative_rule": (
+                    "The observable decision inputs establish that the "
+                    "predicate is false."
+                ),
+                "uncertain_rule": (
+                    "The observable decision inputs cannot establish either "
+                    "the positive or negative rule."
+                ),
+                "output_labels": ["positive", "negative", "uncertain"],
+                "evidence_coverage": {
+                    "positive": [trigger],
+                    "negative": [
+                        "The observable inputs establish that the legacy "
+                        "predicate is false."
+                    ],
+                    "uncertain": [
+                        "Legacy artifact has no structured boundary evidence."
+                    ],
+                },
+            }
+        fallback = normalized.get("fallback")
+        if isinstance(fallback, str):
+            normalized["fallback"] = {
+                "negative": fallback,
+                "uncertain": fallback,
+                "budget_exhausted": fallback,
+            }
+        return normalized
 
     @field_validator("runtime_inputs")
     @classmethod
@@ -251,7 +349,6 @@ class MechanismSpec(TeacherPayload):
     )
     behavioral_pseudocode: str = Field(min_length=1, max_length=3000)
     state_scope: str = Field(min_length=1)
-    fallback: str = Field(min_length=1)
     expected_behavior: str = Field(min_length=1)
     evidence_refs: list[str] = Field(min_length=1)
     required_capabilities: list[str] = Field(default_factory=list)
@@ -275,11 +372,16 @@ class MechanismSpec(TeacherPayload):
         if not legacy_fields <= set(value):
             return value
         normalized = dict(value)
+        legacy_fallback = normalized.pop(
+            "fallback",
+            "Leave the current phase decision unchanged.",
+        )
         phase_rule = {
             "phase": normalized.pop("trigger_phase"),
             "trigger_condition": normalized.pop("trigger_condition"),
             "decision_inputs": normalized.pop("decision_inputs"),
             "action": normalized.pop("action"),
+            "fallback": legacy_fallback,
             "activation_budget": normalized.pop(
                 "activation_budget",
                 1,
@@ -292,6 +394,73 @@ class MechanismSpec(TeacherPayload):
                 "decision_evaluator"
             )
         normalized["phase_rules"] = [phase_rule]
+        return normalized
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_phase_rules(cls, value: object) -> object:
+        """仅在读取历史 artifact 时补齐旧 phase rule 的结构化边界。"""
+
+        if not isinstance(value, dict) or "phase_rules" not in value:
+            return value
+        normalized = dict(value)
+        shared_fallback = normalized.pop(
+            "fallback",
+            "Leave the current phase decision unchanged.",
+        )
+        rules = normalized.get("phase_rules")
+        if not isinstance(rules, list):
+            return normalized
+        converted = []
+        for raw_rule in rules:
+            if not isinstance(raw_rule, dict):
+                converted.append(raw_rule)
+                continue
+            rule = dict(raw_rule)
+            trigger = rule.pop("trigger_condition", None)
+            if "decision_contract" not in rule and isinstance(trigger, str):
+                rule["decision_contract"] = {
+                    "predicate": trigger,
+                    "positive_rule": trigger,
+                    "negative_rule": (
+                        "The observable decision inputs establish that the "
+                        "predicate is false."
+                    ),
+                    "uncertain_rule": (
+                        "The observable decision inputs cannot establish "
+                        "either the positive or negative rule."
+                    ),
+                    "output_labels": [
+                        "positive",
+                        "negative",
+                        "uncertain",
+                    ],
+                    "evidence_coverage": {
+                        "positive": [trigger],
+                        "negative": [
+                            "The observable inputs establish that the legacy "
+                            "predicate is false."
+                        ],
+                        "uncertain": [
+                            "Legacy artifact has no structured boundary evidence."
+                        ],
+                    },
+                }
+            if "fallback" not in rule:
+                rule["fallback"] = {
+                    "negative": str(shared_fallback),
+                    "uncertain": str(shared_fallback),
+                    "budget_exhausted": str(shared_fallback),
+                }
+            elif isinstance(rule["fallback"], str):
+                fallback = rule["fallback"]
+                rule["fallback"] = {
+                    "negative": fallback,
+                    "uncertain": fallback,
+                    "budget_exhausted": fallback,
+                }
+            converted.append(rule)
+        normalized["phase_rules"] = converted
         return normalized
 
     @model_validator(mode="after")
@@ -313,7 +482,7 @@ class MechanismSpec(TeacherPayload):
     def trigger_condition(self) -> str:
         """兼容读取单阶段机制的触发条件。"""
 
-        return self._single_rule().trigger_condition
+        return self._single_rule().decision_contract.predicate
 
     @property
     def decision_inputs(self) -> list[str]:
@@ -338,6 +507,12 @@ class MechanismSpec(TeacherPayload):
         """兼容读取单阶段机制的动作。"""
 
         return self._single_rule().action
+
+    @property
+    def fallback(self) -> str:
+        """兼容读取单阶段机制的统一不确定回退描述。"""
+
+        return self._single_rule().fallback.uncertain
 
     @property
     def activation_budget(self) -> int:
@@ -438,7 +613,12 @@ class InterventionWorkerResult(TeacherPayload):
         return self
 
 
-CompilerDecision = Literal["submitted", "needs_revision"]
+CompilerDecision = Literal[
+    "submitted",
+    "needs_mechanism_revision",
+    "needs_evidence",
+    "implementation_blocked",
+]
 
 
 class CompilerResult(TeacherPayload):
@@ -448,15 +628,42 @@ class CompilerResult(TeacherPayload):
     candidate_ref: str | None = None
     implementation_summary: str = Field(min_length=1)
     unresolved_risk: str | None = None
+    next_obligation: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_decision(cls, value: object) -> object:
+        """把历史 needs_revision 结果映射为明确的机制修订。"""
+
+        if not isinstance(value, dict) or value.get("decision") != "needs_revision":
+            return value
+        normalized = dict(value)
+        normalized["decision"] = "needs_mechanism_revision"
+        normalized.setdefault(
+            "next_obligation",
+            normalized.get("implementation_summary"),
+        )
+        return normalized
 
     @model_validator(mode="after")
     def validate_candidate_reference(self) -> "CompilerResult":
-        if self.decision == "submitted" and not self.candidate_ref:
-            raise ValueError("submitted Compiler result requires candidate_ref")
-        if self.decision == "needs_revision" and self.candidate_ref is not None:
-            raise ValueError(
-                "needs_revision Compiler result must not include candidate_ref"
-            )
+        if self.decision == "submitted":
+            if not self.candidate_ref:
+                raise ValueError("submitted Compiler result requires candidate_ref")
+            if self.next_obligation is not None:
+                raise ValueError(
+                    "submitted Compiler result must not include next_obligation"
+                )
+        else:
+            if self.candidate_ref is not None:
+                raise ValueError(
+                    f"{self.decision} Compiler result must not include "
+                    "candidate_ref"
+                )
+            if not self.next_obligation:
+                raise ValueError(
+                    f"{self.decision} Compiler result requires next_obligation"
+                )
         return self
 
 
@@ -516,11 +723,88 @@ class TrialReviewerInput(TeacherPayload):
     trial_ref: str = Field(min_length=1)
 
 
+PredicateObservationLabel = Literal["positive", "negative", "uncertain"]
+PhaseExecutionStatus = Literal[
+    "intervention_applied",
+    "correct_non_intervention",
+    "not_reached",
+    "invalid_execution",
+    "inconclusive",
+]
+
+
+class TrialPredicateObservation(TeacherPayload):
+    """一条 Trial 对单个 phase activation predicate 的结构化观察。"""
+
+    phase: HookPhaseName
+    predicate_label: PredicateObservationLabel
+    decisive_observation: str = Field(min_length=1, max_length=500)
+    phase_execution: PhaseExecutionStatus
+    observed_effect: str | None = Field(default=None, max_length=500)
+    outcome_evidence: str | None = Field(default=None, max_length=500)
+
+    @field_validator("observed_effect", "outcome_evidence", mode="before")
+    @classmethod
+    def normalize_optional_evidence(cls, value: object) -> object:
+        """把模型常用的空文本表示归一为空值。"""
+
+        if value is None:
+            return None
+        if isinstance(value, str) and value.strip().lower() in {
+            "",
+            "null",
+            "none",
+            "n/a",
+        }:
+            return None
+        return value
+
+
 class TrialReview(TeacherPayload):
     """Trial Reviewer 对一条完整 Intervention 轨迹的事实分析。"""
 
     trial_ref: str = Field(min_length=1)
+    predicate_observations: list[TrialPredicateObservation] = Field(
+        default_factory=list,
+        max_length=4,
+    )
     assessment: str = Field(min_length=1, max_length=4000)
+
+    @model_validator(mode="after")
+    def validate_predicate_observations(self) -> "TrialReview":
+        phases = [item.phase for item in self.predicate_observations]
+        if len(phases) != len(set(phases)):
+            raise ValueError("trial predicate observation phases must be unique")
+        return self
+
+
+class PhaseEvidenceCoverage(TeacherPayload):
+    """程序聚合的单 phase 正例、负例和不确定观察覆盖。"""
+
+    phase: HookPhaseName
+    positive_count: int = Field(ge=0)
+    negative_count: int = Field(ge=0)
+    uncertain_count: int = Field(ge=0)
+    positive_distinct_examples: int = Field(ge=0)
+    negative_distinct_examples: int = Field(ge=0)
+    intervention_applied_count: int = Field(ge=0)
+    correct_non_intervention_count: int = Field(ge=0)
+
+
+class EvidenceCoverageSummary(TeacherPayload):
+    """Evidence Reviewer 可见的程序维护证据覆盖摘要。"""
+
+    required_distinct_examples: int = Field(ge=1)
+    required_positive_per_phase: int = Field(ge=1)
+    required_negative_per_phase: int = Field(ge=1)
+    observed_distinct_examples: int = Field(ge=0)
+    phase_coverage: list[PhaseEvidenceCoverage] = Field(max_length=4)
+    unmet_requirements: list[str]
+    special_obligations: list[HypothesisEvidenceObligation] = Field(
+        default_factory=list,
+        max_length=2,
+    )
+    default_requirements_met: bool
 
 
 class EvidenceReviewBudget(TeacherPayload):
@@ -563,6 +847,7 @@ class EvidenceReviewerInput(TeacherPayload):
     hypothesis: InterventionHypothesis
     aggregate_observations: dict[str, Any]
     trial_reviews: list[TrialReview] = Field(min_length=1)
+    coverage_summary: EvidenceCoverageSummary | None = None
     budget: EvidenceReviewBudget
     prior_obligation: str | None = None
 
@@ -572,6 +857,8 @@ class MechanismDistillerInput(TeacherPayload):
 
     hypothesis: InterventionHypothesis
     review: EvidenceReview
+    trial_reviews: list[TrialReview] = Field(min_length=1)
+    coverage_summary: EvidenceCoverageSummary
     evidence_refs: list[str] = Field(min_length=1)
     budget: EvidenceReviewBudget
     capability_constraints: list[str] = Field(default_factory=list)
@@ -621,6 +908,27 @@ ConformanceVerdict = Literal[
     "runtime_error",
     "inconclusive",
 ]
+ConformanceFailureLayer = Literal[
+    "projection",
+    "evaluator",
+    "parsing",
+    "state",
+    "action",
+    "integration",
+    "ambiguous_spec",
+]
+ConformanceDecisionLabel = Literal[
+    "positive",
+    "negative",
+    "uncertain",
+    "parse_error",
+    "unavailable",
+]
+ConformanceRevisionRoute = Literal[
+    "implementation",
+    "mechanism",
+    "evidence",
+]
 
 
 class ConformanceReviewerInput(TeacherPayload):
@@ -641,6 +949,12 @@ class ConformanceReview(TeacherPayload):
     observed_phases: list[HookPhaseName] = Field(default_factory=list)
     assessment: str = Field(min_length=1, max_length=1200)
     repair_obligation: str | None = Field(default=None, max_length=500)
+    predicate_ref: str | None = Field(default=None, max_length=200)
+    expected_label: ConformanceDecisionLabel | None = None
+    observed_label: ConformanceDecisionLabel | None = None
+    failure_layer: ConformanceFailureLayer | None = None
+    decisive_input_summary: str | None = Field(default=None, max_length=500)
+    recommended_route: ConformanceRevisionRoute | None = None
 
     @model_validator(mode="after")
     def validate_repair_obligation(self) -> "ConformanceReview":
@@ -655,11 +969,60 @@ class ConformanceReview(TeacherPayload):
                 raise ValueError(
                     "faithful conformance finding must not request repair"
                 )
-        elif not self.repair_obligation:
+            diagnostics = (
+                self.predicate_ref,
+                self.expected_label,
+                self.observed_label,
+                self.failure_layer,
+                self.decisive_input_summary,
+                self.recommended_route,
+            )
+            if any(value is not None for value in diagnostics):
+                raise ValueError(
+                    "faithful conformance finding must not include failure "
+                    "diagnostics"
+                )
+            return self
+        if not self.repair_obligation:
             raise ValueError(
                 f"{self.verdict} conformance finding requires "
                 "repair_obligation"
             )
+        if self.failure_layer is None or self.recommended_route is None:
+            raise ValueError(
+                "non-faithful conformance finding requires failure_layer "
+                "and recommended_route"
+            )
+        if not self.decisive_input_summary:
+            raise ValueError(
+                "non-faithful conformance finding requires "
+                "decisive_input_summary"
+            )
+        if self.failure_layer == "evaluator":
+            if (
+                not self.predicate_ref
+                or self.expected_label is None
+                or self.observed_label is None
+            ):
+                raise ValueError(
+                    "evaluator mismatch requires predicate_ref, "
+                    "expected_label, and observed_label"
+                )
+        if self.failure_layer == "parsing":
+            if not self.predicate_ref or self.observed_label != "parse_error":
+                raise ValueError(
+                    "parsing mismatch requires predicate_ref and "
+                    "observed_label=parse_error"
+                )
+        if self.failure_layer == "ambiguous_spec":
+            if not self.predicate_ref:
+                raise ValueError(
+                    "ambiguous_spec finding requires predicate_ref"
+                )
+            if self.recommended_route != "mechanism":
+                raise ValueError(
+                    "ambiguous_spec finding must route to mechanism"
+                )
         return self
 
 
@@ -696,7 +1059,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=HypothesisResearcherInput,
         output_contract_id="intervention_hypothesis",
-        output_contract_version=3,
+        output_contract_version=4,
         output_type=InterventionHypothesis,
     ),
     "evidence_reviewer": TeacherRoleDefinition(
@@ -712,7 +1075,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=TrialReviewerInput,
         output_contract_id="trial_review",
-        output_contract_version=1,
+        output_contract_version=2,
         output_type=TrialReview,
     ),
     "mechanism_distiller": TeacherRoleDefinition(
@@ -736,7 +1099,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=CompilerInput,
         output_contract_id="compiler_result",
-        output_contract_version=1,
+        output_contract_version=2,
         output_type=CompilerResult,
     ),
     "candidate_reviewer": TeacherRoleDefinition(
@@ -752,7 +1115,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=ConformanceReviewerInput,
         output_contract_id="conformance_review",
-        output_contract_version=2,
+        output_contract_version=3,
         output_type=ConformanceReview,
     ),
 }

@@ -25,6 +25,53 @@ from search_harness.evolution.research.resources.base import (
 
 
 class TeacherResourceTest(unittest.TestCase):
+    def test_hook_model_mechanism_requires_probe_before_submission(self) -> None:
+        resources = TeacherResources()
+        draft_id = resources.mechanisms.create(goal="Classify evidence support.")
+        resources.mechanisms.add_phase(
+            draft_id=draft_id,
+            phase="pre_final",
+            guards=[],
+            predicate="Does evidence support the candidate?",
+            positive_rule="Evidence directly supports the candidate.",
+            negative_rule="Evidence directly contradicts the candidate.",
+            uncertain_rule="Evidence establishes neither boundary.",
+            positive_evidence=["Direct support is present."],
+            negative_evidence=["Direct contradiction is present."],
+            uncertain_evidence=["Only related evidence is present."],
+            decision_inputs=["candidate", "retrieved evidence"],
+            runtime_inputs=["tool", "final_decision"],
+            decision_evaluator="hook_model",
+            action="Defer the unsupported final answer.",
+            fallback_negative="Leave the decision unchanged.",
+            fallback_uncertain="Leave the decision unchanged.",
+            fallback_budget_exhausted="Leave the decision unchanged.",
+            activation_budget=1,
+        )
+        resources.mechanisms.complete(
+            draft_id=draft_id,
+            behavioral_pseudocode=(
+                "ON pre_final: classify evidence; defer only on positive."
+            ),
+            state_scope="One rollout-local activation flag.",
+            expected_behavior="Unsupported finalization is deferred once.",
+        )
+        mechanism_ref = resources.mechanisms.validate(
+            draft_id=draft_id,
+            evidence_refs=["trial_001"],
+        )
+        result = MechanismDistillation(
+            decision="distilled",
+            mechanism_ref=mechanism_ref,
+            rationale="The bounded behavior is supported.",
+        )
+
+        with self.assertRaisesRegex(ValueError, "must run"):
+            resources.validate_mechanism_distillation(result)
+
+        resources.hook_evaluator_probes.append({"draft_id": draft_id})
+        resources.validate_mechanism_distillation(result)
+
     def test_distiller_cannot_request_evidence_after_budget_exhaustion(
         self,
     ) -> None:
@@ -56,6 +103,22 @@ class TeacherResourceTest(unittest.TestCase):
                 review={
                     "decision": "ready_to_distill",
                     "assessment": "The bounded behavior is supported.",
+                },
+                trial_reviews=[
+                    {
+                        "trial_ref": "trial_001",
+                        "assessment": "The intervention was observed.",
+                    }
+                ],
+                coverage_summary={
+                    "required_distinct_examples": 3,
+                    "required_positive_per_phase": 2,
+                    "required_negative_per_phase": 2,
+                    "observed_distinct_examples": 3,
+                    "phase_coverage": [],
+                    "unmet_requirements": [],
+                    "special_obligations": [],
+                    "default_requirements_met": True,
                 },
                 evidence_refs=["trial_001"],
                 budget={
@@ -215,6 +278,89 @@ class TeacherResourceTest(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ValueError, "cannot continue"):
+            resources.validate_evidence_review(review)
+
+    def test_review_cannot_distill_with_unmet_default_coverage(self) -> None:
+        """验证程序覆盖摘要不足时不能靠 Reviewer 主观放行蒸馏。"""
+
+        hypothesis = InterventionHypothesis.model_validate(
+            {
+                "fork_phase": "post_tool",
+                "phase_plan": [
+                    {
+                        "phase": "post_tool",
+                        "activation_condition": "A gap is visible.",
+                        "instruction": "Ask for another search.",
+                        "expected_effect": "The Student searches again.",
+                    }
+                ],
+                "evaluation": {
+                    "primary_signal": "next_action",
+                    "success_condition": "Another search occurs.",
+                    "falsifier": "No search occurs.",
+                },
+                "applicability": "Partial-evidence retrieval cases.",
+            }
+        )
+        resources = TeacherResources()
+        resources.bind_role_input(
+            EvidenceReviewerInput(
+                hypothesis=hypothesis,
+                aggregate_observations={"trial_count": 1},
+                trial_reviews=[
+                    {
+                        "trial_ref": "trial_001",
+                        "assessment": "One positive trial was observed.",
+                    }
+                ],
+                coverage_summary={
+                    "required_distinct_examples": 3,
+                    "required_positive_per_phase": 2,
+                    "required_negative_per_phase": 2,
+                    "observed_distinct_examples": 1,
+                    "phase_coverage": [
+                        {
+                            "phase": "post_tool",
+                            "positive_count": 1,
+                            "negative_count": 0,
+                            "uncertain_count": 0,
+                            "positive_distinct_examples": 1,
+                            "negative_distinct_examples": 0,
+                            "intervention_applied_count": 1,
+                            "correct_non_intervention_count": 0,
+                        }
+                    ],
+                    "unmet_requirements": [
+                        "distinct examples: 1/3",
+                        "post_tool positive distinct examples: 1/2",
+                        "post_tool negative distinct examples: 0/2",
+                    ],
+                    "default_requirements_met": False,
+                },
+                budget={
+                    "max_trials_per_hypothesis": 5,
+                    "trials_used": 1,
+                    "trials_remaining": 4,
+                    "max_trial_assignments": 12,
+                    "assignments_used": 1,
+                    "assignments_remaining": 11,
+                    "conclusion_required": False,
+                },
+            )
+        )
+        review = EvidenceReview(
+            decision="ready_to_distill",
+            phase_findings=[
+                {
+                    "phase": "post_tool",
+                    "status": "supported",
+                    "assessment": "The one observed trial was positive.",
+                }
+            ],
+            assessment="The single case looks promising.",
+        )
+
+        with self.assertRaisesRegex(ValueError, "coverage requirements"):
             resources.validate_evidence_review(review)
 
     def test_trial_evidence_returns_trace_canonical_runs(
@@ -813,11 +959,21 @@ class TeacherResourceTest(unittest.TestCase):
         store.add_phase(
             draft_id=draft_id,
             phase="post_tool",
-            trigger_condition="Target relation is absent.",
+            guards=[],
+            predicate="Is the target relation absent?",
+            positive_rule="The required target relation is absent.",
+            negative_rule="The required target relation is present.",
+            uncertain_rule="The result cannot establish presence or absence.",
+            positive_evidence=["A result omitting the target relation."],
+            negative_evidence=["A result stating the target relation."],
+            uncertain_evidence=[],
             decision_inputs=["question", "latest tool result"],
             runtime_inputs=["task", "tool"],
             decision_evaluator="deterministic",
             action="Append a generic evidence-gap instruction.",
+            fallback_negative="Leave the current decision unchanged.",
+            fallback_uncertain="Leave the current decision unchanged.",
+            fallback_budget_exhausted="Leave the current decision unchanged.",
             activation_budget=1,
         )
 
@@ -838,7 +994,6 @@ class TeacherResourceTest(unittest.TestCase):
                 "  do nothing when uncertain"
             ),
             state_scope="Until the next model generation.",
-            fallback="Do nothing when uncertain.",
             expected_behavior="Issue a relevant follow-up retrieval.",
         )
         mechanism_ref = store.validate(

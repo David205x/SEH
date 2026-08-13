@@ -85,9 +85,7 @@ def validate_role_output(
     if isinstance(output, EvidenceReview):
         resources.validate_evidence_review(output)
     if isinstance(output, TrialReview):
-        if resources.trials is None:
-            raise ValueError("Trial Reviewer resources are unavailable")
-        resources.trials.validate_trial_review(output)
+        resources.validate_trial_review(output)
     if isinstance(output, MechanismDistillation):
         resources.validate_mechanism_distillation(output)
         if output.decision == "distilled":

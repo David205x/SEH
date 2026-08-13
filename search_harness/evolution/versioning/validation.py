@@ -144,7 +144,10 @@ class HarnessValidator:
                         env_file=env_file,
                     )
                     hooks = _assembled_hooks(assembled.extensions)
-                    errors.extend(_hook_contract_errors(hooks))
+                    contract_errors = _hook_contract_errors(hooks)
+                    errors.extend(contract_errors)
+                    if not contract_errors:
+                        errors.extend(_hook_pipeline_errors(hooks))
             except Exception as exc:
                 errors.append(f"Harness assembly failed: {type(exc).__name__}: {exc}")
 
@@ -331,7 +334,7 @@ class _ValidationHookModelBackend:
 
 
 def _hook_contract_errors(hooks: tuple[Any, ...]) -> list[str]:
-    """Exercise each subscribed phase against representative non-empty trace."""
+    """Exercise each Hook/phase alone for precise contract diagnostics."""
 
     errors: list[str] = []
     for hook in hooks:
@@ -358,6 +361,228 @@ def _hook_contract_errors(hooks: tuple[Any, ...]) -> list[str]:
                     f"{type(exc).__name__}: {exc}"
                 )
     return errors
+
+
+def _hook_pipeline_errors(hooks: tuple[BaseHook, ...]) -> list[str]:
+    """Exercise the assembled Hook Pipeline across one synthetic rollout."""
+
+    try:
+        pipeline = HookPipeline(
+            hooks,
+            model_backend=_ValidationHookModelBackend(),
+        )
+    except Exception as exc:
+        return [
+            "Hook pipeline construction failed: "
+            f"{type(exc).__name__}: {exc}"
+        ]
+
+    state = AgentState(question="Validation question", max_steps=6)
+    store = pipeline.begin_run(state)
+    trace = _validation_trace()
+    phase = "not_started"
+    iteration = 0
+    try:
+        for iteration in range(1, 3):
+            state.step = iteration
+            phase = HookPhase.PRE_PROMPT
+            pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+            )
+
+            phase = HookPhase.POST_PROMPT
+            model_input = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "model_input": ModelInput.from_messages(
+                        [ChatMessage(role="user", content="Validation question")]
+                    )
+                },
+            )["model_input"]
+            state.append_model_input(model_input)
+            trace.record("model_input", state.step, model_input.to_dict())
+
+            phase = HookPhase.POST_MODEL
+            raw_output = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "raw_model_output": (
+                        '<tool_call>{"name":"search","arguments":'
+                        '{"query":"validation"}}</tool_call>'
+                    )
+                },
+            )["raw_model_output"]
+            state.append_model_output(raw_output)
+            trace.record(
+                "model_output",
+                state.step,
+                {"raw_output": raw_output},
+            )
+
+            tool_call = ToolCall(
+                name="search",
+                arguments={"query": f"validation {iteration}"},
+            )
+            phase = HookPhase.POST_PARSE
+            parsed = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "parser_input": raw_output,
+                    "parsed_output": ParsedOutput.for_tool_call(tool_call),
+                },
+            )["parsed_output"]
+            state.append_parsed_output(parsed)
+            trace.record("parsed_output", state.step, parsed.to_dict())
+
+            phase = HookPhase.PRE_TOOL
+            tool_call = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={"tool_call": tool_call},
+            )["tool_call"]
+            trace.record("tool_call", state.step, tool_call.to_dict())
+
+            phase = HookPhase.POST_TOOL
+            tool_result = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "tool_call": tool_call,
+                    "tool_result": ToolResult(
+                        name=tool_call.name,
+                        content=f"validation result {iteration}",
+                    ),
+                },
+            )["tool_result"]
+            state.append_tool_interaction(tool_call, tool_result)
+            state.append_conversation_message(
+                ChatMessage(role="assistant", content=raw_output)
+            )
+            state.append_conversation_message(
+                ChatMessage(role="user", content=tool_result.content)
+            )
+            trace.record("tool_result", state.step, tool_result.to_dict())
+
+        for final_index in range(1, 3):
+            iteration = final_index + 2
+            state.step = iteration
+            phase = HookPhase.PRE_PROMPT
+            pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+            )
+
+            phase = HookPhase.POST_PROMPT
+            model_input = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "model_input": ModelInput.from_messages(
+                        [ChatMessage(role="user", content="Validation question")]
+                    )
+                },
+            )["model_input"]
+            state.append_model_input(model_input)
+            trace.record("model_input", state.step, model_input.to_dict())
+
+            phase = HookPhase.POST_MODEL
+            raw_output = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "raw_model_output": "<final_answer>validation</final_answer>"
+                },
+            )["raw_model_output"]
+            state.append_model_output(raw_output)
+            trace.record(
+                "model_output",
+                state.step,
+                {"raw_output": raw_output},
+            )
+
+            phase = HookPhase.POST_PARSE
+            parsed = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "parser_input": raw_output,
+                    "parsed_output": ParsedOutput.for_final_answer(
+                        f"validation {final_index}"
+                    ),
+                },
+            )["parsed_output"]
+            state.append_parsed_output(parsed)
+            trace.record("parsed_output", state.step, parsed.to_dict())
+            candidate = f"validation {final_index}"
+            trace.record(
+                "final_answer_candidate",
+                state.step,
+                {"answer": candidate},
+            )
+
+            phase = HookPhase.PRE_FINAL
+            decision = pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "final_decision": FinalDecision.accept(candidate)
+                },
+            )["final_decision"]
+            event_type = (
+                "final_deferred"
+                if decision.action.value == "defer"
+                else "final_answer"
+            )
+            trace.record(event_type, state.step, decision.to_dict())
+
+        for error_index in range(1, 3):
+            iteration = error_index + 4
+            state.step = iteration
+            phase = HookPhase.ON_ERROR
+            pipeline.run_phase(
+                phase,
+                state=state,
+                store=store,
+                trajectory=trace,
+                stage_values={
+                    "error": RuntimeError(
+                        f"validation lifecycle error {error_index}"
+                    )
+                },
+            )
+    except Exception as exc:
+        return [
+            "Hook pipeline lifecycle failed "
+            f"at iteration {iteration}, phase {phase}: "
+            f"{type(exc).__name__}: {exc}"
+        ]
+    return []
 
 
 def _validation_trace() -> InMemoryTrajectoryRecorder:

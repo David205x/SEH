@@ -56,11 +56,21 @@ class MechanismReplayModel(Model):
                     {
                         "draft_id": "mechanism_draft_001",
                         "phase": "post_tool",
-                        "trigger_condition": "The target relation is absent.",
+                        "guards": [],
+                        "predicate": "Is the target relation absent?",
+                        "positive_rule": "The target relation is absent.",
+                        "negative_rule": "The target relation is present.",
+                        "uncertain_rule": "The inputs establish neither boundary.",
+                        "positive_evidence": ["The target relation was absent."],
+                        "negative_evidence": ["The target relation was present."],
+                        "uncertain_evidence": [],
                         "decision_inputs": ["question", "latest tool result"],
                         "runtime_inputs": ["task", "tool", "persistent_state"],
                         "decision_evaluator": "deterministic",
                         "action": "Append a generic evidence-gap instruction.",
+                        "fallback_negative": "Leave the decision unchanged.",
+                        "fallback_uncertain": "Leave the decision unchanged.",
+                        "fallback_budget_exhausted": "Leave the decision unchanged.",
                         "activation_budget": 1,
                     },
                 )
@@ -84,7 +94,6 @@ class MechanismReplayModel(Model):
                             "  do nothing when uncertain"
                         ),
                         "state_scope": "Until the next model generation.",
-                        "fallback": "Do nothing when uncertain.",
                         "expected_behavior": "Perform a relevant follow-up retrieval.",
                     },
                 )
@@ -222,6 +231,7 @@ class AgentsSdkRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     "key_risk": None,
                     "next_obligation": None,
                 },
+                **_distiller_evidence_fields(),
                 "evidence_refs": ["trial_001"],
                 "budget": _review_budget(trials_used=1),
                 "capability_constraints": ["Student runtime cannot call Teacher."],
@@ -329,9 +339,41 @@ def _distiller_input() -> dict[str, Any]:
             "key_risk": None,
             "next_obligation": None,
         },
+        **_distiller_evidence_fields(),
         "evidence_refs": ["trial_001"],
         "budget": _review_budget(trials_used=1),
         "capability_constraints": ["Student runtime cannot call Teacher."],
+    }
+
+
+def _distiller_evidence_fields() -> dict[str, Any]:
+    return {
+        "trial_reviews": [
+            {
+                "trial_ref": "trial_001",
+                "predicate_observations": [
+                    {
+                        "phase": "post_tool",
+                        "predicate_label": "positive",
+                        "decisive_observation": "The target relation was absent.",
+                        "phase_execution": "intervention_applied",
+                        "observed_effect": "The Student searched again.",
+                        "outcome_evidence": "A follow-up tool call was recorded.",
+                    }
+                ],
+                "assessment": "The intervention produced a follow-up search.",
+            }
+        ],
+        "coverage_summary": {
+            "required_distinct_examples": 3,
+            "required_positive_per_phase": 2,
+            "required_negative_per_phase": 2,
+            "observed_distinct_examples": 3,
+            "phase_coverage": [],
+            "unmet_requirements": [],
+            "special_obligations": [],
+            "default_requirements_met": True,
+        },
     }
 
 

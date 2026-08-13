@@ -44,13 +44,20 @@ class HotpotQAEvaluator:
 
     def build_teacher_prompt(self, case: EvaluationCase) -> str:
         return (
-            "Judge whether the predicted answer correctly answers the question given "
-            "the reference answer. Accept aliases, equivalent wording, and compatible "
-            "answer granularity; reject unsupported, contradictory, or different answers.\n\n"
+            "Decide whether the prediction gives the same answer as the reference for "
+            "the question. Score 1 for correct/accepted and 0 for incorrect/rejected.\n\n"
+            "Apply these rules:\n"
+            "1. Multiple mutually contradictory answer entities score 0, even when "
+            "one resembles the reference.\n"
+            "2. Genuine aliases, including a stage name and legal name for the same "
+            "person, may score 1. Geographic parent/child, broader/narrower, or mere "
+            "containment is not an alias or compatible granularity.\n"
+            "3. For a question saying approximately, numeric tolerance is exactly 0. "
+            "A different value scores 0; only an exact alternate representation of the "
+            "same value may score 1. Preserve the reference's intended referent.\n\n"
             f"Question:\n{case.question}\n\n"
             f"Reference answer:\n{case.golden_answer}\n\n"
-            f"Predicted answer:\n{case.predicted_answer}\n\n"
-            "Return exactly one JSON object with no markdown: {\"score\": 0} or {\"score\": 1}."
+            f"Predicted answer:\n{case.predicted_answer}"
         )
 
 

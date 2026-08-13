@@ -46,10 +46,11 @@ class CandidateVersionEffects:
         if existing is not None and existing.status == "rejected":
             return EffectResult(
                 outcome={
-                    "status": "validation_failed",
+                    "status": "unchanged_rejected_candidate",
                     "candidate_attempt_id": existing.candidate_attempt_id,
                     "candidate_digest": candidate_digest,
-                    "validation": self._candidate_attempt_validation(
+                    "rejection_reason": existing.rejection_reason,
+                    "prior_validation": self._candidate_attempt_validation(
                         existing.candidate_attempt_id
                     ),
                 },

@@ -30,7 +30,10 @@
         </section>
         <section class="panel progress-panel">
           <div class="panel-heading progress-heading">
-            <h2>事件进展</h2>
+            <div class="progress-title">
+              <h2>事件进展</h2>
+              <button class="node-filter-badge is-hidden" id="node-filter-clear" type="button"></button>
+            </div>
             <div class="filters">
               <select id="category-filter" aria-label="按类别筛选">
                 <option value="">全部类别</option>
@@ -103,7 +106,7 @@
     <template id="work-template">
       <article class="work-card">
         <a class="work-heading" href="#">
-          <span class="work-kind"></span><span class="work-status"></span><span class="work-time"></span>
+          <span class="work-number"></span><span class="work-kind"></span><span class="work-status"></span><span class="work-time"></span>
         </a>
       </article>
     </template>

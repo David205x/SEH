@@ -402,6 +402,10 @@ _Avoid_: Evolution Set、Memory Store、Evidence Store
 
 ### Research Execution
 
+**Research Attempt**:
+一个 Generation 内从 Failure Analysis 开始、以 Candidate Promotion、Rejection 或研究阶段终止为边界的单一研究方向；定向 Revision 仍属于原 Research Attempt。
+_Avoid_: Generation、Candidate Attempt、Evolution Run
+
 **Research Experiment**:
 为回答一个明确研究问题而设计的经验研究，规定假设、控制变量、比较条件和判据，并可包含一个或多个具体执行。
 _Avoid_: Evolution Run、Experiment Run

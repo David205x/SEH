@@ -29,6 +29,7 @@ class EvolutionControlCliTest(unittest.TestCase):
         for runtime_field in (
             "max_generations",
             "max_trials_per_hypothesis",
+            "trial_batch_size",
             "max_trial_assignments",
             "max_hypothesis_revisions",
             "max_mechanism_revisions",

@@ -12,9 +12,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from search_harness.integrations.openai_compatible import (
+    ProfiledHookModelBackend,
+)
+
 from ..intervention.prefix import load_rollout_record
 
 from ..mechanism.capabilities import build_compiler_capability_packet
+from ..hook_evaluator_probe import (
+    HookEvaluatorProbeRequest,
+    run_hook_evaluator_probe,
+)
 from ..roles.contracts import (
     CompilerInput,
     DecisionEvaluator,
@@ -52,6 +60,7 @@ class TeacherResourceConfig(BaseModel):
     intervention: InterventionResourceConfig | None = None
     compiler: CompilerResourceConfig | None = None
     candidate_review: CandidateReviewResourceConfig | None = None
+    hook_probe_env_file: Path | None = None
 
 
 @dataclass
@@ -69,8 +78,12 @@ class TeacherResources:
     intervention_capabilities_inspected: bool = False
     compiler_capability_packet: dict[str, Any] | None = None
     evidence_review_phases: tuple[str, ...] = ()
+    trial_review_phases: tuple[str, ...] = ()
     evidence_review_conclusion_required: bool = False
+    evidence_review_default_coverage_met: bool | None = None
     mechanism_distillation_conclusion_required: bool = False
+    hook_probe_env_file: Path | None = None
+    hook_evaluator_probes: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def from_config(cls, config: TeacherResourceConfig) -> "TeacherResources":
@@ -83,7 +96,10 @@ class TeacherResources:
                 rollout_file=config.rollout_file,
                 student_template_root=config.student_template_root,
             )
-        elif config.rollout_file is not None or config.student_template_root is not None:
+        elif (
+            config.rollout_file is not None
+            or config.student_template_root is not None
+        ):
             raise ValueError(
                 "rollout_file and student_template_root require report_dir"
             )
@@ -113,6 +129,7 @@ class TeacherResources:
             intervention=intervention,
             compiler=compiler,
             candidate_review=candidate_review,
+            hook_probe_env_file=config.hook_probe_env_file,
         )
 
     def bind_role_input(self, role_input: TeacherPayload) -> None:
@@ -134,6 +151,10 @@ class TeacherResources:
             if self.trials is None:
                 raise ValueError("Trial Reviewer requires trial resources")
             self.trials.bind_refs([role_input.trial_ref])
+            self.trial_review_phases = tuple(
+                directive.phase
+                for directive in role_input.hypothesis.phase_plan
+            )
         if isinstance(role_input, EvidenceReviewerInput):
             self.evidence_review_phases = tuple(
                 directive.phase
@@ -141,6 +162,11 @@ class TeacherResources:
             )
             self.evidence_review_conclusion_required = (
                 role_input.budget.conclusion_required
+            )
+            self.evidence_review_default_coverage_met = (
+                role_input.coverage_summary.default_requirements_met
+                if role_input.coverage_summary is not None
+                else None
             )
         if isinstance(role_input, MechanismDistillerInput):
             self.mechanism_distillation_conclusion_required = (
@@ -224,6 +250,59 @@ class TeacherResources:
                 if self.compiler is not None
                 else None
             ),
+            "hook_evaluator_probes": list(self.hook_evaluator_probes),
+        }
+
+    def probe_mechanism_evaluators(
+        self,
+        *,
+        draft_id: str,
+        evidence_refs: list[str],
+        repetitions: int,
+    ) -> dict[str, Any]:
+        """Probe every Hook-model phase against its frozen evidence labels."""
+
+        if self.hook_probe_env_file is None:
+            raise ValueError("Hook evaluator probe environment is unavailable")
+        mechanism = self.mechanisms.preview(
+            draft_id=draft_id,
+            evidence_refs=evidence_refs,
+        )
+        backend = ProfiledHookModelBackend(env_file=self.hook_probe_env_file)
+        summaries = []
+        for index, rule in enumerate(mechanism.phase_rules, start=1):
+            if rule.decision_evaluator != "hook_model":
+                continue
+            predicate_ref = f"phase-{index}:{rule.phase}"
+            request = HookEvaluatorProbeRequest.from_decision_contract(
+                predicate_ref=predicate_ref,
+                decision_contract=rule.decision_contract,
+                repetitions=repetitions,
+            )
+            summaries.append(
+                run_hook_evaluator_probe(
+                    request=request,
+                    backend=backend,
+                ).to_dict()
+            )
+        artifact = {
+            "schema_version": 1,
+            "draft_id": draft_id,
+            "evidence_refs": list(evidence_refs),
+            "summaries": summaries,
+        }
+        self.hook_evaluator_probes.append(artifact)
+        return {
+            "draft_id": draft_id,
+            "probed_phase_count": len(summaries),
+            "summaries": [
+                {
+                    key: value
+                    for key, value in summary.items()
+                    if key != "observations"
+                }
+                for summary in summaries
+            ],
         }
 
     def mark_intervention_capabilities_inspected(self) -> None:
@@ -261,6 +340,32 @@ class TeacherResources:
                 "Evidence Reviewer cannot continue when no further trial "
                 "can be scheduled; choose ready_to_distill, revise, or reject"
             )
+        if (
+            self.evidence_review_default_coverage_met is False
+            and review.decision == "ready_to_distill"
+        ):
+            raise ValueError(
+                "Evidence Reviewer cannot choose ready_to_distill while "
+                "the program-maintained default coverage requirements are "
+                "unmet; continue when budget remains, otherwise revise or reject"
+            )
+
+    def validate_trial_review(self, review: TrialReview) -> None:
+        """校验新格式 Trial Review 覆盖冻结假设的全部 phase。"""
+
+        if self.trials is None:
+            raise ValueError("Trial Reviewer resources are unavailable")
+        self.trials.validate_trial_review(review)
+        actual = tuple(
+            observation.phase
+            for observation in review.predicate_observations
+        )
+        if actual != self.trial_review_phases:
+            raise ValueError(
+                "Trial Reviewer predicate observations must follow the "
+                f"frozen phase plan: expected={list(self.trial_review_phases)}, "
+                f"actual={list(actual)}"
+            )
 
     def validate_mechanism_distillation(
         self,
@@ -276,6 +381,23 @@ class TeacherResources:
                 "Mechanism Distiller cannot request more evidence when no "
                 "further trial can be scheduled; choose distilled or "
                 "not_distillable"
+            )
+        if result.decision != "distilled" or result.mechanism_ref is None:
+            return
+        mechanism = self.mechanisms.resolve(result.mechanism_ref)
+        if not any(
+            rule.decision_evaluator == "hook_model"
+            for rule in mechanism.phase_rules
+        ):
+            return
+        draft_id = self.mechanisms.source_draft_id(result.mechanism_ref)
+        if not any(
+            probe.get("draft_id") == draft_id
+            for probe in self.hook_evaluator_probes
+        ):
+            raise ValueError(
+                "Hook-model Mechanism must run probe_mechanism_evaluators "
+                "before submission"
             )
 
     def role_session_state(self) -> dict[str, Any]:
@@ -379,7 +501,11 @@ class EvaluationEvidenceStore:
             replicate_id = _required_string(replicate, "replicate_id")
             rollouts.setdefault(example_id, {})[replicate_id] = record
 
-        template_root = student_template_root.resolve() if student_template_root else None
+        template_root = (
+            student_template_root.resolve()
+            if student_template_root
+            else None
+        )
         manifest = None
         if template_root is not None:
             manifest = _read_json_object(template_root / "harness.json")
@@ -1523,6 +1649,7 @@ class MechanismDraftStore:
     def __init__(self) -> None:
         self._drafts: dict[str, dict[str, Any]] = {}
         self._validated: dict[str, MechanismSpec] = {}
+        self._validated_sources: dict[str, str] = {}
 
     def create(
         self,
@@ -1543,11 +1670,21 @@ class MechanismDraftStore:
         *,
         draft_id: str,
         phase: str,
-        trigger_condition: str,
+        guards: list[str],
+        predicate: str,
+        positive_rule: str,
+        negative_rule: str,
+        uncertain_rule: str,
+        positive_evidence: list[str],
+        negative_evidence: list[str],
+        uncertain_evidence: list[str],
         decision_inputs: list[str],
         runtime_inputs: list[str],
         decision_evaluator: DecisionEvaluator,
         action: str,
+        fallback_negative: str,
+        fallback_uncertain: str,
+        fallback_budget_exhausted: str,
         activation_budget: int,
     ) -> None:
         """向草稿追加一个 phase 局部判断、动作和预算。"""
@@ -1564,11 +1701,32 @@ class MechanismDraftStore:
         rules.append(
             {
                 "phase": phase,
-                "trigger_condition": trigger_condition,
+                "guards": list(guards),
+                "decision_contract": {
+                    "predicate": predicate,
+                    "positive_rule": positive_rule,
+                    "negative_rule": negative_rule,
+                    "uncertain_rule": uncertain_rule,
+                    "output_labels": [
+                        "positive",
+                        "negative",
+                        "uncertain",
+                    ],
+                    "evidence_coverage": {
+                        "positive": list(positive_evidence),
+                        "negative": list(negative_evidence),
+                        "uncertain": list(uncertain_evidence),
+                    },
+                },
                 "decision_inputs": list(decision_inputs),
                 "runtime_inputs": list(runtime_inputs),
                 "decision_evaluator": decision_evaluator,
                 "action": action,
+                "fallback": {
+                    "negative": fallback_negative,
+                    "uncertain": fallback_uncertain,
+                    "budget_exhausted": fallback_budget_exhausted,
+                },
                 "activation_budget": activation_budget,
             }
         )
@@ -1579,7 +1737,6 @@ class MechanismDraftStore:
         draft_id: str,
         behavioral_pseudocode: str,
         state_scope: str,
-        fallback: str,
         expected_behavior: str,
         required_capabilities: list[str] | None = None,
         prohibited_behaviors: list[str] | None = None,
@@ -1593,7 +1750,6 @@ class MechanismDraftStore:
             {
                 "behavioral_pseudocode": behavioral_pseudocode,
                 "state_scope": state_scope,
-                "fallback": fallback,
                 "expected_behavior": expected_behavior,
                 "required_capabilities": list(required_capabilities or []),
                 "prohibited_behaviors": list(prohibited_behaviors or []),
@@ -1631,7 +1787,20 @@ class MechanismDraftStore:
         mechanism = MechanismSpec.model_validate(draft)
         mechanism_ref = f"mechanism_{len(self._validated) + 1:03d}"
         self._validated[mechanism_ref] = mechanism
+        self._validated_sources[mechanism_ref] = draft_id
         return mechanism_ref
+
+    def preview(
+        self,
+        *,
+        draft_id: str,
+        evidence_refs: list[str],
+    ) -> MechanismSpec:
+        """Validate a draft for bounded probes without assigning a stable ref."""
+
+        draft = dict(self._require_draft(draft_id))
+        draft["evidence_refs"] = list(evidence_refs)
+        return MechanismSpec.model_validate(draft)
 
     def resolve(self, mechanism_ref: str) -> MechanismSpec:
         """解析已经验证的机制引用。"""
@@ -1640,6 +1809,16 @@ class MechanismDraftStore:
             return self._validated[mechanism_ref]
         except KeyError as exc:
             raise KeyError(f"unknown validated mechanism: {mechanism_ref}") from exc
+
+    def source_draft_id(self, mechanism_ref: str) -> str:
+        """Return the draft that produced one validated mechanism."""
+
+        try:
+            return self._validated_sources[mechanism_ref]
+        except KeyError as exc:
+            raise KeyError(
+                f"unknown validated mechanism: {mechanism_ref}"
+            ) from exc
 
     def summary(self) -> dict[str, Any]:
         """返回草稿数量，不把草稿内容提前放入 Prompt。"""

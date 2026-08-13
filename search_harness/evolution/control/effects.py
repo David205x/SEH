@@ -205,6 +205,22 @@ class LocalControlEffects:
         hypothesis = InterventionHypothesis.model_validate(
             _role_output(_read_json(_ref_path(work, "hypothesis_artifact")))
         )
+        limits = _required_payload_object(work, "trial_budget")
+        max_trials = _required_positive_int(
+            limits,
+            "max_trials_per_hypothesis",
+        )
+        max_assignments = _required_positive_int(
+            limits,
+            "max_trial_assignments",
+        )
+        trial_count = _required_non_negative_int(work.payload, "trial_count")
+        assignment_count = _required_non_negative_int(
+            work.payload,
+            "assignment_count",
+        )
+        if trial_count > max_trials or assignment_count > max_assignments:
+            raise ValueError("Trial selection budget usage exceeds its maximum")
         return self._intervention_effects().select_trial(
             failure=failure,
             hypothesis=hypothesis,
@@ -213,9 +229,13 @@ class LocalControlEffects:
                 str(item)
                 for item in work.payload.get("used_assignments", [])
             },
-            assignment_count=int(
-                work.payload.get("assignment_count", 0)
+            assignment_count=assignment_count,
+            trial_batch_size=_required_positive_int(
+                limits,
+                "trial_batch_size",
             ),
+            remaining_trial_budget=max_trials - trial_count,
+            remaining_assignment_budget=max_assignments - assignment_count,
             prior_obligation=work.payload.get("prior_obligation"),
             work_dir=work_dir,
         )
@@ -231,6 +251,23 @@ class LocalControlEffects:
         hypothesis = _role_output(
             _read_json(_ref_path(work, "hypothesis_artifact"))
         )
+        raw_pending = work.payload.get("pending_assignments")
+        if raw_pending is not None:
+            assignments = _object_list(
+                raw_pending,
+                "pending_assignments",
+            )
+            if not assignments or assignments[0] != assignment:
+                raise ValueError(
+                    "active Trial assignment must be the pending batch head"
+                )
+            return await self._intervention_effects().execute_batch(
+                assignments=assignments,
+                hypothesis=hypothesis,
+                rollout_file=_ref_path(work, "rollout_file"),
+                max_workers=self.config.rollout_workers,
+                work_dir=work_dir,
+            )
         return await self._intervention_effects().execute_trial(
             assignment=assignment,
             hypothesis=hypothesis,
@@ -254,12 +291,21 @@ class LocalControlEffects:
             review_key = f"trial_review_{index:03d}_artifact"
             if review_key in work.input_refs:
                 persisted_reviews[index] = _ref_path(work, review_key)
+                continue
+            checkpoint = (
+                work_dir
+                / "trial_reviews"
+                / f"trial_review_{index:03d}.json"
+            )
+            if checkpoint.is_file():
+                persisted_reviews[index] = checkpoint.resolve()
         return await EvidenceReviewEffects(
             role_runner=self.role_runner,
             trial_reviewer_template_root=_template("trial_reviewer"),
             evidence_reviewer_template_root=_template(
                 "evidence_reviewer"
             ),
+            judge_workers=self.config.judge_workers,
         ).review(
             hypothesis=hypothesis,
             trial_paths=trial_paths,
@@ -277,12 +323,20 @@ class LocalControlEffects:
         work_dir: Path,
     ) -> EffectResult:
         trial_paths = _trial_paths(work)
+        reviewer_artifact = _read_json(
+            _ref_path(work, "reviewer_artifact")
+        )
+        reviewer_input = reviewer_artifact.get("input")
+        if not isinstance(reviewer_input, dict):
+            raise TypeError("Evidence Reviewer artifact lacks structured input")
         return await self._research_role_effects().distill_mechanism(
             hypothesis=_role_output(
                 _read_json(_ref_path(work, "hypothesis_artifact"))
             ),
-            review=_role_output(
-                _read_json(_ref_path(work, "reviewer_artifact"))
+            review=_role_output(reviewer_artifact),
+            trial_reviews=list(reviewer_input.get("trial_reviews", [])),
+            coverage_summary=dict(
+                reviewer_input.get("coverage_summary", {})
             ),
             trial_files=trial_paths,
             budget=_evidence_review_budget(work, len(trial_paths)),
@@ -299,9 +353,31 @@ class LocalControlEffects:
         state: ControlState,
         work_dir: Path,
     ) -> EffectResult:
-        mechanism = MechanismSpec.model_validate(
-            _read_json(_ref_path(work, "mechanism_file"))
-        )
+        mechanism_payload = _read_json(_ref_path(work, "mechanism_file"))
+        if _uses_legacy_mechanism_contract(mechanism_payload):
+            return EffectResult(
+                outcome={
+                    "output": {
+                        "decision": "needs_mechanism_revision",
+                        "candidate_ref": None,
+                        "implementation_summary": (
+                            "The persisted Mechanism predates the operational "
+                            "three-label decision contract."
+                        ),
+                        "unresolved_risk": (
+                            "Legacy compatibility projection cannot supply "
+                            "trial-grounded negative and uncertain boundaries."
+                        ),
+                        "next_obligation": (
+                            "Redistill the mechanism from structured Trial "
+                            "observations with explicit guards, positive, "
+                            "negative, and uncertain rules, and phase-local "
+                            "fallbacks."
+                        ),
+                    }
+                }
+            )
+        mechanism = MechanismSpec.model_validate(mechanism_payload)
         return await self._research_role_effects().compile_candidate(
             mechanism=mechanism,
             implementation_constraints=list(
@@ -662,6 +738,18 @@ def _required_string(value: dict[str, Any], name: str) -> str:
     return item
 
 
+def _uses_legacy_mechanism_contract(payload: dict[str, Any]) -> bool:
+    """Identify readable legacy specs that must be redistilled before compile."""
+
+    rules = payload.get("phase_rules")
+    if not isinstance(rules, list) or not rules:
+        return "trigger_condition" in payload
+    return any(
+        not isinstance(rule, dict) or "decision_contract" not in rule
+        for rule in rules
+    )
+
+
 def _required_object(
     value: dict[str, Any],
     name: str,
@@ -670,6 +758,17 @@ def _required_object(
     if not isinstance(item, dict):
         raise TypeError(f"{name} must be an object")
     return dict(item)
+
+
+def _object_list(value: object, name: str) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        raise TypeError(f"{name} must be a list")
+    result = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise TypeError(f"{name}[{index}] must be an object")
+        result.append(dict(item))
+    return result
 
 
 def _required_positive_int(value: dict[str, Any], name: str) -> int:

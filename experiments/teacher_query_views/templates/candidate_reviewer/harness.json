@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "harness_id": "shadow_teacher_candidate_reviewer_v1",
+  "tools": [
+    {"instance_id": "list_candidate_changes", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_list_candidate_changes"}},
+    {"instance_id": "get_candidate_case", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_get_candidate_case"}},
+    {"instance_id": "get_paired_student_trajectory", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_get_paired_student_trajectory"}},
+    {"instance_id": "get_candidate_harness_diff", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_get_candidate_harness_diff"}},
+    {"instance_id": "get_candidate_trajectory_text", "entrypoint": "tools/component.py:build", "config": {"kind": "shadow_get_candidate_trajectory_text"}}
+  ],
+  "prompt": {"instance_id": "candidate_reviewer", "entrypoint": "prompt/component.py:build", "config": {}},
+  "output": {"instance_id": "role_contract", "entrypoint": "output/component.py:build", "config": {}},
+  "extensions": []
+}

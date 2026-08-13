@@ -50,6 +50,10 @@ class ConformanceSummary:
 
     decision: str
     finding_counts: dict[str, int]
+    failure_layer_counts: dict[str, int]
+    recommended_route_counts: dict[str, int]
+    recommended_route: str | None
+    route_feedback: dict[str, tuple[str, ...]]
     per_example: dict[str, dict[str, Any]]
     compiler_feedback: tuple[str, ...]
     finding_refs: tuple[str, ...]
@@ -58,6 +62,13 @@ class ConformanceSummary:
         return {
             "decision": self.decision,
             "finding_counts": dict(self.finding_counts),
+            "failure_layer_counts": dict(self.failure_layer_counts),
+            "recommended_route_counts": dict(self.recommended_route_counts),
+            "recommended_route": self.recommended_route,
+            "route_feedback": {
+                key: list(values)
+                for key, values in self.route_feedback.items()
+            },
             "per_example": {
                 key: dict(value) for key, value in self.per_example.items()
             },
@@ -241,11 +252,45 @@ def aggregate_conformance(
     decision = (
         "pass"
         if not (set(counts) & hard_failures) and not missing_faithful
-        else "revise_implementation"
+        else "revise"
+    )
+    route_feedback = {
+        route: tuple(
+            _unique(
+                item.repair_obligation
+                for item in finding_items
+                if item.recommended_route == route
+            )
+        )
+        for route in ("evidence", "mechanism", "implementation")
+    }
+    recommended_route = next(
+        (
+            route
+            for route in ("evidence", "mechanism", "implementation")
+            if route_feedback[route]
+        ),
+        None,
     )
     return ConformanceSummary(
         decision=decision,
         finding_counts=dict(counts),
+        failure_layer_counts=dict(
+            Counter(
+                item.failure_layer
+                for item in finding_items
+                if item.failure_layer is not None
+            )
+        ),
+        recommended_route_counts=dict(
+            Counter(
+                item.recommended_route
+                for item in finding_items
+                if item.recommended_route is not None
+            )
+        ),
+        recommended_route=recommended_route,
+        route_feedback=route_feedback,
         per_example=per_example,
         compiler_feedback=tuple(_unique(compiler_feedback)),
         finding_refs=refs,
@@ -271,6 +316,12 @@ def runtime_error_finding(
             "Repair the compiled Harness so the complete Student rollout "
             f"finishes without this runtime failure: {compact_error}"
         ),
+        failure_layer="integration",
+        decisive_input_summary=(
+            "The Candidate rollout ended with an explicit runtime failure "
+            "before conformance could be established."
+        ),
+        recommended_route="implementation",
     )
 
 
@@ -383,7 +434,11 @@ def _model_input_changes(before: object, after: object) -> dict[str, Any]:
     after_messages = _messages(after)
     changes = []
     for block_id in range(1, max(len(before_messages), len(after_messages)) + 1):
-        old = before_messages[block_id - 1] if block_id <= len(before_messages) else None
+        old = (
+            before_messages[block_id - 1]
+            if block_id <= len(before_messages)
+            else None
+        )
         new = after_messages[block_id - 1] if block_id <= len(after_messages) else None
         if old == new:
             continue

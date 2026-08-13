@@ -5,6 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .roles.contracts import (
+    EvidenceCoverageSummary,
+    InterventionHypothesis,
+    TrialReview,
+)
+
+
+DEFAULT_REQUIRED_DISTINCT_EXAMPLES = 3
+DEFAULT_REQUIRED_POSITIVE_PER_PHASE = 2
+DEFAULT_REQUIRED_NEGATIVE_PER_PHASE = 2
+
 
 def aggregate_trial_observations(
     trial_artifacts: list[dict[str, Any]],
@@ -59,6 +70,95 @@ def aggregate_trial_observations(
     }
 
 
+def summarize_evidence_coverage(
+    hypothesis: InterventionHypothesis,
+    trial_artifacts: list[dict[str, Any]],
+    trial_reviews: list[TrialReview],
+) -> EvidenceCoverageSummary:
+    """Aggregate Reviewer labels against the default research coverage bar."""
+
+    if len(trial_artifacts) != len(trial_reviews):
+        raise ValueError("trial artifact and review counts must match")
+    example_ids = {
+        example_id
+        for artifact in trial_artifacts
+        if (example_id := _trial_example_id(artifact)) is not None
+    }
+    phase_coverage: list[dict[str, Any]] = []
+    unmet_requirements: list[str] = []
+    if len(example_ids) < DEFAULT_REQUIRED_DISTINCT_EXAMPLES:
+        unmet_requirements.append(
+            "distinct examples: "
+            f"{len(example_ids)}/{DEFAULT_REQUIRED_DISTINCT_EXAMPLES}"
+        )
+    for directive in hypothesis.phase_plan:
+        observations = [
+            (observation, _trial_example_id(artifact))
+            for artifact, review in zip(trial_artifacts, trial_reviews)
+            for observation in review.predicate_observations
+            if observation.phase == directive.phase
+        ]
+        positive_count = sum(
+            item.predicate_label == "positive" for item, _ in observations
+        )
+        negative_count = sum(
+            item.predicate_label == "negative" for item, _ in observations
+        )
+        uncertain_count = sum(
+            item.predicate_label == "uncertain" for item, _ in observations
+        )
+        positive_examples = {
+            example_id
+            for item, example_id in observations
+            if item.predicate_label == "positive" and example_id is not None
+        }
+        negative_examples = {
+            example_id
+            for item, example_id in observations
+            if item.predicate_label == "negative" and example_id is not None
+        }
+        phase_coverage.append(
+            {
+                "phase": directive.phase,
+                "positive_count": positive_count,
+                "negative_count": negative_count,
+                "uncertain_count": uncertain_count,
+                "positive_distinct_examples": len(positive_examples),
+                "negative_distinct_examples": len(negative_examples),
+                "intervention_applied_count": sum(
+                    item.phase_execution == "intervention_applied"
+                    for item, _ in observations
+                ),
+                "correct_non_intervention_count": sum(
+                    item.phase_execution == "correct_non_intervention"
+                    for item, _ in observations
+                ),
+            }
+        )
+        if len(positive_examples) < DEFAULT_REQUIRED_POSITIVE_PER_PHASE:
+            unmet_requirements.append(
+                f"{directive.phase} positive distinct examples: "
+                f"{len(positive_examples)}/"
+                f"{DEFAULT_REQUIRED_POSITIVE_PER_PHASE}"
+            )
+        if len(negative_examples) < DEFAULT_REQUIRED_NEGATIVE_PER_PHASE:
+            unmet_requirements.append(
+                f"{directive.phase} negative distinct examples: "
+                f"{len(negative_examples)}/"
+                f"{DEFAULT_REQUIRED_NEGATIVE_PER_PHASE}"
+            )
+    return EvidenceCoverageSummary(
+        required_distinct_examples=DEFAULT_REQUIRED_DISTINCT_EXAMPLES,
+        required_positive_per_phase=DEFAULT_REQUIRED_POSITIVE_PER_PHASE,
+        required_negative_per_phase=DEFAULT_REQUIRED_NEGATIVE_PER_PHASE,
+        observed_distinct_examples=len(example_ids),
+        phase_coverage=phase_coverage,
+        unmet_requirements=unmet_requirements,
+        special_obligations=hypothesis.special_evidence_obligations,
+        default_requirements_met=not unmet_requirements,
+    )
+
+
 def _trial_observation(artifact: dict[str, Any]) -> dict[str, Any]:
     resources = artifact.get("resource_artifacts")
     resources = resources if isinstance(resources, dict) else {}
@@ -89,6 +189,7 @@ def _trial_observation(artifact: dict[str, Any]) -> dict[str, Any]:
         branch_execution if isinstance(branch_execution, dict) else {}
     )
     return {
+        "example_id": _trial_example_id(artifact),
         "source_status": source.get("status"),
         "branch_status": branch.get("status"),
         "source_answer": source.get("answer"),
@@ -121,6 +222,14 @@ def _trial_observation(artifact: dict[str, Any]) -> dict[str, Any]:
             for change in context_changes
         ),
     }
+
+
+def _trial_example_id(artifact: dict[str, Any]) -> str | None:
+    role_input = artifact.get("input")
+    if not isinstance(role_input, dict):
+        return None
+    example_id = role_input.get("example_id")
+    return example_id if isinstance(example_id, str) and example_id else None
 
 
 def _sum_phase_counts(items: list[dict[str, Any]]) -> dict[str, int]:

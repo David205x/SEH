@@ -99,6 +99,7 @@ class InterventionRoleRunner:
             role_id,
             default_max_tokens=model_config.max_tokens,
             default_max_turns=self.max_steps_per_activation,
+            default_thinking_mode=model_config.thinking_mode,
         )
         runner = InterventionRunner(
             InterventionRuntimeConfig(
@@ -113,6 +114,11 @@ class InterventionRoleRunner:
             teacher_config=replace(
                 model_config,
                 max_tokens=role_budget.max_tokens,
+                thinking_mode=(
+                    role_budget.thinking_mode
+                    if model_config.thinking_mode is not None
+                    else None
+                ),
             ),
         )
         branch_artifact = await asyncio.to_thread(

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "harness_id": "teacher_hypothesis_researcher_v3",
+  "harness_id": "teacher_hypothesis_researcher_v4",
   "tools": [
     {
       "instance_id": "get_student_trajectory",

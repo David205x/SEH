@@ -6,11 +6,10 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from search_harness.integrations.openai_compatible import OpenAICompatibleModel
 from search_harness.paths import COMPONENT_RUNS_ROOT, new_component_run_dir
 
 from .hotpotqa import HotpotQAEvaluator
-from .judge import TeacherBinaryJudge
+from .judge import TeacherBinaryJudge, build_teacher_judge_model
 from .report import evaluate_rollout_file, write_evaluation_report
 
 
@@ -47,9 +46,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     judge_factory = None
     if args.teacher_judge:
         judge_factory = lambda: TeacherBinaryJudge(
-            OpenAICompatibleModel.from_env(
-                args.env_file, prefix="TEACHER"
-            ),
+            build_teacher_judge_model(env_file=args.env_file),
             evaluator,
         )
     output_dir = args.output_dir or _default_output_dir(args.input_file)
