@@ -110,16 +110,11 @@ class NativeChatRoleRunner:
             spec.role.role_id,
             default_max_tokens=config.max_tokens,
             default_max_turns=self.max_turns,
-            default_thinking_mode=config.thinking_mode,
+            default_thinking_mode=config.configured_thinking_mode,
         )
-        config = replace(
-            config,
-            max_tokens=budget.max_tokens,
-            thinking_mode=(
-                budget.thinking_mode
-                if config.thinking_mode is not None
-                else None
-            ),
+        config = replace(config, max_tokens=budget.max_tokens)
+        config = config.with_configured_thinking_mode(
+            budget.thinking_mode
         )
         output_tool_name = f"submit_{spec.role.output_contract_id}"
         try:

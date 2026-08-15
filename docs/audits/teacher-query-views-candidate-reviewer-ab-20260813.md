@@ -1,5 +1,8 @@
 # Candidate Reviewer 影子证据视图 A/B（2026-08-13）
 
+状态：历史 A/B；配对 Case/Trajectory、按需长文本和证据程序已迁入正式 Candidate
+Reviewer，影子角色与入口已于 2026-08-14 清理。本文引用的源码路径仅记录实验时环境。
+
 ## 1. 实验目的
 
 本实验只改变 Candidate Reviewer 的模型可见输入、查询工具返回视图及已有证据义务的提示词对齐，不修改正式 Candidate Reviewer、底层 Evaluation/Rollout artifact、Candidate 内容、MechanismSpec、输出协议或 Promotion Gate。目标是验证：在保留晋升判断所需事实的前提下，能否降低重复上下文，并保持对目标正向行为、fallback、机制误触发、回归归因、成本和修订边界的判断能力。

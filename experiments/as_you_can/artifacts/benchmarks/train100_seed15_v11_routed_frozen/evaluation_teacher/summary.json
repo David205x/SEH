@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "experiments\\as_you_can\\artifacts\\benchmarks\\train100_seed15_v11_routed_frozen\\rollouts.jsonl",
+  "created_at": "2026-08-14T04:12:53.507270+00:00",
+  "provenance": {
+    "dataset": "train",
+    "dataset_path": "D:\\_Project\\Agent\\corpus_filter\\output\\train\\supported.jsonl",
+    "selection_seed": 20260815,
+    "ids_file": null,
+    "sampling_seed": 42,
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_id": "qwen3:8b",
+      "max_tokens": 4096,
+      "timeout": 120.0,
+      "temperature": 0.65,
+      "seed": 42,
+      "ollama_think": false,
+      "thinking_mode": null
+    },
+    "max_steps": 20
+  },
+  "evaluation_config": {
+    "teacher_judge": true,
+    "judge_workers": 8
+  },
+  "metrics": {
+    "answers": {
+      "scored_count": 100,
+      "correct_count": 68,
+      "accuracy": 0.68,
+      "static_pass_count": 56,
+      "teacher_judged_count": 44,
+      "unresolved_count": 0,
+      "example_count": 100,
+      "stable_correct_count": 68,
+      "stable_failure_count": 32,
+      "unstable_count": 0,
+      "unresolved_example_count": 0,
+      "stable_correct_rate": 0.68,
+      "stable_failure_rate": 0.32,
+      "unstable_rate": 0.0,
+      "majority_correct_rate": 0.68,
+      "pass_at_n": 0.68,
+      "mean_example_success_rate": 0.68,
+      "mean_answer_consistency": 1.0
+    },
+    "execution": {
+      "record_count": 100,
+      "completed_rate": 1.0,
+      "status_counts": {
+        "completed": 100
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 2.33,
+      "mean_model_calls": 2.33,
+      "mean_tool_calls": 1.32,
+      "mean_duplicate_queries": 0.01
+    },
+    "tokens": {
+      "input_tokens": 259258,
+      "output_tokens": 219603,
+      "total_tokens": 478861,
+      "student_input_tokens": 180410,
+      "student_output_tokens": 123052,
+      "student_total_tokens": 303462,
+      "hook_input_tokens": 78848,
+      "hook_output_tokens": 96551,
+      "hook_total_tokens": 175399,
+      "coverage_rate": 1.0
+    }
+  }
+}

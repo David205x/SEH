@@ -127,6 +127,7 @@ class OpenAICompatibleToolSession:
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
             extra_body=_request_extra_body(self.config),
+            **_request_reasoning_options(self.config),
         )
         usage_value = (
             response.get("usage")
@@ -285,6 +286,7 @@ class OpenAICompatibleToolRunner:
                     temperature=self.config.temperature,
                     max_tokens=self.config.max_tokens,
                     extra_body=_request_extra_body(self.config),
+                    **_request_reasoning_options(self.config),
                 )
                 request_usage.append(_model_dump(response.usage))
                 finish_reasons.append(_first_finish_reason(response))
@@ -638,3 +640,13 @@ def _request_extra_body(config: OpenAICompatibleConfig) -> dict[str, Any] | None
     if config.thinking_mode is not None:
         extra_body["thinking"] = {"type": config.thinking_mode}
     return extra_body or None
+
+
+def _request_reasoning_options(
+    config: OpenAICompatibleConfig,
+) -> dict[str, str]:
+    """Map the logical Ollama disable switch to its OpenAI-compatible field."""
+
+    if config.ollama_think is False:
+        return {"reasoning_effort": "none"}
+    return {}

@@ -1,8 +1,11 @@
 # Failure Landscape 对适用性边界认知的研究计划
 
-状态：待执行的最小研究交接  
+状态：历史研究计划；影子入口已于 2026-08-14 清理
 日期：2026-08-12  
 基准运行：`runs/evolution/20260809_base`  
+
+本文列出的影子脚本属于历史实验设施，当前活动代码不再提供；保存的 Judgment 与汇总
+Artifact 保留在 `runs/experiments/teacher_query_views/`。
 
 ## 1. 接手 Agent 首先要理解的目标
 

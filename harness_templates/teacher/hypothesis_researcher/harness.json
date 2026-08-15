@@ -10,6 +10,34 @@
       }
     },
     {
+      "instance_id": "get_trajectory_change",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_trajectory_change"
+      }
+    },
+    {
+      "instance_id": "get_trajectory_block",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_trajectory_block"
+      }
+    },
+    {
+      "instance_id": "search_hidden_trajectory_blocks",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "search_hidden_trajectory_blocks"
+      }
+    },
+    {
+      "instance_id": "get_student_behavior_interface",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_student_behavior_interface"
+      }
+    },
+    {
       "instance_id": "get_intervention_capabilities",
       "entrypoint": "tools/runtime/component.py:build",
       "config": {

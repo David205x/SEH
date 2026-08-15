@@ -378,14 +378,50 @@ class LocalControlEffects:
                 }
             )
         mechanism = MechanismSpec.model_validate(mechanism_payload)
+        student_model_experiments: list[dict[str, Any]] = []
+        distiller_ref = work.input_refs.get("distiller_artifact")
+        if distiller_ref is not None:
+            distiller = _read_json(Path(distiller_ref))
+            resource_artifacts = distiller.get("resource_artifacts")
+            if isinstance(resource_artifacts, dict):
+                raw_experiments = resource_artifacts.get(
+                    "student_model_experiments"
+                )
+                if isinstance(raw_experiments, list):
+                    student_model_experiments = [
+                        item
+                        for item in raw_experiments
+                        if isinstance(item, dict)
+                    ]
+        continuation_ref = work.input_refs.get("compiler_candidate_file")
+        if continuation_ref is not None:
+            continuation_candidate = _read_json(Path(continuation_ref))
+            raw_experiments = continuation_candidate.get(
+                "student_model_experiments"
+            )
+            if isinstance(raw_experiments, list):
+                known_signatures = {
+                    item.get("experiment_signature")
+                    for item in student_model_experiments
+                }
+                for item in raw_experiments:
+                    if not isinstance(item, dict):
+                        continue
+                    signature = item.get("experiment_signature")
+                    if signature in known_signatures:
+                        continue
+                    student_model_experiments.append(item)
+                    known_signatures.add(signature)
         return await self._research_role_effects().compile_candidate(
             mechanism=mechanism,
+            student_model_experiments=student_model_experiments,
             implementation_constraints=list(
                 work.payload.get("implementation_constraints", [])
             ),
             validation_feedback=list(
                 work.payload.get("validation_feedback", [])
             ),
+            conformance_failures=_compiler_conformance_failures(work),
             continuation_candidate_file=(
                 Path(work.input_refs["compiler_candidate_file"])
                 if "compiler_candidate_file" in work.input_refs
@@ -729,6 +765,47 @@ def _evidence_review_budget(
             trials_remaining == 0 or assignments_remaining == 0
         ),
     }
+
+
+def _compiler_conformance_failures(
+    work: WorkItem,
+) -> list[dict[str, Any]]:
+    """Load compact, Reviewer-owned repair evidence for Compiler continuation."""
+
+    summary = work.payload.get("conformance_summary")
+    if not isinstance(summary, dict):
+        return []
+    raw_refs = summary.get("finding_refs")
+    if not isinstance(raw_refs, list):
+        return []
+    failures = []
+    for raw_ref in raw_refs:
+        if not isinstance(raw_ref, str) or not raw_ref.strip():
+            continue
+        finding_artifact = _read_json(Path(raw_ref))
+        finding = finding_artifact.get("output")
+        if not isinstance(finding, dict):
+            continue
+        if finding.get("verdict") == "faithful":
+            continue
+        failures.append(
+            {
+                key: finding.get(key)
+                for key in (
+                    "candidate_run_ref",
+                    "verdict",
+                    "assessment",
+                    "repair_obligation",
+                    "failure_layer",
+                    "predicate_ref",
+                    "expected_label",
+                    "observed_label",
+                    "decisive_input_summary",
+                    "recommended_route",
+                )
+            }
+        )
+    return failures
 
 
 def _required_string(value: dict[str, Any], name: str) -> str:

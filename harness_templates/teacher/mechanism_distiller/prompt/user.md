@@ -6,6 +6,9 @@ Role input:
 Program-maintained resource summary:
 {{resource_context}}
 
-Inspect every cited trial and use the mechanism draft tools before returning
-`distilled`. For `needs_evidence`, request only a discriminating additional
+The dossier already contains every cited Trial's independent Review, exact
+Student-visible mutation, deterministic effect, and outcome. Use the mechanism
+draft tools before returning `distilled`. Call
+`get_distillation_trial_detail` only to resolve a concrete conflict or
+ambiguity. For `needs_evidence`, request only a discriminating additional
 assignment of the same frozen hypothesis.

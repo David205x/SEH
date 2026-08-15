@@ -19,9 +19,10 @@ from search_harness.integrations.openai_compatible import (
 from ..intervention.prefix import load_rollout_record
 
 from ..mechanism.capabilities import build_compiler_capability_packet
-from ..hook_evaluator_probe import (
-    HookEvaluatorProbeRequest,
-    run_hook_evaluator_probe,
+from ..student_model_experiment import (
+    StudentModelExperimentCase,
+    experiment_signature,
+    run_student_model_experiment,
 )
 from ..roles.contracts import (
     CompilerInput,
@@ -83,7 +84,9 @@ class TeacherResources:
     evidence_review_default_coverage_met: bool | None = None
     mechanism_distillation_conclusion_required: bool = False
     hook_probe_env_file: Path | None = None
-    hook_evaluator_probes: list[dict[str, Any]] = field(default_factory=list)
+    student_model_experiments: list[dict[str, Any]] = field(
+        default_factory=list
+    )
 
     @classmethod
     def from_config(cls, config: TeacherResourceConfig) -> "TeacherResources":
@@ -186,6 +189,9 @@ class TeacherResources:
             )
             self.compiler.bind_capability_packet(packet)
             self.compiler_capability_packet = packet
+            self.student_model_experiments = [
+                dict(item) for item in role_input.student_model_experiments
+            ]
 
     def model_context(self, role_id: str) -> dict[str, Any]:
         """返回只适合直接进入 Prompt 的紧凑程序上下文。"""
@@ -250,60 +256,63 @@ class TeacherResources:
                 if self.compiler is not None
                 else None
             ),
-            "hook_evaluator_probes": list(self.hook_evaluator_probes),
+            "student_model_experiments": list(
+                self.student_model_experiments
+            ),
         }
 
-    def probe_mechanism_evaluators(
+    def run_student_model_experiment(
         self,
         *,
-        draft_id: str,
-        evidence_refs: list[str],
+        purpose: str,
+        system_prompt: str,
+        cases: list[dict[str, object]],
+        thinking_modes: list[str],
         repetitions: int,
     ) -> dict[str, Any]:
-        """Probe every Hook-model phase against its frozen evidence labels."""
+        """Run Teacher-authored Student probes without deriving a verdict."""
 
         if self.hook_probe_env_file is None:
-            raise ValueError("Hook evaluator probe environment is unavailable")
-        mechanism = self.mechanisms.preview(
-            draft_id=draft_id,
-            evidence_refs=evidence_refs,
+            raise ValueError("Student model experiment environment is unavailable")
+        parsed_cases = tuple(
+            StudentModelExperimentCase(
+                case_id=_required_string(case, "case_id"),
+                user_prompt=_required_string(case, "user_prompt"),
+            )
+            for case in cases
+        )
+        signature = experiment_signature(
+            system_prompt=system_prompt,
+            cases=parsed_cases,
+            thinking_modes=tuple(thinking_modes),
+            repetitions=repetitions,
+        )
+        cached = next(
+            (
+                item
+                for item in self.student_model_experiments
+                if item.get("experiment_signature") == signature
+            ),
+            None,
+        )
+        if cached is not None:
+            return {**cached, "cache_hit": True}
+        experiment_id = (
+            f"student_model_experiment_"
+            f"{len(self.student_model_experiments) + 1:03d}"
         )
         backend = ProfiledHookModelBackend(env_file=self.hook_probe_env_file)
-        summaries = []
-        for index, rule in enumerate(mechanism.phase_rules, start=1):
-            if rule.decision_evaluator != "hook_model":
-                continue
-            predicate_ref = f"phase-{index}:{rule.phase}"
-            request = HookEvaluatorProbeRequest.from_decision_contract(
-                predicate_ref=predicate_ref,
-                decision_contract=rule.decision_contract,
-                repetitions=repetitions,
-            )
-            summaries.append(
-                run_hook_evaluator_probe(
-                    request=request,
-                    backend=backend,
-                ).to_dict()
-            )
-        artifact = {
-            "schema_version": 1,
-            "draft_id": draft_id,
-            "evidence_refs": list(evidence_refs),
-            "summaries": summaries,
-        }
-        self.hook_evaluator_probes.append(artifact)
-        return {
-            "draft_id": draft_id,
-            "probed_phase_count": len(summaries),
-            "summaries": [
-                {
-                    key: value
-                    for key, value in summary.items()
-                    if key != "observations"
-                }
-                for summary in summaries
-            ],
-        }
+        artifact = run_student_model_experiment(
+            backend=backend,
+            experiment_id=experiment_id,
+            purpose=purpose,
+            system_prompt=system_prompt,
+            cases=parsed_cases,
+            thinking_modes=tuple(thinking_modes),
+            repetitions=repetitions,
+        )
+        self.student_model_experiments.append(artifact)
+        return {**artifact, "cache_hit": False}
 
     def mark_intervention_capabilities_inspected(self) -> None:
         """记录 Researcher 已读取运行时能力目录。"""
@@ -381,23 +390,6 @@ class TeacherResources:
                 "Mechanism Distiller cannot request more evidence when no "
                 "further trial can be scheduled; choose distilled or "
                 "not_distillable"
-            )
-        if result.decision != "distilled" or result.mechanism_ref is None:
-            return
-        mechanism = self.mechanisms.resolve(result.mechanism_ref)
-        if not any(
-            rule.decision_evaluator == "hook_model"
-            for rule in mechanism.phase_rules
-        ):
-            return
-        draft_id = self.mechanisms.source_draft_id(result.mechanism_ref)
-        if not any(
-            probe.get("draft_id") == draft_id
-            for probe in self.hook_evaluator_probes
-        ):
-            raise ValueError(
-                "Hook-model Mechanism must run probe_mechanism_evaluators "
-                "before submission"
             )
 
     def role_session_state(self) -> dict[str, Any]:

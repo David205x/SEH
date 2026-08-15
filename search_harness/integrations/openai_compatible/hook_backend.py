@@ -24,7 +24,7 @@ class ProfiledHookModelBackend:
         self._allowed_profiles = frozenset(
             profile.strip().casefold() for profile in allowed_profiles
         )
-        self._models: dict[str, OpenAICompatibleModel] = {}
+        self._models: dict[tuple[str, str | None], OpenAICompatibleModel] = {}
         self._seed = seed
 
     def generate(self, request: HookModelRequest) -> HookModelResponse:
@@ -32,15 +32,18 @@ class ProfiledHookModelBackend:
             raise PermissionError(
                 f"hook model profile is not enabled: {request.profile}"
             )
-        model = self._models.get(request.profile)
+        model_key = (request.profile, request.thinking_mode)
+        model = self._models.get(model_key)
         if model is None:
             config = OpenAICompatibleConfig.from_env(
                 env_file=self._env_file, prefix=request.profile.upper()
             )
             if self._seed is not None:
                 config = replace(config, seed=self._seed)
+            if request.thinking_mode is not None:
+                config = config.with_thinking_mode(request.thinking_mode)
             model = OpenAICompatibleModel(config)
-            self._models[request.profile] = model
+            self._models[model_key] = model
         response = model.generate(request.model_input)
         metadata = dict(response.metadata)
         if response.usage:

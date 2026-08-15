@@ -206,7 +206,24 @@ class TeacherRoleResourceTest(unittest.TestCase):
             continued.initial_context()["continuation"]["changed_paths"],
             ["candidate_note.txt"],
         )
+        self.assertEqual(
+            continued.initial_context()["continuation_changed_files"],
+            {"candidate_note.txt": "first candidate revision\n"},
+        )
         self.assertIn("HookPhase", continued.prior_queried_symbols)
+
+        unchanged = continued.finalize(
+            summary="Resubmit the inherited candidate without repair."
+        )
+        self.assertEqual(unchanged["status"], "repair_required")
+        self.assertIn("byte-for-byte identical", unchanged["errors"][0])
+
+        continued.write_file(
+            path="candidate_note.txt",
+            content="second candidate revision\n",
+        )
+        revised = continued.finalize(summary="Repair the candidate revision.")
+        self.assertEqual(revised["status"], "submitted")
 
     def test_compiler_finalizer_reports_authoring_policy_errors(self) -> None:
         """验证 finalizer 将 Compiler 专属代码缺陷返回给模型修复。"""

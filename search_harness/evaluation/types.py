@@ -52,6 +52,7 @@ class TeacherJudgment:
     """One optional 0/1 decision issued by the configured teacher model."""
 
     score: int | None
+    assessment: str | None = None
     raw_output: str | None = None
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -59,6 +60,7 @@ class TeacherJudgment:
     def to_dict(self) -> dict[str, Any]:
         return {
             "score": self.score,
+            "assessment": self.assessment,
             "raw_output": self.raw_output,
             "error": self.error,
             "metadata": dict(self.metadata),

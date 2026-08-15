@@ -6,11 +6,18 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import patch
 
-from search_harness.framework import ChatMessage, ModelInput
+from search_harness.framework import (
+    ChatMessage,
+    HookModelRequest,
+    ModelInput,
+    ModelResponse,
+)
 from search_harness.integrations.openai_compatible import (
     OpenAICompatibleConfig,
     OpenAICompatibleModel,
+    ProfiledHookModelBackend,
 )
 
 
@@ -132,6 +139,97 @@ class OpenAICompatibleModelTest(TestCase):
         self.assertEqual(config.thinking_mode, "disabled")
         self.assertIsNone(config.ollama_think)
 
+    def test_overrides_ollama_thinking_mode_for_one_hook_model(self) -> None:
+        config = OpenAICompatibleConfig(
+            base_url="http://127.0.0.1:11434/v1",
+            model_id="qwen3:8b",
+            ollama_think=True,
+        )
+
+        overridden = config.with_thinking_mode("disabled")
+
+        self.assertFalse(overridden.ollama_think)
+        self.assertIsNone(overridden.thinking_mode)
+        self.assertEqual(overridden.configured_thinking_mode, "disabled")
+        self.assertTrue(overridden.supports_thinking_mode)
+
+    def test_overrides_deepseek_thinking_mode_for_one_hook_model(self) -> None:
+        config = OpenAICompatibleConfig(
+            base_url="https://api.deepseek.com",
+            model_id="deepseek-test",
+            thinking_mode="enabled",
+        )
+
+        overridden = config.with_thinking_mode("disabled")
+
+        self.assertEqual(overridden.thinking_mode, "disabled")
+        self.assertIsNone(overridden.ollama_think)
+        self.assertEqual(overridden.configured_thinking_mode, "disabled")
+        self.assertTrue(overridden.supports_thinking_mode)
+
+    def test_ignores_configured_thinking_mode_for_unknown_provider(self) -> None:
+        config = OpenAICompatibleConfig(
+            base_url="https://provider.example/v1",
+            model_id="provider-test",
+        )
+
+        self.assertIs(
+            config.with_configured_thinking_mode("disabled"),
+            config,
+        )
+        self.assertIsNone(config.configured_thinking_mode)
+        self.assertFalse(config.supports_thinking_mode)
+
+    def test_rejects_thinking_override_for_unknown_provider(self) -> None:
+        config = OpenAICompatibleConfig(
+            base_url="https://provider.example/v1",
+            model_id="provider-test",
+        )
+
+        with self.assertRaisesRegex(ValueError, "unavailable"):
+            config.with_thinking_mode("disabled")
+
+    def test_hook_backend_caches_models_by_profile_and_thinking_mode(self) -> None:
+        base_config = OpenAICompatibleConfig(
+            base_url="http://127.0.0.1:11434/v1",
+            model_id="qwen3:8b",
+        )
+        model_input = ModelInput.from_messages(
+            [ChatMessage(role="user", content="classify")]
+        )
+        with (
+            patch(
+                "search_harness.integrations.openai_compatible.hook_backend."
+                "OpenAICompatibleConfig.from_env",
+                return_value=base_config,
+            ),
+            patch(
+                "search_harness.integrations.openai_compatible.hook_backend."
+                "OpenAICompatibleModel"
+            ) as model_type,
+        ):
+            model_type.return_value.generate.return_value = ModelResponse(
+                raw_output='{"label":"positive"}'
+            )
+            backend = ProfiledHookModelBackend(env_file=None)
+
+            for thinking_mode in ("enabled", "disabled", "disabled"):
+                backend.generate(
+                    HookModelRequest(
+                        profile="student",
+                        purpose="classification",
+                        model_input=model_input,
+                        thinking_mode=thinking_mode,
+                    )
+                )
+
+        self.assertEqual(model_type.call_count, 2)
+        self.assertEqual(
+            [call.args[0].ollama_think for call in model_type.call_args_list],
+            [True, False],
+        )
+        self.assertEqual(model_type.return_value.generate.call_count, 3)
+
     def test_does_not_send_thinking_extension_to_unknown_provider(self) -> None:
         """Unknown OpenAI-compatible endpoints receive only standard fields."""
 
@@ -200,8 +298,8 @@ class OpenAICompatibleModelTest(TestCase):
             ],
         )
 
-    def test_posts_ollama_think_when_configured(self) -> None:
-        """Verifies the posts ollama think when configured contract."""
+    def test_posts_ollama_reasoning_effort_when_disabled(self) -> None:
+        """Ollama's OpenAI endpoint disables thinking with reasoning_effort."""
         server = _ChatCompletionTestServer()
         try:
             model = OpenAICompatibleModel(
@@ -223,7 +321,32 @@ class OpenAICompatibleModelTest(TestCase):
         finally:
             server.close()
 
-        self.assertEqual(server.requests[0]["think"], False)
+        self.assertEqual(server.requests[0]["reasoning_effort"], "none")
+        self.assertNotIn("think", server.requests[0])
+
+    def test_omits_ollama_reasoning_effort_when_enabled(self) -> None:
+        """Enabled thinking uses the Ollama model's default reasoning mode."""
+
+        server = _ChatCompletionTestServer()
+        try:
+            model = OpenAICompatibleModel(
+                OpenAICompatibleConfig(
+                    base_url=server.base_url,
+                    model_id="test-model",
+                    ollama_think=True,
+                )
+            )
+
+            model.generate(
+                ModelInput.from_messages(
+                    [ChatMessage(role="user", content="hello")]
+                )
+            )
+        finally:
+            server.close()
+
+        self.assertNotIn("reasoning_effort", server.requests[0])
+        self.assertNotIn("think", server.requests[0])
 
     def test_posts_seed_when_configured(self) -> None:
         """Verifies the posts seed when configured contract."""

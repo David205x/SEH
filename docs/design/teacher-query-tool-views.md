@@ -1,8 +1,13 @@
 # Teacher 查询工具模型可见视图
 
-状态：已确认的实施规格  
-当前实施阶段：Researcher、Intervention 与 Mechanism Distiller 影子 A/B 已完成，等待正式迁移决策  
-最后更新：2026-08-13
+状态：已确认的实施规格
+当前实施阶段：正式主链路迁移与影子实现清理已完成
+最后更新：2026-08-14
+
+2026-08-14 收口：通过真实 API 验证的视图已迁入正式角色；影子模板、影子 Role
+Factory、对应 A/B 执行入口和只验证影子实现的测试已从活动代码删除。本文前半部分保留的
+`experiments/teacher_query_views/` 路径只描述历史实验环境，真实结果继续保存在
+`runs/experiments/`，不表示当前仓库仍提供这些影子入口。
 
 ## 1. 目的与范围
 
@@ -10,7 +15,7 @@
 保留完整事实、Provider metadata、原始 Tool Result、完整 Model Input 和 Harness
 生命周期事件；模型可见视图是从 Artifact 派生的有损投影，不是新的事实源。
 
-当前影子代码实施范围包含：
+以下是迁移前影子代码曾覆盖的范围，保留用于解释后续 A/B 结论：
 
 1. Teacher Judgment 输出 `score` 与简短 `assessment`；
 2. `get_evaluation_case` 默认精简视图；
@@ -19,9 +24,9 @@
 5. Hypothesis Researcher 使用的 Student Behavior Interface。
 6. Intervention Worker 使用的紧凑 Editable Context 与精确 Block View。
 
-Intervention Worker 作为第二轮影子实验实现，不改变正式 Worker 的默认查询工具。
-Trial Reviewer 的影子实现已经放弃。Mechanism Distiller 已完成独立影子实现与真实 API
-A/B，但尚未替换正式模板或删除正式 Trial 查询工具。
+Intervention Worker 当时作为第二轮影子实验实现，没有直接改变正式 Worker 的默认查询
+工具。Trial Reviewer 的影子实现随后放弃；Mechanism Distiller 的影子实现完成真实 API
+A/B 后，其验证有效的视图已迁入正式模板。当前状态以第 16 节为准。
 
 ## 2. 实施与迁移约束
 
@@ -548,7 +553,218 @@ Student-profile Hook probe 的 `WinError 10061`，最初 3 对只记录为基础
 在 8/8 影子 run 中不需要下钻，且都生成了包含正负覆盖、三值边界、guard/predicate
 分工、action、fallback、state、观测项和限制的完整 Mechanism。
 
-当前建议保留影子实现作为正式迁移候选，不在本轮直接替换生产模板。正式迁移前可单独
-修正终态 Schema 对可选空字段的 Provider 展示，避免把与 Evidence View 无关的
-`"null"` 重试计入角色稳定性；Hook probe 使用 Student profile 的架构边界也应作为独立
-议题评估，不与 dossier 迁移绑定。
+该阶段的结论曾是保留影子实现作为正式迁移候选。后续迁移已完成：Evidence Dossier
+进入正式 Distiller，固定 Hook probe 由通用 Student Model Experiment 取代，影子实现
+本身已经删除。终态可选空字段造成的 Provider 重试仍作为输出协议问题单独记录，不归因
+于 Evidence View。
+
+## 16. 正式主链路迁移进度
+
+本节只记录已经进入正式代码并完成定向测试与真实 API 验证的项目；尚未完成的项目保持
+未勾选，不据此宣称主链路已经具备对应能力。
+
+- [x] Teacher Judge：正式输出 `score + assessment`。
+- [x] Failure Analyst：Evaluation 与 Trajectory 角色视图。
+- [x] Hypothesis Researcher：分层证据视图与 Student Behavior Interface。
+- [x] Intervention Worker：紧凑 Editable Context 与精确 Block View。
+- [x] Mechanism Distiller：Distillation Evidence Dossier。
+- [x] Hook-model 研究：通用 Student Model Experiment 取代固定 Probe。
+- [x] Compiler：native API 视图、packet 去重、continuation 投影和实验交接。
+- [x] Conformance Reviewer：按 Example 批处理、独立轨迹边界与 Hook-model 成本预检。
+- [x] Candidate Reviewer：配对 Case、Behavior Trajectory 与按需长文本视图。
+- [x] 清理：删除已合并影子副本及实验确认较差的角色实现。
+
+Trial Reviewer 与 Evidence Reviewer 的影子方案不进入正式主链路；Compiler 只吸收已经
+独立证明有价值的工程设施，不整体迁移影子行为模板。每项迁移完成后均使用相同输入重复
+三次真实 Teacher API 验证，并把结果追加到本节。
+
+### 16.1 Teacher Judge
+
+2026-08-14 已将影子验证过的严格输出契约迁入正式 `TeacherBinaryJudge`。Judgment 新增
+简短 `assessment`，同时继续保存 `raw_output`、usage 和 provider metadata；解析器要求
+响应仅包含 `score` 与非空 `assessment`，拒绝从夹杂文本中宽松提取分数。评估层 22 项
+单元测试通过。
+
+使用正式 DeepSeek Teacher、关闭 thinking，对互相矛盾实体、地理上下位关系、
+`approximately` 零容差三个边界案例整组重复 3 次，共 9 次真实调用。9/9 均一次生成
+合法协议、9/9 判为 0，且 assessment 分别明确指出矛盾实体、broader location 不是
+alias、数值容差为 0；单次总 token 为 311--320。未观察到协议重试或判分漂移。
+
+### 16.2 Failure Analyst
+
+2026-08-14 已将紧凑 Evaluation Case、Block/Revision Trajectory、Extension Change、
+精确 Block 下钻和 Runtime-only 搜索迁入正式工具。完整 `get_harness_manifest` 从 Analyst
+模板移除，替换为只呈现 Student 可观察工具、Extension phase 与 action surface 的
+`get_student_capability_view`；Analyst 仍只做行为诊断，不承担组件级归因。底层 Evaluation
+与 Rollout Artifact 未改。27 项角色装配、资源访问和视图测试通过。
+
+使用 `20260812_ab` 相同保存输入先执行 6 次真实 API 迁移诊断，确认 6/6 最终完成，
+同时如实暴露了字段贴近 Schema 上限、截短 evidence ID 和超出 6 条唯一轨迹预算等提交
+不稳定。随后只补明既有长度安全余量、完整 ID 复制和证据预算规则，再执行最终 3 次：
+3/3 完成、3/3 第一次提交通过、无 Tool error；每次读取 5--6 条轨迹，最终引用覆盖
+2--3 个逻辑案例。三次均收敛到“检索未建立问题所需关系或属性时即终答、没有针对缺口
+继续检索”的同一行为方向，总 token 分别为 `104515`、`179234`、`133330`。结果支持
+正式迁移，但也表明多轨迹分析和 thinking 仍是主体成本，视图压缩不等于低延迟。
+
+### 16.3 Hypothesis Researcher
+
+2026-08-14 已将与 Analyst 相同的 Context Revision、Extension Change、Block 下钻和
+Runtime-only 搜索接入正式 Researcher，并新增 `get_student_behavior_interface`：只有先读
+对应轨迹后才能读取该轨迹实际送入 Student 的 system/developer prompt、model-visible
+工具声明、输出动作表面和 Extension phase/read-write surface。Capability registration
+与实际轨迹行为继续分开呈现；底层 Artifact 和 Researcher 的证据 allowlist 未变。角色
+装配、续接 transcript 和资源账本定向测试通过。
+
+使用 `20260812_ab` 保存的同一 Researcher 输入执行 3 次真实 API。3/3 完成，3/3 读取
+全部 4 条冻结轨迹、Student Behavior Interface 和 intervention capability catalog；三次
+均生成单一 corrective `pre_final` 方案，并把缺失关系/属性、同名实体混淆、passage-supported
+排除项和额外正负覆盖写入可观察条件。总 token 为 `124512`、`201617`、`162802`。
+首次提交通过为 1/3；其余两次只因 activation/applicability 贴近 Schema 长度上限而修复，
+最终 phase 和语义方向未漂移。由此支持视图正式迁移和最终稳定性，但不宣称首提格式已经
+完全稳定。
+
+### 16.4 Intervention Worker
+
+2026-08-14 已将正式 Worker 的 Editable Context 目录改为紧凑有序表格，单 Block 读取改为
+无 JSON 转义的精确内容边界；未知 Block 返回统一的结构化错误标识。每次 Hook activation
+的 user message 已直接携带程序维护的 active observation，因此从 native tool list 删除
+重复的 `inspect_active_observation`，不删除底层 observation 或审计 trace。所有写工具、
+phase action 和 patch 校验逻辑保持不变。19 项 Intervention 生命周期测试通过。
+
+复用 `20260809_base` 的同一 `post_tool` Trial，使用正式 DeepSeek Worker、真实本地
+Student 和 Teacher Judge 重复 3 次。3/3 均用 1 次 Context 目录读取、1 次精确 Block
+读取和 1 次 `apply_context_patch` 完成，无 Tool error；3/3 patch 实际进入 Student
+上下文，Student 紧随其后的动作均为 `search`，最终 branch score 均为 1。Worker 每次
+3 个模型回合，总 token 分别为 `8586`、`9131`、`8971`。这一结果同时验证了查询视图
+可读性和真实分支副作用，没有仅凭 Worker 自述判定通过。
+
+### 16.5 Mechanism Distiller
+
+2026-08-14 已将 Distillation Evidence Dossier 接入正式 Prompt：冻结 Hypothesis、Evidence
+Review、Coverage/Budget、每条独立 Trial Review、实际 Student-visible mutation、activation、
+deterministic phase effect 和 outcome 在初始输入中按 `trial_ref` 对齐。原先三个通用 Trial
+目录/读取工具从 Distiller 模板移除，保留一个按引用返回完整事件目录的
+`get_distillation_trial_detail` 异常下钻工具。Mechanism draft、constraints 和 validation
+工具未在本阶段改变。正式装配与 dossier/detail 投影测试通过。
+
+使用 `20260809_base` 的 4 Trial 保存输入执行 3 次真实 API。前两次不调用详情工具，均以
+一套 draft/phase/constraints/probe/validation 序列生成 `mechanism_001`；总 token 为
+`158190`、`112108`。第三次固定 Hook probe 将同一个冻结 positive fixture 稳定误判为
+negative；Distiller 连续尝试 3 个更操作化 draft 后只下钻该冲突 Trial，最终合理返回
+`needs_evidence`，总 token `365577`。因此 dossier 的正常/异常披露路径均按设计工作；
+第三轮差异来自现有固定 probe 对 Hook model 的非稳定标签，而非 evidence view 丢失。
+这一结果支持 dossier 正式迁移，同时直接形成下一阶段“用通用 Student Model Experiment
+取代固定 pass-like probe”的问题证据。
+
+### 16.6 Student Model Experiment
+
+2026-08-14 已删除固定 `probe_mechanism_evaluators` 及其程序所有的 expected label、
+match rate 和隐式通过语义，改为 Distiller 与 Compiler 共用的
+`run_student_model_experiment`。Teacher 自行提供实验目的、system prompt、1--6 个输入、
+thinking mode 和 1--3 次重复；正式 artifact 保留逐请求原始输出、usage、错误和 provider
+metadata，工具视图只省略 provider metadata，不计算正确率或替角色选择 thinking mode。
+Distiller 产物中的实验会原样交接给 Compiler。`HookModelRequest` 同时新增可选的
+`thinking_mode=enabled|disabled`，由 OpenAI-compatible provider 在单次请求层映射，不改变
+Student 正式 rollout 的默认模式。
+
+直接使用 Student profile 执行 2 个案例、2 种 thinking mode、每项 3 次，共 12 次真实
+调用，12/12 返回成功；同一案例的标签在重复调用间会漂移。当时框架把 Ollama `/v1`
+的 `disabled` 错误映射为原生 API 字段 `think: false`，该字段被 OpenAI-compatible endpoint
+忽略，因此返回中仍有 reasoning metadata。2026-08-15 已改为
+`reasoning_effort: "none"` 并通过重复实验确认关闭生效；原实验仍支持删除 expected-label
+程序硬门禁，但不能再作为“Ollama 无法关闭 thinking”的证据。
+
+正式 Distiller 在通用工具接入后的初次 3 次验证均成功，但有两次进行了过量 prompt
+迭代：一次在长度错误后执行 20 个 observation，另一次连续两轮共执行 48 个 observation。
+随后明确实验只服务于重要的不确定性、通常至多调用一次且不因表面标签一致继续调参，
+再用相同 artifact 重复 3 次：3/3 一次提交、无 Tool error、3/3 `distilled`；两次跳过
+实验，一次执行单一 disabled-mode 实验，共 10 个 observation，总 token 分别为
+`154766`、`109465`、`101375`。该次仍使用了 5 个案例，超过 prompt 建议的 1--3 个但未
+违反工具的 1--6 个硬边界，说明软指导显著减少了迭代，却不能保证严格实验规模。
+
+旧实验第三次运行的两轮 prompt 调优另见对应
+`prompt_iteration_analysis.md`。它表明 Distiller 能识别危险的 `negative -> positive`
+误触发并收紧操作边界；修订后剩余漂移只发生在共同 no-op 的 `negative/uncertain` 之间。
+因此最终机制通过的依据是错误后果被安全化并写入 known limits，而不是分类器已经完全
+稳定。
+
+### 16.7 Compiler
+
+2026-08-14 保留正式 Compiler 的完整 system prompt、完整 `CompilerInput`、workspace
+写工具、finalizer 和终态协议，只迁入四项独立设施。第一，`query_hook_api` 默认返回
+Python-native contract，不再同时复制结构化 contract。第二，capability packet 中已经
+由 Runtime Input Topic native 文档覆盖的 symbol 不再作为 JSON contract 重复出现；
+packet selection 只保留 API 输入选择和未解析项，不复制 Mechanism 中已有的 guards、
+decision contract、fallback 与 activation budget。第三，初始资源上下文直接提供当前
+manifest、evolution policy、Extension 索引；Compiler revision 续接时还提供该 Candidate
+的精确 changed file 内容。第四，Distiller 的 `student_model_experiments` 原样进入
+`CompilerInput`，Compiler 也可按需运行同一个描述性工具。未迁移影子 Compiler 的完整
+Implementation Brief、自动 reference 选择或影子角色模板。
+
+生产视图、continuation materialization、API query 以及现有 Compiler resource 共 22 项
+定向测试通过。使用 `20260809_base` 同一历史 Compiler 输入执行第一组 3 次真实 API：
+3/3 提交、3/3 首次 finalizer 通过、3/3 deterministic validation 通过；因旧 A/B 入口未
+传递 Student profile 环境，三次可选实验均明确失败后继续实现，这组只用于验证
+Compiler/validation，不用于实验交接。该入口随后补齐 `.env` 资源映射。
+
+修正入口后再次执行 3 次：3/3 提交、3/3 首次 finalizer 通过、3/3 deterministic
+validation 通过；1/3 运行 3 个案例、enabled/disabled 各一次的实验并在实现摘要中引用
+观察，2/3 未额外实验。首轮 prompt token 三次均为 `9344`，相对旧正式同案例的
+`12413` 减少 `24.7%`；平均总 token 为 `347741`，与旧正式 `342743` 相近，不能宣称
+总体成本下降。实际 API rejected query 为 `2/5/1`，平均 `2.67`，低于旧正式平均
+`4.33`，但没有归零；实验统计器原只识别 JSON 返回，已修正为同时识别 native text，
+不回写现有 summary。
+
+本阶段只能证明 authoring、实验交接和机械合法性保持稳定。三份 Candidate 是否忠实执行
+Hook-model 决策边界仍需 Conformance Reviewer 检查，不能由 HarnessValidator 的通过替代。
+
+### 16.8 Conformance Reviewer
+
+2026-08-14 已将正式 Conformance Review 从“同一 Example 的每条 replicate 各调用一次”
+改为“同一 Example 一次调用、按 replicate 返回有序独立 Finding”。Mechanism 与完整
+reference observations 在输入中只呈现一次，每条 `candidate_trajectory_view` 使用明确的
+标题和紧凑 JSON 边界；底层 replay 与 reference artifact 不删除信息。输出协议升级为
+`conformance_review_batch@5`，程序严格校验 replicate 顺序，再附加权威 trial/run identity
+并确定性聚合。Runner error 仍由程序直接形成 `runtime_error` Finding。
+
+角色输入新增每条 rollout 的 Hook-model 调用次数、profile、purpose、`thinking_mode` 与基础
+token 事实。Reviewer 只预检 Mechanism 明示的 profile、调用上限、activation budget 和
+thinking 选择；没有明示 token 上限时，不用单条 token 数替代后续 Candidate 成本比较。
+Prompt 同时区分“必须执行的 Harness action”与“随后观察到的 Student effect”：后续正确
+搜索不能补偿 intervention 本身仍输出占位符或缺少 Mechanism 要求的具体内容。
+
+定向的角色协议、投影、checkpoint、重试和 Controller 测试共 70 项通过。随后复用历史
+Candidate replay 中一组边界较难的 3 条轨迹重复调用正式 DeepSeek Teacher 3 次，不重跑
+Student。三次均一次提交，且 9/9 Finding 一致判为
+`implementation_mismatch/action -> implementation`，准确指出三条 intervention 都把具体
+缺失实体/关系退化成占位式文本；assessment 均低于 1000 字符。三次总 token 分别为
+`18762`、`17720`、`16722`，相对迁移前同输入的 `49251`、`49220`、`48306` 下降约
+`62%--66%`。迁移前第三次曾整体误判为 `faithful`；显式 replicate 边界和 action/effect
+判据补正后未再出现该翻转，因此正式迁移通过。
+
+### 16.9 Candidate Reviewer
+
+2026-08-14 已将六项验证过的证据设施接入正式 Candidate Reviewer。初始 brief 只呈现一次
+Mechanism、压缩 Conformance、Incumbent/Candidate 指标对比和 change landscape，不把
+Candidate Validation Report 与重复 metrics 塞入模型上下文。`list_candidate_changes` 默认
+changed-first 且最多一次显示 100 条；`get_candidate_case` 以 replicate 配对 score、answer、
+执行和基础 token delta，并增加逐 replicate Hook decision/change 轻量索引；
+`get_paired_student_trajectory` 只呈现行为与 Hook effect 事件，删除累计 model input、provider
+metadata、reasoning、`metadata.results` 与 `omitted`；Harness diff 小型时完整呈现，大型时按
+path 下钻；新增 `get_candidate_trajectory_text` 供 preview 不足时精确读取单个长文本字段。
+底层 Evaluation、Rollout 和 Candidate Template Artifact 均未裁剪。
+
+Prompt 要求先用 Case 的 outcome/Hook activity 选择混合或异常 replicate，再读取 paired
+trajectory；存在 improved/regressed 时仍由程序强制至少各读取一条配对轨迹。`revise` 只适用
+于完成一个 bounded obligation 后同一 Candidate 可能成为可晋升对象；如果独立的终止理由
+仍然成立，Reviewer 必须 `reject`，不能用另一项局部缺陷推迟已有结论。
+
+正式装配、视图与资源义务共 18 项定向测试通过。第一轮 3 次真实 API 为
+`reject/revise(implementation)/reject`；分歧来自 Case 视图未预先展示同一 boundary 的混合
+Hook 标签，模型随机读取不同 replicate。增加 Hook activity 索引并明确 revise/reject 支配
+关系后，复用同一 `20260809_base` Candidate Evaluation 和 rollout 再运行 3 次，3/3 均为
+`reject`。三次都观察到目标正向路径，同时一致指出越界正触发、平坦的 aggregate accuracy
+和约 `93%` 的额外总 token 成本需要至少两个独立重设计。平均查询返回字符约 `108886`，
+相对迁移前正式 A/B 的约 `450152` 降低 `75.8%`；平均总 token 约 `225681`，相对约
+`287312` 降低 `21.5%`。其中一次首提因尚未读取 regressed paired trajectory 被程序拒绝，
+补读后结论不变，证明证据义务按预期工作。

@@ -2241,10 +2241,10 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             "rejected",
         )
 
-    async def test_conformance_effect_runs_three_independent_reviews(
+    async def test_conformance_effect_batches_three_independent_findings(
         self,
     ) -> None:
-        """验证每个 intervention example 完整运行三次并独立审阅。"""
+        """验证每个 Example 完整运行三次并在一次审查中独立判定。"""
 
         experience_file = self.run_dir / "experience.jsonl"
         experience_file.write_text(
@@ -2344,6 +2344,30 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                     "runner_errors": 0,
                 }
 
+            def evaluate_existing_rollouts(
+                self,
+                *,
+                rollout_file: Path,
+                output_dir: Path,
+            ) -> dict[str, Any]:
+                records = [
+                    {
+                        "example_id": "example-1",
+                        "replicate_id": f"r{index:03d}",
+                        "score": 1,
+                        "score_source": "static",
+                        "teacher": None,
+                        "run_status": "completed",
+                    }
+                    for index in range(3)
+                ]
+                output_dir.mkdir(parents=True, exist_ok=True)
+                (output_dir / "per_rollout.jsonl").write_text(
+                    "".join(json.dumps(item) + "\n" for item in records),
+                    encoding="utf-8",
+                )
+                return {"rollouts": records}
+
         class ConformanceRuntime:
             def __init__(self) -> None:
                 self.calls: list[dict[str, Any]] = []
@@ -2351,36 +2375,54 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             async def run(self, **kwargs: Any) -> dict[str, Any]:
                 self.calls.append(kwargs)
                 role_input = kwargs["role_input"]
-                faithful = role_input["replicate_id"] == "r000"
+                trajectories = role_input["candidate_trajectory_views"]
                 return {
                     "output": {
-                        "verdict": (
-                            "faithful" if faithful else "not_observed"
-                        ),
-                        "observed_phases": (
-                            ["pre_final"] if faithful else []
-                        ),
-                        "assessment": (
-                            "The mechanism was faithfully observed."
-                            if faithful
-                            else "The mechanism was not observed."
-                        ),
-                        "repair_obligation": (
-                            None
-                            if faithful
-                            else "Make the activation observable."
-                        ),
-                        "failure_layer": (
-                            None if faithful else "integration"
-                        ),
-                        "decisive_input_summary": (
-                            None
-                            if faithful
-                            else "No declared phase behavior was observable."
-                        ),
-                        "recommended_route": (
-                            None if faithful else "implementation"
-                        ),
+                        "findings": [
+                            {
+                                "replicate_id": item["replicate_id"],
+                                "verdict": (
+                                    "faithful"
+                                    if item["replicate_id"] == "r000"
+                                    else "not_observed"
+                                ),
+                                "observed_phases": (
+                                    ["pre_final"]
+                                    if item["replicate_id"] == "r000"
+                                    else []
+                                ),
+                                "assessment": (
+                                    "The mechanism was faithfully observed."
+                                    if item["replicate_id"] == "r000"
+                                    else "The mechanism was not observed."
+                                ),
+                                "repair_obligation": (
+                                    None
+                                    if item["replicate_id"] == "r000"
+                                    else "Make the activation observable."
+                                ),
+                                "failure_layer": (
+                                    None
+                                    if item["replicate_id"] == "r000"
+                                    else "integration"
+                                ),
+                                "decisive_input_summary": (
+                                    None
+                                    if item["replicate_id"] == "r000"
+                                    else "No declared phase behavior was observable."
+                                ),
+                                "recommended_route": (
+                                    None
+                                    if item["replicate_id"] == "r000"
+                                    else "implementation"
+                                ),
+                                "local_efficacy": "neutral",
+                                "local_efficacy_assessment": (
+                                    "The scored outcome was preserved."
+                                ),
+                            }
+                            for item in trajectories
+                        ]
                     },
                     "usage": {"total_tokens": 5},
                 }
@@ -2430,16 +2472,16 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(result.outcome["decision"], "pass")
-        self.assertEqual(len(runtime.calls), 3)
+        self.assertEqual(len(runtime.calls), 1)
         self.assertIn(
-            "candidate_trajectory_view",
+            "candidate_trajectory_views",
             runtime.calls[0]["role_input"],
         )
         self.assertNotIn(
             "candidate_trajectory",
             runtime.calls[0]["role_input"],
         )
-        self.assertEqual(result.usage["total_tokens"], 15)
+        self.assertEqual(result.usage["total_tokens"], 5)
         self.assertTrue(
             Path(
                 result.artifact_refs["conformance_summary_artifact"]
@@ -2454,15 +2496,18 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             finding["output"]["candidate_run_ref"],
             "example-1/r000",
         )
+        batch_artifact = json.loads(
+            Path(finding["role_artifact_ref"]).read_text(encoding="utf-8")
+        )
         self.assertNotIn(
             "candidate_run_ref",
-            finding["role_artifact"]["output"],
+            batch_artifact["role_artifact"]["output"],
         )
 
-    async def test_conformance_retry_reuses_rollout_and_completed_findings(
+    async def test_conformance_retry_reuses_rollout_after_batch_failure(
         self,
     ) -> None:
-        """验证失败重试只调用尚未完成的单条 Reviewer。"""
+        """验证 batch 审查失败后复用 rollout 并重试该 Example。"""
 
         experience_file = self.run_dir / "checkpoint_experience.jsonl"
         experience_file.write_text(
@@ -2551,6 +2596,30 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                 )
                 return {"processed_rollouts": 3}
 
+            def evaluate_existing_rollouts(
+                self,
+                *,
+                rollout_file: Path,
+                output_dir: Path,
+            ) -> dict[str, object]:
+                records = [
+                    {
+                        "example_id": "example-checkpoint",
+                        "replicate_id": f"r{index:03d}",
+                        "score": 1,
+                        "score_source": "static",
+                        "teacher": None,
+                        "run_status": "completed",
+                    }
+                    for index in range(3)
+                ]
+                output_dir.mkdir(parents=True, exist_ok=True)
+                (output_dir / "per_rollout.jsonl").write_text(
+                    "".join(json.dumps(item) + "\n" for item in records),
+                    encoding="utf-8",
+                )
+                return {"rollouts": records}
+
         class OneFindingFailure(RuntimeError):
             def __init__(self) -> None:
                 super().__init__("transient review failure")
@@ -2565,23 +2634,39 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
 
         class RecoveringRuntime:
             def __init__(self) -> None:
-                self.calls: list[str] = []
+                self.calls: list[tuple[str, ...]] = []
                 self.failed = False
 
             async def run(self, **kwargs: object) -> dict[str, object]:
                 role_input = kwargs["role_input"]
                 assert isinstance(role_input, dict)
-                replicate_id = str(role_input["replicate_id"])
-                self.calls.append(replicate_id)
-                if replicate_id == "r001" and not self.failed:
+                trajectories = role_input["candidate_trajectory_views"]
+                assert isinstance(trajectories, list)
+                replicate_ids = tuple(
+                    str(item["replicate_id"])
+                    for item in trajectories
+                    if isinstance(item, dict)
+                )
+                self.calls.append(replicate_ids)
+                if not self.failed:
                     self.failed = True
                     raise OneFindingFailure()
                 return {
                     "output": {
-                        "verdict": "faithful",
-                        "observed_phases": ["pre_final"],
-                        "assessment": "The declared phase was observed.",
-                        "repair_obligation": None,
+                        "findings": [
+                            {
+                                "replicate_id": replicate_id,
+                                "verdict": "faithful",
+                                "observed_phases": ["pre_final"],
+                                "assessment": "The declared phase was observed.",
+                                "repair_obligation": None,
+                                "local_efficacy": "neutral",
+                                "local_efficacy_assessment": (
+                                    "The scored outcome was preserved."
+                                ),
+                            }
+                            for replicate_id in replicate_ids
+                        ]
                     },
                     "usage": {"total_tokens": 5},
                 }
@@ -2619,7 +2704,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(failure["stage"], "review_findings")
         self.assertEqual(
             failure["usage"]["total_tokens"],
-            17,
+            7,
             failure,
         )
         finding_failure = json.loads(
@@ -2642,9 +2727,10 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.outcome["decision"], "pass")
         self.assertEqual(result.usage["total_tokens"], 5)
         self.assertEqual(backend.calls, 1)
-        self.assertEqual(runtime.calls.count("r000"), 1)
-        self.assertEqual(runtime.calls.count("r001"), 2)
-        self.assertEqual(runtime.calls.count("r002"), 1)
+        self.assertEqual(
+            runtime.calls,
+            [("r000", "r001", "r002"), ("r000", "r001", "r002")],
+        )
 
     async def test_review_evidence_uses_independent_trial_review_first(
         self,

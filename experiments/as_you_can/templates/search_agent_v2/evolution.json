@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_search_v2",
+  "components": {
+    "search": "fixed",
+    "ircot_search": "evolvable",
+    "tagged_output": "fixed",
+    "answer_control": "evolvable"
+  }
+}

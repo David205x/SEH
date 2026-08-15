@@ -13,6 +13,7 @@ from search_harness.evolution.research.conformance import (
     ConformanceCase,
     aggregate_conformance,
     project_conformance_trajectory,
+    render_conformance_batch_input,
 )
 from search_harness.evolution.research.roles.contracts import ConformanceFinding
 
@@ -86,6 +87,29 @@ class ConformanceAggregationTest(unittest.TestCase):
             "Repair implementation_mismatch.",
             summary.compiler_feedback,
         )
+
+    def test_revises_before_full_evaluation_on_local_harm(self) -> None:
+        """验证实现保真但局部伤害会路由回证据层。"""
+
+        findings = [
+            _finding(
+                "example-1",
+                index,
+                "faithful",
+                local_efficacy=("harmful" if index == 0 else "neutral"),
+            )
+            for index in range(3)
+        ]
+
+        summary = aggregate_conformance(
+            cases=(_case("example-1"),),
+            findings=findings,
+            finding_refs=["finding-0", "finding-1", "finding-2"],
+        )
+
+        self.assertEqual(summary.decision, "revise")
+        self.assertEqual(summary.local_efficacy_gate, "fail")
+        self.assertEqual(summary.recommended_route, "evidence")
 
     def test_revises_when_one_example_has_no_faithful_replicate(
         self,
@@ -164,7 +188,13 @@ class ConformanceAggregationTest(unittest.TestCase):
                                     }
                                 ]
                             },
-                            "metadata": {"reasoning": "private reasoning"},
+                            "metadata": {
+                                "reasoning": "private reasoning",
+                                "usage": {
+                                    "prompt_tokens": 40,
+                                    "completion_tokens": 2,
+                                },
+                            },
                         },
                     },
                     {
@@ -218,9 +248,47 @@ class ConformanceAggregationTest(unittest.TestCase):
         self.assertNotIn("private reasoning", encoded)
         self.assertNotIn("private Student thinking", encoded)
         self.assertIn("retrieved relation evidence", encoded)
+        self.assertNotIn("omitted", view)
+        self.assertEqual(view["hook_model_cost"]["call_count"], 1)
+        self.assertEqual(view["hook_model_cost"]["total_tokens"], 42)
+        self.assertEqual(
+            view["hook_model_cost"]["calls"][0]["thinking_mode"],
+            "inherited",
+        )
         self.assertIn("explicit_relation_present=false", encoded)
         self.assertIn("continue searching", encoded)
         self.assertIn("specific relation", encoded)
+
+    def test_batch_render_separates_shared_and_replicate_evidence(self) -> None:
+        """验证共享证据只呈现一次且每条轨迹拥有明确边界。"""
+
+        rendered = render_conformance_batch_input(
+            {
+                "mechanism": {"goal": "shared mechanism"},
+                "trial_refs": ["trial-1"],
+                "reference_observations": [{"fact": "shared reference"}],
+                "example_id": "example-1",
+                "candidate_trajectory_views": [
+                    {
+                        "replicate_id": "r000",
+                        "candidate_trajectory_view": {"answer": "first"},
+                    },
+                    {
+                        "replicate_id": "r001",
+                        "candidate_trajectory_view": {"answer": "second"},
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(rendered.count("shared mechanism"), 1)
+        self.assertEqual(rendered.count("shared reference"), 1)
+        self.assertIn("### replicate r000", rendered)
+        self.assertIn("### replicate r001", rendered)
+        self.assertLess(
+            rendered.index("### replicate r000"),
+            rendered.index("### replicate r001"),
+        )
 
 
 def _case(example_id: str) -> ConformanceCase:
@@ -238,6 +306,8 @@ def _finding(
     example_id: str,
     replicate_index: int,
     verdict: str,
+    *,
+    local_efficacy: str | None = None,
 ) -> ConformanceFinding:
     return ConformanceFinding(
         trial_refs=[f"trial-{example_id}"],
@@ -259,4 +329,8 @@ def _finding(
         recommended_route=(
             None if verdict == "faithful" else "implementation"
         ),
+        local_efficacy=local_efficacy or (
+            "neutral" if verdict == "faithful" else "inconclusive"
+        ),
+        local_efficacy_assessment="The local score did not regress.",
     )

@@ -171,10 +171,12 @@ class ResearchRoleEffects:
         self,
         *,
         mechanism: MechanismSpec,
+        student_model_experiments: list[dict[str, Any]],
         implementation_constraints: list[Any],
         validation_feedback: list[Any],
         work_dir: Path,
         continuation_candidate_file: Path | None = None,
+        conformance_failures: list[dict[str, Any]] | None = None,
     ) -> EffectResult:
         artifact = await self.role_runner.run(
             template_root=self._template("compiler"),
@@ -182,10 +184,13 @@ class ResearchRoleEffects:
             role_version=1,
             role_input={
                 "mechanism": mechanism.model_dump(mode="json"),
+                "student_model_experiments": student_model_experiments,
                 "implementation_constraints": implementation_constraints,
                 "validation_feedback": validation_feedback,
+                "conformance_failures": conformance_failures or [],
             },
             resource_config=TeacherResourceConfig(
+                hook_probe_env_file=self.env_file,
                 compiler=CompilerResourceConfig(
                     parent_template_root=self.store.template_dir,
                     env_file=self.env_file,
@@ -206,6 +211,13 @@ class ResearchRoleEffects:
                 raise ValueError(
                     "submitted Compiler artifact lacks compiler_candidate"
                 )
+            candidate = dict(candidate)
+            experiments = resources.get("student_model_experiments")
+            candidate["student_model_experiments"] = (
+                [item for item in experiments if isinstance(item, dict)]
+                if isinstance(experiments, list)
+                else []
+            )
             candidate_path = _write_json(
                 work_dir / "candidate_workspace.json",
                 candidate,

@@ -57,6 +57,8 @@ class ConformanceSummary:
     per_example: dict[str, dict[str, Any]]
     compiler_feedback: tuple[str, ...]
     finding_refs: tuple[str, ...]
+    local_efficacy_counts: dict[str, int]
+    local_efficacy_gate: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -74,11 +76,15 @@ class ConformanceSummary:
             },
             "compiler_feedback": list(self.compiler_feedback),
             "finding_refs": list(self.finding_refs),
+            "local_efficacy_counts": dict(self.local_efficacy_counts),
+            "local_efficacy_gate": self.local_efficacy_gate,
         }
 
 
 def project_conformance_trajectory(
     record: dict[str, Any],
+    *,
+    evaluation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """投影 Reviewer 判断机制保真所需的完整行为证据。"""
 
@@ -101,6 +107,8 @@ def project_conformance_trajectory(
             "answer": run.get("answer"),
             "error": run.get("error"),
         },
+        "evaluation": evaluation,
+        "hook_model_cost": _hook_model_cost(trace),
         "events": [
             projected
             for event in trace
@@ -108,13 +116,58 @@ def project_conformance_trajectory(
             and (projected := _project_conformance_event(event)) is not None
         ],
         "runner_error": record.get("runner_error"),
-        "omitted": [
-            "repeated Student model_input snapshots",
-            "Student and Hook-model reasoning",
-            "provider usage metadata",
-            "unselected runtime events and filesystem provenance",
-        ],
     }
+
+
+def render_conformance_batch_input(value: dict[str, Any]) -> str:
+    """Render shared evidence once and give every replicate an explicit boundary."""
+
+    trajectories = value.get("candidate_trajectory_views")
+    trajectories = trajectories if isinstance(trajectories, list) else []
+    lines = [
+        "# Example-level Conformance Review Batch",
+        (
+            "Judge each replicate independently. Shared Mechanism and reference "
+            "evidence appear once; never infer one finding from another "
+            "replicate's behavior."
+        ),
+        "",
+        "## Shared authoritative Mechanism",
+        "```json",
+        _compact_json(value.get("mechanism")),
+        "```",
+        "",
+        "## Shared reference boundary",
+        f"example_id: {value.get('example_id', 'unavailable')}",
+        "trial_refs: " + _compact_json(value.get("trial_refs")),
+        "```json",
+        _compact_json(value.get("reference_observations")),
+        "```",
+        "",
+        "## Candidate rollout views",
+    ]
+    for item in trajectories:
+        item = item if isinstance(item, dict) else {}
+        lines.extend(
+            (
+                f"### replicate {item.get('replicate_id', 'unavailable')}",
+                "```json",
+                _compact_json(item.get("candidate_trajectory_view")),
+                "```",
+            )
+        )
+    lines.extend(
+        (
+            "",
+            "## Submission requirement",
+            (
+                "Submit exactly one independent finding for every replicate_id "
+                "above, in the same order. Apply the full verdict and diagnostic "
+                "contract separately to every finding."
+            ),
+        )
+    )
+    return "\n".join(lines)
 
 
 def load_conformance_cases(
@@ -249,9 +302,20 @@ def aggregate_conformance(
                 )
             )
 
+    efficacy_counts = Counter(
+        item.local_efficacy for item in finding_items
+    )
+    if efficacy_counts["harmful"]:
+        efficacy_gate = "fail"
+    elif efficacy_counts["beneficial"]:
+        efficacy_gate = "pass"
+    else:
+        efficacy_gate = "inconclusive"
     decision = (
         "pass"
-        if not (set(counts) & hard_failures) and not missing_faithful
+        if not (set(counts) & hard_failures)
+        and not missing_faithful
+        and efficacy_gate != "fail"
         else "revise"
     )
     route_feedback = {
@@ -264,6 +328,24 @@ def aggregate_conformance(
         )
         for route in ("evidence", "mechanism", "implementation")
     }
+    if (
+        efficacy_gate == "fail"
+        and not (set(counts) & hard_failures)
+        and not missing_faithful
+    ):
+        route_feedback["evidence"] = tuple(
+            _unique(
+                [
+                    *route_feedback["evidence"],
+                    (
+                        "The locally faithful Candidate replay produced a "
+                        "harmful task outcome. Re-establish that the researched "
+                        "mechanism has a supported local task benefit before "
+                        "another full Candidate Evaluation."
+                    ),
+                ]
+            )
+        )
     recommended_route = next(
         (
             route
@@ -294,6 +376,8 @@ def aggregate_conformance(
         per_example=per_example,
         compiler_feedback=tuple(_unique(compiler_feedback)),
         finding_refs=refs,
+        local_efficacy_counts=dict(efficacy_counts),
+        local_efficacy_gate=efficacy_gate,
     )
 
 
@@ -322,6 +406,10 @@ def runtime_error_finding(
             "before conformance could be established."
         ),
         recommended_route="implementation",
+        local_efficacy="inconclusive",
+        local_efficacy_assessment=(
+            "The rollout did not complete, so local task effect is unavailable."
+        ),
     )
 
 
@@ -344,6 +432,33 @@ def _reference_observation(
             trial.get("context_changes")
         ),
         "phase_effects": trial.get("phase_effects"),
+        "trial_outcome": _project_trial_outcome(trial.get("comparison")),
+    }
+
+
+def _project_trial_outcome(value: object) -> dict[str, Any] | None:
+    """Expose only score-level Trial outcomes needed for local preflight."""
+
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    branch = value.get("branch")
+    source = source if isinstance(source, dict) else {}
+    branch = branch if isinstance(branch, dict) else {}
+    teacher = branch.get("teacher")
+    teacher = teacher if isinstance(teacher, dict) else {}
+    return {
+        "source": {
+            "score": source.get("score"),
+            "status": source.get("status"),
+        },
+        "intervention_branch": {
+            "score": branch.get("score"),
+            "score_source": branch.get("score_source"),
+            "teacher_assessment": teacher.get("assessment"),
+            "status": branch.get("status"),
+        },
+        "exact_match_delta": value.get("exact_match_delta"),
     }
 
 
@@ -368,7 +483,14 @@ def _project_conformance_event(
     if event_type == "hook_model_output":
         projected_payload = {
             key: payload.get(key)
-            for key in ("phase", "hook_id", "profile", "purpose", "raw_output")
+            for key in (
+                "phase",
+                "hook_id",
+                "profile",
+                "purpose",
+                "thinking_mode",
+                "raw_output",
+            )
             if key in payload
         }
     elif event_type == "hook_applied":
@@ -401,6 +523,58 @@ def _project_conformance_event(
         "event_type": event_type,
         "payload": projected_payload,
     }
+
+
+def _hook_model_cost(trace: list[object]) -> dict[str, Any]:
+    """Summarize actual Hook-model calls without exposing reasoning metadata."""
+
+    calls = []
+    total_tokens = 0
+    for event in trace:
+        if not isinstance(event, dict) or event.get("event_type") != "hook_model_output":
+            continue
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        metadata = payload.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        usage = metadata.get("usage")
+        usage = usage if isinstance(usage, dict) else {}
+        call_tokens = _usage_total(usage)
+        total_tokens += call_tokens
+        calls.append(
+            {
+                "step": event.get("step"),
+                "phase": payload.get("phase"),
+                "hook_id": payload.get("hook_id"),
+                "profile": payload.get("profile"),
+                "purpose": payload.get("purpose"),
+                "thinking_mode": payload.get("thinking_mode", "inherited"),
+                "total_tokens": call_tokens,
+            }
+        )
+    return {
+        "call_count": len(calls),
+        "total_tokens": total_tokens,
+        "calls": calls,
+    }
+
+
+def _usage_total(usage: dict[str, Any]) -> int:
+    value = usage.get("total_tokens")
+    if isinstance(value, int) and not isinstance(value, bool):
+        return max(0, value)
+    prompt = usage.get("prompt_tokens", usage.get("prompt_eval_count", 0))
+    completion = usage.get(
+        "completion_tokens",
+        usage.get("eval_count", 0),
+    )
+    return _non_negative_usage(prompt) + _non_negative_usage(completion)
+
+
+def _non_negative_usage(value: object) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        return 0
+    return value
 
 
 def _project_hook_changes(value: object) -> list[dict[str, Any]]:
@@ -545,6 +719,10 @@ def _read_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"JSON artifact must contain an object: {path}")
     return value
+
+
+def _compact_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
 def _unique(values: Iterable[str | None]) -> list[str]:

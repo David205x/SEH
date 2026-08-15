@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_final_routed_adaptive_search",
+  "components": {
+    "search": "fixed",
+    "evidence_search": "fixed",
+    "tagged_output": "fixed",
+    "question_router": "evolvable",
+    "adaptive_decompose": "evolvable",
+    "runtime_guards": "evolvable"
+  }
+}

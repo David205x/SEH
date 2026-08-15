@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from .model import ChatMessage, ModelInput
 from ..tools import ToolCall, ToolInteraction, ToolResult
@@ -13,6 +13,7 @@ from ..trajectory import TrajectoryEvent
 
 
 TraceEvent = TrajectoryEvent
+HookThinkingMode = Literal["enabled", "disabled"]
 
 
 class ParsedOutputKind(str, Enum):
@@ -47,6 +48,7 @@ class HookModelRequest:
     profile: str
     purpose: str
     model_input: ModelInput
+    thinking_mode: HookThinkingMode | None = None
 
     def __post_init__(self) -> None:
         profile = self.profile.strip().casefold()
@@ -55,6 +57,10 @@ class HookModelRequest:
             raise ValueError("hook model profile must not be empty")
         if not purpose:
             raise ValueError("hook model purpose must not be empty")
+        if self.thinking_mode not in {None, "enabled", "disabled"}:
+            raise ValueError(
+                "hook model thinking_mode must be enabled, disabled, or None"
+            )
         object.__setattr__(self, "profile", profile)
         object.__setattr__(self, "purpose", purpose)
 
@@ -63,6 +69,7 @@ class HookModelRequest:
             "profile": self.profile,
             "purpose": self.purpose,
             "model_input": self.model_input.to_dict(),
+            "thinking_mode": self.thinking_mode,
         }
 
 

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_search_v6",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/component.py:build",
+      "config": {"default_topk": 5}
+    }
+  ],
+  "prompt": {
+    "instance_id": "ircot_search",
+    "entrypoint": "prompt/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "tagged_output",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": [
+    {
+      "instance_id": "runtime_guards",
+      "entrypoint": "extensions/answer_control/component.py:build",
+      "config": {"topk": 5}
+    }
+  ]
+}

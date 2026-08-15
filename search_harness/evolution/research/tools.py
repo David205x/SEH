@@ -9,6 +9,14 @@ from search_harness.framework import ToolResult
 from search_harness.framework.tools import CallableTool, ToolArg, tool
 from search_harness.framework.harness import ComponentFactoryContext
 
+from .compiler_views import render_hook_api_result
+from .candidate_views import (
+    render_candidate_case,
+    render_candidate_changes,
+    render_candidate_harness_diff,
+    render_candidate_trajectory_text,
+    render_paired_candidate_trajectory,
+)
 from .mechanism.hook_api import hook_api_categories
 from .mechanism.runtime_inputs import RuntimeInputId
 from .intervention.capabilities import intervention_capabilities
@@ -21,6 +29,13 @@ from .resources.stores import (
     CandidateComparisonStore,
     CompilerWorkspaceStore,
     InterventionBranchStore,
+)
+from .views import (
+    TeacherTrajectoryView,
+    render_evaluation_case,
+    render_distillation_trial_detail,
+    render_student_behavior_interface,
+    render_student_capability_view,
 )
 
 
@@ -44,6 +59,12 @@ def build_builtin_tool(
         "get_cost_summary": _get_cost_summary,
         "get_evaluation_case": _get_evaluation_case,
         "get_student_trajectory": _get_student_trajectory,
+        "get_trajectory_change": _get_trajectory_change,
+        "get_trajectory_block": _get_trajectory_block,
+        "search_hidden_trajectory_blocks": _search_hidden_trajectory_blocks,
+        "get_student_capability_view": _get_student_capability_view,
+        "get_student_behavior_interface": _get_student_behavior_interface,
+        "get_distillation_trial_detail": _get_distillation_trial_detail,
         "get_intervention_capabilities": _get_intervention_capabilities,
         "get_harness_manifest": _get_harness_manifest,
         "get_harness_component": _get_harness_component,
@@ -55,7 +76,7 @@ def build_builtin_tool(
         "complete_mechanism_draft": _complete_mechanism_draft,
         "set_mechanism_constraints": _set_mechanism_constraints,
         "validate_mechanism_draft": _validate_mechanism_draft,
-        "probe_mechanism_evaluators": _probe_mechanism_evaluators,
+        "run_student_model_experiment": _run_student_model_experiment,
         "list_intervention_timeline": _list_intervention_timeline,
         "inspect_intervention_prefix": _inspect_intervention_prefix,
         "run_intervention_branch": _run_intervention_branch,
@@ -74,6 +95,7 @@ def build_builtin_tool(
         "get_candidate_case": _get_candidate_case,
         "get_paired_student_trajectory": _get_paired_student_trajectory,
         "get_candidate_harness_diff": _get_candidate_harness_diff,
+        "get_candidate_trajectory_text": _get_candidate_trajectory_text,
     }
     try:
         factory = factories[kind]
@@ -90,8 +112,8 @@ def _list_evaluation_cases(resources: TeacherResources) -> CallableTool:
         page: Annotated[int, ToolArg("One-based page number.", minimum=1)] = 1,
         page_size: Annotated[
             int,
-            ToolArg("Cases per page.", minimum=1, maximum=20),
-        ] = 10,
+            ToolArg("Cases per page.", minimum=1, maximum=100),
+        ] = 100,
         stability: Annotated[
             str,
             ToolArg(
@@ -132,7 +154,10 @@ def _get_evaluation_case(resources: TeacherResources) -> CallableTool:
     ) -> ToolResult:
         """Read one logical example's evaluation and replicate directory."""
 
-        return _json_result("get_evaluation_case", store.get_case(example_id))
+        return _text_result(
+            "get_evaluation_case",
+            render_evaluation_case(store.get_case(example_id)),
+        )
 
     return CallableTool.from_callable(invoke)
 
@@ -224,26 +249,191 @@ def _get_student_trajectory(resources: TeacherResources) -> CallableTool:
             str,
             ToolArg("Replicate ID returned by get_evaluation_case."),
         ],
-        view: Annotated[
+    ) -> ToolResult:
+        """Read a de-duplicated Student behavior and context-revision view."""
+
+        return _text_result(
+            "get_student_trajectory",
+            _trajectory_view(store, example_id, replicate_id).render(),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_trajectory_block(resources: TeacherResources) -> CallableTool:
+    store = _require_evaluation(resources)
+
+    @tool(name="get_trajectory_block")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Trajectory example ID.")],
+        replicate_id: Annotated[str, ToolArg("Trajectory replicate ID.")],
+        block_id: Annotated[
+            int,
+            ToolArg("Numeric block ID from the trajectory view.", minimum=1),
+        ],
+        revision: Annotated[
+            int,
+            ToolArg("Block revision from the trajectory view.", minimum=1),
+        ] = 1,
+        offset: Annotated[
+            int,
+            ToolArg("Zero-based character offset.", minimum=0),
+        ] = 0,
+        max_characters: Annotated[
+            int,
+            ToolArg(
+                "Maximum exact characters to return.",
+                minimum=1,
+                maximum=12000,
+            ),
+        ] = 4000,
+    ) -> ToolResult:
+        """Read one exact Context Block slice by stable reference."""
+
+        view = _trajectory_view(store, example_id, replicate_id)
+        return _text_result(
+            "get_trajectory_block",
+            view.read_block(
+                block_id=block_id,
+                revision=revision,
+                offset=offset,
+                max_characters=max_characters,
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_trajectory_change(resources: TeacherResources) -> CallableTool:
+    store = _require_evaluation(resources)
+
+    @tool(name="get_trajectory_change")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Trajectory example ID.")],
+        replicate_id: Annotated[str, ToolArg("Trajectory replicate ID.")],
+        change_id: Annotated[
+            str,
+            ToolArg("Change ID returned by get_student_trajectory."),
+        ],
+    ) -> ToolResult:
+        """Read one Extension Change and its source/effective block directory."""
+
+        return _text_result(
+            "get_trajectory_change",
+            _trajectory_view(store, example_id, replicate_id).render_change(
+                change_id
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _search_hidden_trajectory_blocks(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_evaluation(resources)
+
+    @tool(name="search_hidden_trajectory_blocks")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Trajectory example ID.")],
+        replicate_id: Annotated[str, ToolArg("Trajectory replicate ID.")],
+        query: Annotated[
+            str,
+            ToolArg("Literal text to find in Runtime-only block contents."),
+        ],
+        max_matches: Annotated[
+            int,
+            ToolArg("Maximum returned matches.", minimum=1, maximum=20),
+        ] = 8,
+    ) -> ToolResult:
+        """Search Runtime-only source blocks before exact retrieval."""
+
+        return _text_result(
+            "search_hidden_trajectory_blocks",
+            _trajectory_view(store, example_id, replicate_id).search_runtime_blocks(
+                query,
+                max_matches=max_matches,
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_student_capability_view(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_evaluation(resources)
+
+    @tool(name="get_student_capability_view")
+    def invoke() -> ToolResult:
+        """Read Student-observable registered capabilities, not source code."""
+
+        return _text_result(
+            "get_student_capability_view",
+            render_student_capability_view(
+                manifest=store.harness_manifest or {},
+                records=_evaluation_records(store),
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_student_behavior_interface(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_evaluation(resources)
+
+    @tool(name="get_student_behavior_interface")
+    def invoke(
+        example_id: Annotated[
+            str,
+            ToolArg("One cited trajectory's example ID."),
+        ],
+        replicate_id: Annotated[
+            str,
+            ToolArg("One cited trajectory's replicate ID."),
+        ],
+    ) -> ToolResult:
+        """Read the exact Student-visible prompt and behavior surface."""
+
+        reference = f"{example_id}/{replicate_id}"
+        reads = set(store.role_session_state().get("trajectory_reads", []))
+        if reference not in reads:
+            raise ValueError(
+                "inspect this trajectory through get_student_trajectory "
+                "before reading its Student Behavior Interface"
+            )
+        return _text_result(
+            "get_student_behavior_interface",
+            render_student_behavior_interface(
+                manifest=store.harness_manifest or {},
+                record=store.rollouts[example_id][replicate_id],
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_distillation_trial_detail(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_trials(resources)
+
+    @tool(name="get_distillation_trial_detail")
+    def invoke(
+        trial_ref: Annotated[
             str,
             ToolArg(
-                "Trajectory projection. behavior preserves Student reasoning, "
-                "model output, actions, observations, and outcomes while "
-                "removing repeated prompt/runtime data. full returns the "
-                "complete rollout record.",
-                choices=("behavior", "full"),
+                "Trial reference listed in the Distillation Evidence Dossier."
             ),
-        ] = "behavior",
+        ],
     ) -> ToolResult:
-        """Read one Student trajectory at behavior or full diagnostic detail."""
+        """Read one focused event catalog only to resolve an ambiguity."""
 
-        return _json_result(
-            "get_student_trajectory",
-            store.get_trajectory(
-                example_id=example_id,
-                replicate_id=replicate_id,
-                view=view,
-            ),
+        return _text_result(
+            "get_distillation_trial_detail",
+            render_distillation_trial_detail(store.get_trial(trial_ref)),
         )
 
     return CallableTool.from_callable(invoke)
@@ -592,37 +782,99 @@ def _validate_mechanism_draft(resources: TeacherResources) -> CallableTool:
     return CallableTool.from_callable(invoke)
 
 
-def _probe_mechanism_evaluators(
+def _run_student_model_experiment(
     resources: TeacherResources,
 ) -> CallableTool:
-    @tool(name="probe_mechanism_evaluators")
+    @tool(name="run_student_model_experiment")
     def invoke(
-        draft_id: Annotated[
+        purpose: Annotated[
             str,
-            ToolArg("Completed mechanism draft ID to probe."),
+            ToolArg(
+                "Question this descriptive experiment is intended to answer; "
+                "maximum 300 characters, preferably no more than 240."
+            ),
         ],
-        evidence_refs: Annotated[
+        system_prompt: Annotated[
+            str,
+            ToolArg(
+                "Exact system instruction shown to the Student model; maximum "
+                "6000 characters. Include the proposed output format and "
+                "decision task when relevant."
+            ),
+        ],
+        cases: Annotated[
+            list[dict[str, object]],
+            ToolArg(
+                "One to six inputs shaped as "
+                "{case_id:<unique string>, user_prompt:<exact string>}."
+            ),
+        ],
+        thinking_modes: Annotated[
             list[str],
-            ToolArg("Trial references supporting the draft labels."),
+            ToolArg(
+                "One or both per-request modes: enabled and disabled. Results "
+                "are descriptive; the program does not choose a winner."
+            ),
         ],
         repetitions: Annotated[
             int,
             ToolArg(
-                "Repeated classifications per labeled fixture.",
+                "Repeated generations per case and thinking mode.",
                 minimum=1,
                 maximum=3,
             ),
         ] = 3,
     ) -> ToolResult:
-        """Run the production Hook model on every labeled decision fixture."""
+        """Run bounded Student generations and return raw outputs and usage."""
 
+        artifact = resources.run_student_model_experiment(
+            purpose=purpose,
+            system_prompt=system_prompt,
+            cases=cases,
+            thinking_modes=thinking_modes,
+            repetitions=repetitions,
+        )
+        grouped: dict[tuple[str, str], dict[str, object]] = {}
+        for observation in artifact["observations"]:
+            key = (
+                str(observation["case_id"]),
+                str(observation["thinking_mode"]),
+            )
+            bucket = grouped.setdefault(
+                key,
+                {
+                    "case_id": key[0],
+                    "thinking_mode": key[1],
+                    "outputs": [],
+                    "total_tokens": 0,
+                    "errors": [],
+                },
+            )
+            output = observation.get("raw_output")
+            bucket["outputs"].append(output)
+            usage = observation.get("usage")
+            usage = usage if isinstance(usage, dict) else {}
+            total_tokens = usage.get("total_tokens", 0)
+            if isinstance(total_tokens, int) and not isinstance(
+                total_tokens,
+                bool,
+            ):
+                bucket["total_tokens"] += max(0, total_tokens)
+            error = observation.get("error")
+            if error is not None:
+                bucket["errors"].append(error)
         return _json_result(
-            "probe_mechanism_evaluators",
-            resources.probe_mechanism_evaluators(
-                draft_id=draft_id,
-                evidence_refs=evidence_refs,
-                repetitions=repetitions,
-            ),
+            "run_student_model_experiment",
+            {
+                "experiment_id": artifact["experiment_id"],
+                "experiment_signature": artifact["experiment_signature"],
+                "cache_hit": artifact.get("cache_hit", False),
+                "purpose": artifact["purpose"],
+                "thinking_modes": artifact["thinking_modes"],
+                "repetitions": artifact["repetitions"],
+                "case_mode_results": list(grouped.values()),
+                "provider_metadata_retained_in_artifact": True,
+            },
         )
 
     return CallableTool.from_callable(invoke)
@@ -849,9 +1101,9 @@ def _query_hook_api(resources: TeacherResources) -> CallableTool:
     ) -> ToolResult:
         """Resolve one Topic or API contract and suggest nearby public inputs."""
 
-        return _json_result(
+        return _text_result(
             "query_hook_api",
-            store.query_hook_api(symbol),
+            render_hook_api_result(store.query_hook_api(symbol)),
         )
 
     return CallableTool.from_callable(invoke)
@@ -978,16 +1230,18 @@ def _list_candidate_changes(resources: TeacherResources) -> CallableTool:
         change: Annotated[
             str,
             ToolArg(
-                "Paired outcome filter.",
+                "Paired outcome filter. The default lists improved and "
+                "regressed cases before unchanged drill-down.",
                 choices=("any", "improved", "regressed", "unchanged"),
             ),
         ] = "any",
     ) -> ToolResult:
-        """List paired incumbent/candidate outcome changes."""
+        """List a changed-first incumbent/candidate outcome directory."""
 
-        return _json_result(
+        return _text_result(
             "list_candidate_changes",
-            store.list_changes(
+            render_candidate_changes(
+                store,
                 page=page,
                 page_size=page_size,
                 change=change,
@@ -1007,11 +1261,11 @@ def _get_candidate_case(resources: TeacherResources) -> CallableTool:
             ToolArg("Example ID returned by list_candidate_changes."),
         ],
     ) -> ToolResult:
-        """Read paired evaluation details for one logical example."""
+        """Read a paired Evaluation Case with replicate-level deltas."""
 
-        return _json_result(
+        return _text_result(
             "get_candidate_case",
-            store.get_case(example_id),
+            render_candidate_case(store, example_id),
         )
 
     return CallableTool.from_callable(invoke)
@@ -1028,14 +1282,18 @@ def _get_paired_student_trajectory(resources: TeacherResources) -> CallableTool:
         ],
         replicate_id: Annotated[
             str,
-            ToolArg("Replicate ID present in both evaluations."),
+            ToolArg(
+                "A decisive replicate ID from get_candidate_case. Prefer an "
+                "actual score-changing or mechanism-boundary pair."
+            ),
         ],
     ) -> ToolResult:
-        """Read paired Student trajectories for one example replicate."""
+        """Read one self-contained paired Candidate effect trajectory."""
 
-        return _json_result(
+        return _text_result(
             "get_paired_student_trajectory",
-            store.get_paired_trajectory(
+            render_paired_candidate_trajectory(
+                store,
                 example_id=example_id,
                 replicate_id=replicate_id,
             ),
@@ -1048,12 +1306,77 @@ def _get_candidate_harness_diff(resources: TeacherResources) -> CallableTool:
     store = _require_candidate_review(resources)
 
     @tool(name="get_candidate_harness_diff")
-    def invoke() -> ToolResult:
-        """Read the candidate Harness file diff when roots were configured."""
+    def invoke(
+        path: Annotated[
+            str,
+            ToolArg(
+                "Exact changed path, or an empty string for a complete small "
+                "diff or a large-diff directory."
+            ),
+        ] = "",
+    ) -> ToolResult:
+        """Read the Candidate Harness diff with size-aware path drill-down."""
 
-        return _json_result(
+        return _text_result(
             "get_candidate_harness_diff",
-            store.harness_diff(),
+            render_candidate_harness_diff(store, path=path or None),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_candidate_trajectory_text(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_candidate_review(resources)
+
+    @tool(name="get_candidate_trajectory_text")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Trajectory example ID.")],
+        replicate_id: Annotated[str, ToolArg("Trajectory replicate ID.")],
+        side: Annotated[
+            str,
+            ToolArg(
+                "Paired trajectory side.",
+                choices=("incumbent", "candidate"),
+            ),
+        ],
+        event_index: Annotated[int, ToolArg("Exact event index.", minimum=0)],
+        field: Annotated[
+            str,
+            ToolArg(
+                "Exact long-text field exposed by the paired view.",
+                choices=(
+                    "tool_result_content",
+                    "hook_raw_output",
+                    "hook_model_input",
+                    "final_answer",
+                ),
+            ),
+        ],
+        offset: Annotated[
+            int,
+            ToolArg("Zero-based character offset.", minimum=0),
+        ] = 0,
+        max_characters: Annotated[
+            int,
+            ToolArg("Maximum exact characters.", minimum=1, maximum=12000),
+        ] = 4000,
+    ) -> ToolResult:
+        """Read one exact long text field when a preview is insufficient."""
+
+        return _text_result(
+            "get_candidate_trajectory_text",
+            render_candidate_trajectory_text(
+                store,
+                example_id=example_id,
+                replicate_id=replicate_id,
+                side=side,
+                event_index=event_index,
+                field=field,
+                offset=offset,
+                max_characters=max_characters,
+            ),
         )
 
     return CallableTool.from_callable(invoke)
@@ -1065,6 +1388,30 @@ def _require_evaluation(
     if resources.evaluation is None:
         raise ValueError("Teacher template requires evaluation resources")
     return resources.evaluation
+
+
+def _trajectory_view(
+    store: EvaluationEvidenceStore,
+    example_id: str,
+    replicate_id: str,
+) -> TeacherTrajectoryView:
+    # Keep the store's access ledger and evidence budget authoritative even
+    # though presentation is built from the immutable source record.
+    store.get_trajectory(
+        example_id=example_id,
+        replicate_id=replicate_id,
+        view="behavior",
+    )
+    return TeacherTrajectoryView(
+        store.rollouts[example_id][replicate_id],
+        case=store.cases.get(example_id),
+        replicate_id=replicate_id,
+    )
+
+
+def _evaluation_records(store: EvaluationEvidenceStore):
+    for by_replicate in store.rollouts.values():
+        yield from by_replicate.values()
 
 
 def _require_trials(resources: TeacherResources) -> TrialEvidenceStore:
@@ -1102,3 +1449,7 @@ def _json_result(name: str, payload: Any) -> ToolResult:
         name=name,
         content=json.dumps(payload, ensure_ascii=False),
     )
+
+
+def _text_result(name: str, content: str) -> ToolResult:
+    return ToolResult(name=name, content=content)

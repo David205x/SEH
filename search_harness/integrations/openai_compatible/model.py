@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 from urllib import parse as urllib_parse
@@ -143,6 +143,53 @@ class OpenAICompatibleConfig:
             "thinking_mode": self.thinking_mode,
         }
 
+    @property
+    def configured_thinking_mode(self) -> str | None:
+        """Return the provider-neutral logical thinking setting."""
+
+        if self.ollama_think is not None:
+            return "enabled" if self.ollama_think else "disabled"
+        return self.thinking_mode
+
+    @property
+    def supports_thinking_mode(self) -> bool:
+        """Return whether this adapter knows the provider's request mapping."""
+
+        return _is_default_ollama_base_url(
+            self.base_url
+        ) or _is_deepseek_base_url(self.base_url)
+
+    def with_configured_thinking_mode(
+        self,
+        thinking_mode: str | None,
+    ) -> "OpenAICompatibleConfig":
+        """Apply a configured mode only when this provider mapping is known."""
+
+        if thinking_mode is None or not self.supports_thinking_mode:
+            return self
+        return self.with_thinking_mode(thinking_mode)
+
+    def with_thinking_mode(self, thinking_mode: str) -> "OpenAICompatibleConfig":
+        """Return a config with one supported provider's thinking override."""
+
+        if thinking_mode not in {"enabled", "disabled"}:
+            raise ValueError("thinking_mode must be enabled or disabled")
+        if _is_default_ollama_base_url(self.base_url):
+            return replace(
+                self,
+                ollama_think=thinking_mode == "enabled",
+                thinking_mode=None,
+            )
+        if _is_deepseek_base_url(self.base_url):
+            return replace(
+                self,
+                ollama_think=None,
+                thinking_mode=thinking_mode,
+            )
+        raise ValueError(
+            "per-request thinking_mode is unavailable for this model provider"
+        )
+
 
 class OpenAICompatibleModel:
     """通过 OpenAI-compatible Chat Completions 调用文本模型。"""
@@ -167,8 +214,8 @@ class OpenAICompatibleModel:
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
         }
-        if self.config.ollama_think is not None:
-            payload["think"] = self.config.ollama_think
+        if self.config.ollama_think is False:
+            payload["reasoning_effort"] = "none"
         if self.config.thinking_mode is not None:
             payload["thinking"] = {"type": self.config.thinking_mode}
         if self.config.seed is not None:

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_search_v1",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/component.py:build",
+      "config": {}
+    }
+  ],
+  "prompt": {
+    "instance_id": "evidence_search",
+    "entrypoint": "prompt/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "tagged_output",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

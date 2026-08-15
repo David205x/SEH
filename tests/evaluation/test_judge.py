@@ -94,17 +94,41 @@ class TeacherJudgeTest(unittest.TestCase):
         )
 
         self.assertEqual(0, judgment.score)
+        self.assertEqual("A broader location is not an alias.", judgment.assessment)
         prompt = model.model_input.messages[-1].content
-        self.assertEqual(1, prompt.count("Return exactly one JSON object"))
+        self.assertEqual(0, prompt.count("Return exactly one JSON object"))
+        self.assertIn("score-and-assessment object", prompt)
+
+    def test_teacher_judge_rejects_incomplete_output_contract(self) -> None:
+        model = _RecordingModel(raw_output='{"score": 0}')
+        judgment = TeacherBinaryJudge(model, HotpotQAEvaluator()).judge(
+            EvaluationCase(
+                example_id="example",
+                question="Where?",
+                golden_answer="England",
+                predicted_answer="United Kingdom",
+            )
+        )
+
+        self.assertIsNone(judgment.score)
+        self.assertIsNone(judgment.assessment)
+        self.assertIn("only score and assessment", judgment.error)
 
 
 class _RecordingModel:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        raw_output: str = (
+            '{"score": 0, "assessment": '
+            '"A broader location is not an alias."}'
+        ),
+    ) -> None:
         self.model_input = None
+        self.raw_output = raw_output
 
     def generate(self, model_input):
         self.model_input = model_input
-        return ModelResponse(raw_output='{"score": 0}')
+        return ModelResponse(raw_output=self.raw_output)
 
 
 if __name__ == "__main__":

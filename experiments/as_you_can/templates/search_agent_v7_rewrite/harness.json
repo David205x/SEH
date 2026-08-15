@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_search_v7_rewrite",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/component.py:build",
+      "config": {"default_topk": 5}
+    }
+  ],
+  "prompt": {
+    "instance_id": "evidence_search",
+    "entrypoint": "prompt/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "tagged_output",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": [
+    {
+      "instance_id": "question_rewrite",
+      "entrypoint": "extensions/question_rewrite/component.py:build",
+      "config": {}
+    },
+    {
+      "instance_id": "runtime_guards",
+      "entrypoint": "extensions/runtime_guards/component.py:build",
+      "config": {"topk": 5}
+    }
+  ]
+}

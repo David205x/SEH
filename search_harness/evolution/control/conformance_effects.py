@@ -24,7 +24,7 @@ from search_harness.evolution.research.resources.base import (
 )
 from search_harness.evolution.research.roles.contracts import (
     ConformanceFinding,
-    ConformanceReview,
+    ConformanceReviewBatch,
     MechanismSpec,
 )
 from search_harness.evolution.research.roles.runner import RoleRunner
@@ -50,6 +50,12 @@ class ConformanceBatchFailed(RuntimeError):
 class _ReviewedFinding:
     finding: ConformanceFinding
     path: Path
+    incurred_tokens: int
+
+
+@dataclass(frozen=True)
+class _ReviewedBatch:
+    findings: tuple[_ReviewedFinding, ...]
     incurred_tokens: int
 
 
@@ -174,6 +180,28 @@ class ConformanceEffects:
                 incurred_tokens=incurred_tokens,
             ) from exc
 
+        local_report_dir = checkpoint_dir / "local_evaluation"
+        local_rollout_report = local_report_dir / "per_rollout.jsonl"
+        try:
+            if local_rollout_report.is_file():
+                evaluated_rollouts = _read_jsonl(local_rollout_report)
+            else:
+                local_report = await asyncio.to_thread(
+                    self.backend.evaluate_existing_rollouts,
+                    rollout_file=rollout_file,
+                    output_dir=local_report_dir,
+                )
+                incurred_tokens += _teacher_judge_total_tokens(local_report)
+                evaluated_rollouts = list(local_report.get("rollouts", []))
+            local_evaluations = _index_local_evaluations(evaluated_rollouts)
+        except Exception as exc:
+            raise _batch_failure(
+                stage="local_efficacy_evaluation",
+                exc=exc,
+                checkpoint_dir=checkpoint_dir,
+                incurred_tokens=incurred_tokens,
+            ) from exc
+
         try:
             indexed_records = _index_rollout_records(records)
         except Exception as exc:
@@ -185,32 +213,51 @@ class ConformanceEffects:
             ) from exc
         semaphore = asyncio.Semaphore(self.judge_workers)
 
-        async def review_record(
+        async def review_case(
             case: ConformanceCase,
-            replicate_id: str,
-            record: dict[str, Any],
-            finding_index: int,
-        ) -> _ReviewedFinding:
-            expected_run_ref = f"{case.example.example_id}/{replicate_id}"
-            trajectory_view = project_conformance_trajectory(record)
-            input_digest = _finding_input_digest(
-                mechanism=mechanism,
-                trial_refs=case.trial_refs,
-                reference_observations=case.reference_observations,
-                candidate_run_ref=expected_run_ref,
-                trajectory=trajectory_view,
-            )
-            path = (
-                checkpoint_dir
-                / "findings"
-                / f"finding_{finding_index:03d}.json"
-            )
+            case_index: int,
+            records_for_case: list[tuple[str, dict[str, Any], int]],
+        ) -> _ReviewedBatch:
             artifact: dict[str, Any] | None = None
-            finding_tokens = 0
+            batch_tokens = 0
+            first_finding_index = records_for_case[0][2]
+            expected_run_ref = f"{case.example.example_id}/batch"
+            prepared = []
+            for replicate_id, record, finding_index in records_for_case:
+                trajectory = project_conformance_trajectory(
+                    record,
+                    evaluation=local_evaluations.get(
+                        (case.example.example_id, replicate_id)
+                    ),
+                )
+                run_ref = f"{case.example.example_id}/{replicate_id}"
+                prepared.append(
+                    {
+                        "replicate_id": replicate_id,
+                        "record": record,
+                        "finding_index": finding_index,
+                        "run_ref": run_ref,
+                        "trajectory": trajectory,
+                        "input_digest": _finding_input_digest(
+                            mechanism=mechanism,
+                            trial_refs=case.trial_refs,
+                            reference_observations=case.reference_observations,
+                            candidate_run_ref=run_ref,
+                            trajectory=trajectory,
+                        ),
+                        "path": checkpoint_dir
+                        / "findings"
+                        / f"finding_{finding_index:03d}.json",
+                    }
+                )
             try:
-                if path.is_file():
+                completed_by_id: dict[str, _ReviewedFinding] = {}
+                for item in prepared:
+                    path = item["path"]
+                    if not path.is_file():
+                        continue
                     checkpoint = _read_json(path)
-                    if checkpoint.get("input_digest") != input_digest:
+                    if checkpoint.get("input_digest") != item["input_digest"]:
                         raise ValueError(
                             "Conformance Finding checkpoint input changed: "
                             f"{path}"
@@ -218,155 +265,210 @@ class ConformanceEffects:
                     finding = ConformanceFinding.model_validate(
                         checkpoint.get("output")
                     )
-                    if finding.candidate_run_ref != expected_run_ref:
+                    if finding.candidate_run_ref != item["run_ref"]:
                         raise ValueError(
                             "Conformance Finding checkpoint identity changed: "
                             f"{path}"
                         )
-                    if finding.trial_refs != list(case.trial_refs):
-                        raise ValueError(
-                            "Conformance Finding checkpoint trial refs changed: "
-                            f"{path}"
-                        )
-                    return _ReviewedFinding(finding, path.resolve(), 0)
-
-                runner_error = record.get("runner_error")
-                if isinstance(runner_error, dict):
-                    finding = runtime_error_finding(
-                        case=case,
-                        replicate_id=replicate_id,
-                        error=(
-                            f"{runner_error.get('type', 'RunnerError')}: "
-                            f"{runner_error.get('message', '')}"
+                    completed_by_id[item["replicate_id"]] = _ReviewedFinding(
+                        finding,
+                        path.resolve(),
+                        0,
+                    )
+                if len(completed_by_id) == len(prepared):
+                    return _ReviewedBatch(
+                        tuple(
+                            completed_by_id[item["replicate_id"]]
+                            for item in prepared
                         ),
+                        0,
                     )
-                    artifact = {
-                        "runtime": "deterministic_runner_error",
-                        "output": {
-                            key: value
-                            for key, value in finding.model_dump(
-                                mode="json"
-                            ).items()
-                            if key not in {"trial_refs", "candidate_run_ref"}
-                        },
-                        "usage": {"total_tokens": 0},
-                    }
-                else:
-                    async with semaphore:
-                        artifact = await self.role_runner.run(
-                            template_root=self.reviewer_template_root,
-                            role_id="conformance_reviewer",
-                            role_version=1,
-                            role_input={
-                                "mechanism": mechanism.model_dump(mode="json"),
-                                "trial_refs": list(case.trial_refs),
-                                "reference_observations": list(
-                                    case.reference_observations
-                                ),
-                                "example_id": case.example.example_id,
-                                "replicate_id": replicate_id,
-                                "candidate_trajectory_view": trajectory_view,
-                            },
-                            resource_config=TeacherResourceConfig(),
-                        )
-                    finding_tokens = _artifact_total_tokens(artifact)
-                    review = ConformanceReview.model_validate(
-                        artifact.get("output")
-                    )
-                    finding = ConformanceFinding(
-                        **review.model_dump(mode="python"),
-                        trial_refs=list(case.trial_refs),
-                        candidate_run_ref=expected_run_ref,
-                    )
-                allowed_phases = {
-                    rule.phase for rule in mechanism.phase_rules
-                }
-                unexpected_phases = (
-                    set(finding.observed_phases) - allowed_phases
+
+                model_items = [
+                    item
+                    for item in prepared
+                    if not isinstance(item["record"].get("runner_error"), dict)
+                ]
+                batch_reviews = {}
+                batch_path = (
+                    checkpoint_dir
+                    / "batches"
+                    / f"batch_{case_index:03d}.json"
                 )
-                if unexpected_phases:
-                    relevant_phases = [
-                        phase
-                        for phase in finding.observed_phases
-                        if phase in allowed_phases
-                    ]
-                    finding_payload = finding.model_dump(mode="json")
-                    finding_payload["observed_phases"] = relevant_phases
-                    if (
-                        finding.verdict == "faithful"
-                        and not relevant_phases
-                    ):
-                        finding_payload.update(
+                if model_items:
+                    batch_digest = _conformance_batch_input_digest(
+                        mechanism=mechanism,
+                        trial_refs=case.trial_refs,
+                        reference_observations=case.reference_observations,
+                        example_id=case.example.example_id,
+                        trajectories=[
                             {
-                                "verdict": "inconclusive",
-                                "assessment": (
-                                    "The review named only phases outside "
-                                    "the supplied MechanismSpec, so it did "
-                                    "not establish implementation fidelity."
-                                ),
-                                "repair_obligation": (
-                                    "Make the mechanism's declared phase "
-                                    "activation observable in the complete "
-                                    "Candidate rollout."
-                                ),
-                                "failure_layer": "integration",
-                                "decisive_input_summary": (
-                                    "The review named no declared mechanism "
-                                    "phase observable in this rollout."
-                                ),
-                                "recommended_route": "implementation",
+                                "replicate_id": item["replicate_id"],
+                                "candidate_trajectory_view": item["trajectory"],
                             }
-                        )
-                    finding = ConformanceFinding.model_validate(
-                        finding_payload
+                            for item in model_items
+                        ],
                     )
-                _write_json_atomic(
-                    path,
-                    {
-                        "schema_version": 1,
-                        "status": "completed",
-                        "input_digest": input_digest,
-                        "identity": {
-                            "candidate_run_ref": expected_run_ref,
-                            "trial_refs": list(case.trial_refs),
+                    if batch_path.is_file():
+                        batch_checkpoint = _read_json(batch_path)
+                        if batch_checkpoint.get("input_digest") != batch_digest:
+                            raise ValueError(
+                                "Conformance batch checkpoint input changed: "
+                                f"{batch_path}"
+                            )
+                        batch = ConformanceReviewBatch.model_validate(
+                            batch_checkpoint.get("output")
+                        )
+                    else:
+                        async with semaphore:
+                            artifact = await self.role_runner.run(
+                                template_root=self.reviewer_template_root,
+                                role_id="conformance_reviewer",
+                                role_version=1,
+                                role_input={
+                                    "mechanism": mechanism.model_dump(mode="json"),
+                                    "trial_refs": list(case.trial_refs),
+                                    "reference_observations": list(
+                                        case.reference_observations
+                                    ),
+                                    "example_id": case.example.example_id,
+                                    "candidate_trajectory_views": [
+                                        {
+                                            "replicate_id": item["replicate_id"],
+                                            "candidate_trajectory_view": item[
+                                                "trajectory"
+                                            ],
+                                        }
+                                        for item in model_items
+                                    ],
+                                },
+                                resource_config=TeacherResourceConfig(),
+                            )
+                        batch_tokens = _artifact_total_tokens(artifact)
+                        batch = ConformanceReviewBatch.model_validate(
+                            artifact.get("output")
+                        )
+                        _write_json_atomic(
+                            batch_path,
+                            {
+                                "schema_version": 1,
+                                "status": "completed",
+                                "input_digest": batch_digest,
+                                "example_id": case.example.example_id,
+                                "output": batch.model_dump(mode="json"),
+                                "role_artifact": artifact,
+                                "usage": {"total_tokens": batch_tokens},
+                            },
+                        )
+                    expected_ids = [
+                        item["replicate_id"] for item in model_items
+                    ]
+                    actual_ids = [
+                        finding.replicate_id for finding in batch.findings
+                    ]
+                    if actual_ids != expected_ids:
+                        raise ValueError(
+                            "Conformance batch findings must match supplied "
+                            f"replicate order; expected={expected_ids}, "
+                            f"actual={actual_ids}"
+                        )
+                    batch_reviews = {
+                        finding.replicate_id: finding
+                        for finding in batch.findings
+                    }
+
+                for item in prepared:
+                    replicate_id = item["replicate_id"]
+                    if replicate_id in completed_by_id:
+                        continue
+                    runner_error = item["record"].get("runner_error")
+                    if isinstance(runner_error, dict):
+                        finding = runtime_error_finding(
+                            case=case,
+                            replicate_id=replicate_id,
+                            error=(
+                                f"{runner_error.get('type', 'RunnerError')}: "
+                                f"{runner_error.get('message', '')}"
+                            ),
+                        )
+                        artifact_ref = None
+                    else:
+                        review = batch_reviews[replicate_id]
+                        finding = ConformanceFinding(
+                            **review.model_dump(
+                                mode="python",
+                                exclude={"replicate_id"},
+                            ),
+                            trial_refs=list(case.trial_refs),
+                            candidate_run_ref=item["run_ref"],
+                        )
+                        artifact_ref = str(batch_path.resolve())
+                    finding = _normalize_finding_phases(
+                        finding=finding,
+                        mechanism=mechanism,
+                    )
+                    _write_json_atomic(
+                        item["path"],
+                        {
+                            "schema_version": 2,
+                            "status": "completed",
+                            "input_digest": item["input_digest"],
+                            "identity": {
+                                "candidate_run_ref": item["run_ref"],
+                                "trial_refs": list(case.trial_refs),
+                            },
+                            "output": finding.model_dump(mode="json"),
+                            "role_artifact_ref": artifact_ref,
+                            "usage": {"total_tokens": 0},
                         },
-                        "output": finding.model_dump(mode="json"),
-                        "role_artifact": artifact,
-                        "usage": {"total_tokens": finding_tokens},
-                    },
-                )
-                return _ReviewedFinding(
-                    finding,
-                    path.resolve(),
-                    finding_tokens,
+                    )
+                    completed_by_id[replicate_id] = _ReviewedFinding(
+                        finding,
+                        item["path"].resolve(),
+                        0,
+                    )
+                return _ReviewedBatch(
+                    tuple(
+                        completed_by_id[item["replicate_id"]]
+                        for item in prepared
+                    ),
+                    batch_tokens,
                 )
             except Exception as exc:
                 failure_artifact = getattr(exc, "failure_artifact", None)
                 if artifact is None and isinstance(failure_artifact, dict):
                     artifact = failure_artifact
-                finding_tokens = max(
-                    finding_tokens,
+                batch_tokens = max(
+                    batch_tokens,
                     _artifact_total_tokens(artifact),
                 )
                 failure_path = _write_finding_failure(
                     checkpoint_dir=checkpoint_dir,
-                    finding_index=finding_index,
+                    finding_index=first_finding_index,
                     candidate_run_ref=expected_run_ref,
                     trial_refs=case.trial_refs,
-                    input_digest=input_digest,
+                    input_digest=_json_digest(
+                        {
+                            "example_id": case.example.example_id,
+                            "finding_inputs": [
+                                item["input_digest"] for item in prepared
+                            ],
+                        }
+                    ),
                     exc=exc,
                     role_artifact=artifact,
-                    incurred_tokens=finding_tokens,
+                    incurred_tokens=batch_tokens,
                 )
                 raise _FindingReviewFailed(
                     f"{expected_run_ref}: {type(exc).__name__}: {exc}",
                     failure_path=failure_path,
-                    incurred_tokens=finding_tokens,
+                    incurred_tokens=batch_tokens,
                 ) from exc
 
         jobs = []
         finding_index = 0
-        for case in cases:
+        for case_index, case in enumerate(cases, start=1):
+            records_for_case = []
             for replicate_index in range(CONFORMANCE_REPLICATES):
                 finding_index += 1
                 replicate_id = f"r{replicate_index:03d}"
@@ -382,29 +484,25 @@ class ConformanceEffects:
                             ),
                         }
                     }
-                jobs.append(
-                    review_record(
-                        case,
-                        replicate_id,
-                        record,
-                        finding_index,
-                    )
+                records_for_case.append(
+                    (replicate_id, record, finding_index)
                 )
-        reviewed_results = await asyncio.gather(
-            *jobs,
-            return_exceptions=True,
-        )
+            jobs.append(review_case(case, case_index, records_for_case))
+        reviewed_results = await asyncio.gather(*jobs, return_exceptions=True)
         failures = [
             item
             for item in reviewed_results
             if isinstance(item, BaseException)
         ]
-        completed = [
-            item
-            for item in reviewed_results
-            if isinstance(item, _ReviewedFinding)
+        batches = [
+            item for item in reviewed_results if isinstance(item, _ReviewedBatch)
         ]
-        incurred_tokens += sum(item.incurred_tokens for item in completed)
+        completed = [
+            finding
+            for batch in batches
+            for finding in batch.findings
+        ]
+        incurred_tokens += sum(item.incurred_tokens for item in batches)
         incurred_tokens += sum(
             item.incurred_tokens
             for item in failures
@@ -414,7 +512,7 @@ class ConformanceEffects:
             raise _batch_failure(
                 stage="review_findings",
                 exc=RuntimeError(
-                    f"{len(failures)} of {len(jobs)} Conformance Findings failed"
+                    f"{len(failures)} of {len(jobs)} Conformance batches failed"
                 ),
                 checkpoint_dir=checkpoint_dir,
                 incurred_tokens=incurred_tokens,
@@ -442,6 +540,9 @@ class ConformanceEffects:
             ) from exc
         refs = {
             "conformance_rollout_file": str(rollout_file.resolve()),
+            "conformance_local_evaluation": str(
+                local_report_dir.resolve()
+            ),
             "conformance_summary_artifact": str(summary_path),
             **{
                 f"conformance_finding_{index:03d}": str(path)
@@ -478,6 +579,8 @@ def summarize_conformance_review(
         "recommended_route_counts": summary.get("recommended_route_counts"),
         "example_count": len(per_example),
         "passed_example_count": passed,
+        "local_efficacy_counts": summary.get("local_efficacy_counts"),
+        "local_efficacy_gate": summary.get("local_efficacy_gate"),
     }
 
 
@@ -515,6 +618,58 @@ def _index_rollout_records(
             raise ValueError(f"duplicate conformance rollout: {key}")
         indexed[key] = record
     return indexed
+
+
+def _index_local_evaluations(
+    records: list[dict[str, Any]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    indexed = {}
+    for record in records:
+        example_id = record.get("example_id")
+        replicate_id = record.get("replicate_id")
+        if not isinstance(example_id, str) or not isinstance(
+            replicate_id,
+            str,
+        ):
+            raise ValueError("local Evaluation result lacks rollout identity")
+        teacher = record.get("teacher")
+        teacher = teacher if isinstance(teacher, dict) else {}
+        indexed[(example_id, replicate_id)] = {
+            "score": record.get("score"),
+            "score_source": record.get("score_source"),
+            "teacher_assessment": teacher.get("assessment"),
+            "run_status": record.get("run_status"),
+        }
+    return indexed
+
+
+def _teacher_judge_total_tokens(report: dict[str, Any]) -> int:
+    total = 0
+    rollouts = report.get("rollouts")
+    rollouts = rollouts if isinstance(rollouts, list) else []
+    for rollout in rollouts:
+        if not isinstance(rollout, dict):
+            continue
+        teacher = rollout.get("teacher")
+        teacher = teacher if isinstance(teacher, dict) else {}
+        metadata = teacher.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        usage = metadata.get("usage")
+        usage = usage if isinstance(usage, dict) else {}
+        reported = usage.get("total_tokens")
+        if isinstance(reported, int) and not isinstance(reported, bool):
+            total += max(0, reported)
+            continue
+        total += _non_negative_int(
+            usage.get("prompt_tokens", usage.get("prompt_eval_count"))
+        )
+        total += _non_negative_int(
+            usage.get(
+                "completion_tokens",
+                usage.get("eval_count"),
+            )
+        )
+    return total
 
 
 def _rollout_total_tokens(records: list[dict[str, Any]]) -> int:
@@ -585,7 +740,7 @@ def _suite_fingerprint(
     experience_file: Path,
 ) -> str:
     payload = {
-        "conformance_input_schema": 3,
+        "conformance_input_schema": 5,
         "candidate_attempt_id": candidate.candidate_attempt_id,
         "candidate_digest": candidate.candidate_digest,
         "mechanism": mechanism.model_dump(mode="json"),
@@ -618,6 +773,64 @@ def _finding_input_digest(
             "candidate_trajectory_view": trajectory,
         }
     )
+
+
+def _conformance_batch_input_digest(
+    *,
+    mechanism: MechanismSpec,
+    trial_refs: tuple[str, ...],
+    reference_observations: tuple[dict[str, Any], ...],
+    example_id: str,
+    trajectories: list[dict[str, Any]],
+) -> str:
+    return _json_digest(
+        {
+            "mechanism": mechanism.model_dump(mode="json"),
+            "trial_refs": list(trial_refs),
+            "reference_observations": list(reference_observations),
+            "example_id": example_id,
+            "candidate_trajectory_views": trajectories,
+        }
+    )
+
+
+def _normalize_finding_phases(
+    *,
+    finding: ConformanceFinding,
+    mechanism: MechanismSpec,
+) -> ConformanceFinding:
+    """Remove undeclared phases and prevent an empty faithful finding."""
+
+    allowed_phases = {rule.phase for rule in mechanism.phase_rules}
+    relevant_phases = [
+        phase for phase in finding.observed_phases if phase in allowed_phases
+    ]
+    if relevant_phases == finding.observed_phases:
+        return finding
+    payload = finding.model_dump(mode="json")
+    payload["observed_phases"] = relevant_phases
+    if finding.verdict == "faithful" and not relevant_phases:
+        payload.update(
+            {
+                "verdict": "inconclusive",
+                "assessment": (
+                    "The review named only phases outside the supplied "
+                    "MechanismSpec, so it did not establish implementation "
+                    "fidelity."
+                ),
+                "repair_obligation": (
+                    "Make the mechanism's declared phase activation observable "
+                    "in the complete Candidate rollout."
+                ),
+                "failure_layer": "integration",
+                "decisive_input_summary": (
+                    "The review named no declared mechanism phase observable "
+                    "in this rollout."
+                ),
+                "recommended_route": "implementation",
+            }
+        )
+    return ConformanceFinding.model_validate(payload)
 
 
 def _json_digest(value: dict[str, Any]) -> str:

@@ -1,0 +1,46 @@
+{
+  "overall": {
+    "count": 9,
+    "baseline_semantic_accuracy": 1.0,
+    "candidate_semantic_accuracy": 1.0,
+    "baseline_exact_match": 0.8888888888888888,
+    "candidate_exact_match": 0.8888888888888888
+  },
+  "by_type": {
+    "comparison": {
+      "count": 9,
+      "baseline_semantic_accuracy": 1.0,
+      "candidate_semantic_accuracy": 1.0,
+      "baseline_exact_match": 0.8888888888888888,
+      "candidate_exact_match": 0.8888888888888888
+    }
+  },
+  "by_level": {
+    "hard": {
+      "count": 3,
+      "baseline_semantic_accuracy": 1.0,
+      "candidate_semantic_accuracy": 1.0,
+      "baseline_exact_match": 1.0,
+      "candidate_exact_match": 1.0
+    },
+    "medium": {
+      "count": 6,
+      "baseline_semantic_accuracy": 1.0,
+      "candidate_semantic_accuracy": 1.0,
+      "baseline_exact_match": 0.8333333333333334,
+      "candidate_exact_match": 0.8333333333333334
+    }
+  },
+  "paired_semantic": {
+    "candidate_gains": 0,
+    "candidate_losses": 0,
+    "ties": 9,
+    "exact_mcnemar_two_sided_p": null
+  },
+  "paired_exact_match": {
+    "candidate_gains": 0,
+    "candidate_losses": 0,
+    "ties": 9,
+    "exact_mcnemar_two_sided_p": null
+  }
+}

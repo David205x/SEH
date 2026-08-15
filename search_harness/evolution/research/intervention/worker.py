@@ -326,7 +326,6 @@ class _ActivationTools:
     def __init__(self, activation: _ActivationState) -> None:
         self._activation = activation
         tools = [
-            CallableTool.from_callable(self.inspect_active_observation),
             CallableTool.from_callable(self.inspect_editable_context),
             CallableTool.from_callable(self.inspect_context_block),
         ]
@@ -342,29 +341,33 @@ class _ActivationTools:
         tools.append(CallableTool.from_callable(self.continue_without_change))
         self.tool_set = ToolSet(tools)
 
-    @tool(name="inspect_active_observation")
-    def inspect_active_observation(self) -> ToolResult:
-        """Read phase-local stage values and lifecycle facts; these are not editable."""
-
-        return ToolResult(
-            name="inspect_active_observation",
-            content=json.dumps(
-                _active_observation(self._activation.snapshot),
-                ensure_ascii=False,
-            ),
-        )
-
     @tool(name="inspect_editable_context")
     def inspect_editable_context(self) -> ToolResult:
-        """List editable blocks using short summaries, not full content."""
+        """List editable Student context blocks as a compact ordered table."""
 
-        blocks = self._activation.snapshot.get("editable_context")
+        value = self._activation.snapshot.get("editable_context")
+        blocks = value if isinstance(value, list) else []
+        lines = [
+            f"Editable Student context: {len(blocks)} blocks",
+            "| id | kind | role | chars | preview |",
+            "|---:|---|---|---:|---|",
+        ]
+        for block in blocks:
+            if not isinstance(block, dict):
+                continue
+            lines.append(
+                "| {block_id} | {kind} | {role} | {characters} | "
+                "{summary} |".format(
+                    block_id=block.get("block_id", "unavailable"),
+                    kind=_table_cell(block.get("kind")),
+                    role=_table_cell(block.get("role")),
+                    characters=block.get("characters", "unavailable"),
+                    summary=_table_cell(block.get("summary")),
+                )
+            )
         return ToolResult(
             name="inspect_editable_context",
-            content=json.dumps(
-                blocks if isinstance(blocks, list) else [],
-                ensure_ascii=False,
-            ),
+            content="\n".join(lines),
         )
 
     @tool(name="inspect_context_block")
@@ -378,7 +381,7 @@ class _ActivationTools:
             ),
         ],
     ) -> ToolResult:
-        """Read the complete visible content of one selected editable context block."""
+        """Read one exact Student-visible block without JSON string escaping."""
 
         blocks = self._activation.snapshot.get("_editable_context_blocks")
         if not isinstance(blocks, list):
@@ -394,19 +397,27 @@ class _ActivationTools:
         if block is None:
             return ToolResult(
                 name="inspect_context_block",
-                content=f"TOOL_INPUT_ERROR: unknown block_id {block_id}",
-                metadata={"error": f"unknown block_id {block_id}"},
+                content=(
+                    "TOOL_INPUT_ERROR\n"
+                    "code: unknown_block_id\n"
+                    f"block_id: {block_id}"
+                ),
+                metadata={
+                    "error": f"unknown block_id {block_id}",
+                    "error_type": "input_validation",
+                },
             )
+        content = block.get("content")
+        exact = content if isinstance(content, str) else str(content or "")
         return ToolResult(
             name="inspect_context_block",
-            content=json.dumps(
-                {
-                    "block_id": block_id,
-                    "kind": block.get("kind"),
-                    "role": block.get("role"),
-                    "content": block.get("content"),
-                },
-                ensure_ascii=False,
+            content=(
+                f"Block {block_id} | kind={block.get('kind', 'unavailable')} | "
+                f"role={block.get('role', 'unavailable')} | "
+                f"characters={len(exact)}\n"
+                "--- BEGIN EXACT CONTENT ---\n"
+                f"{exact}\n"
+                "--- END EXACT CONTENT ---"
             ),
         )
 
@@ -551,6 +562,12 @@ def _assistant_content(message: dict[str, Any]) -> str:
     if isinstance(content, str):
         return content
     return json.dumps(content, ensure_ascii=False)
+
+
+def _table_cell(value: object) -> str:
+    return str(value if value is not None else "unavailable").replace(
+        "|", "\\|"
+    ).replace("\n", " ")
 
 
 def _active_observation(snapshot: dict[str, Any]) -> dict[str, Any]:

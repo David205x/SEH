@@ -1,9 +1,12 @@
 # Hypothesis Researcher 边界保持 Prompt 实验计划
 
-状态：待实施的实验交接  
+状态：历史实验交接；影子实现已于 2026-08-14 清理
 日期：2026-08-13  
 基准运行：`runs/evolution/20260809_base`  
 前置实验：`runs/experiments/failure_landscape_boundary_awareness/20260812_173314`
+
+本文引用的影子模板与实验入口只用于解释当时的设计和结果；正式 Researcher 已完成选择性
+迁移，影子代码不再保留，保存的 `runs/experiments/` Artifact 仍可审计。
 
 ## 1. 实验目标
 

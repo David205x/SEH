@@ -126,6 +126,17 @@ class ObserverService:
         work = next((item for item in works if item.work_id == work_id), None)
         if work is None:
             raise FileNotFoundError(f"missing WorkItem: {work_id}")
+        if work.kind == "reject_candidate" and work.parent_work_id is not None:
+            parent = next(
+                (item for item in works if item.work_id == work.parent_work_id),
+                None,
+            )
+            if parent is not None:
+                return self.artifacts.project_with_related_fallback(
+                    run_dir,
+                    work,
+                    parent,
+                ).to_dict()
         return self.artifacts.project(run_dir, work).to_dict()
 
     def refresh_state(self, run_name: str) -> dict[str, object]:
@@ -147,8 +158,8 @@ def serve(*, runs_root: Path, port: int) -> None:
     if not 1 <= port <= 65535:
         raise ValueError("port must be between 1 and 65535")
     service = ObserverService(runs_root)
-    server = ThreadingHTTPServer(("127.0.0.1", port), _handler_for(service))
-    print(f"Evolution Experiment Observer: http://127.0.0.1:{port}")
+    server = ThreadingHTTPServer(("0.0.0.0", port), _handler_for(service))
+    print(f"Evolution Experiment Observer: http://0.0.0.0:{port}")
     print(f"Runs root: {service.discovery.runs_root}")
     try:
         server.serve_forever()

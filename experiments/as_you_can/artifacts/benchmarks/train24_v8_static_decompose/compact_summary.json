@@ -1,0 +1,13 @@
+{
+  "rollouts": 24,
+  "exact_match_rate": 0.4583333333333333,
+  "mean_token_f1": 0.4916666666666667,
+  "completed_rate": 1.0,
+  "status_counts": {
+    "completed": 24
+  },
+  "runner_errors": 0,
+  "mean_tool_calls": 1.6666666666666667,
+  "mean_model_calls": 2.6666666666666665,
+  "mean_total_tokens": 4713.833333333333
+}

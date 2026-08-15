@@ -68,8 +68,10 @@ async def run_probe(args: argparse.Namespace) -> dict[str, Any]:
         teacher_template_root=Path("harness_templates/teacher"),
     ).compile_candidate(
         mechanism=mechanism,
+        student_model_experiments=[],
         implementation_constraints=feedback,
         validation_feedback=[],
+        conformance_failures=_conformance_failures(source_conformance),
         continuation_candidate_file=continuation_file,
         work_dir=compiler_dir,
     )
@@ -183,6 +185,39 @@ def _compiler_feedback(effect: dict[str, Any]) -> list[str]:
     if not isinstance(feedback, list) or not feedback:
         raise ValueError("source Conformance effect has no compiler feedback")
     return [str(item) for item in feedback]
+
+
+def _conformance_failures(effect: dict[str, Any]) -> list[dict[str, Any]]:
+    refs = effect.get("artifact_refs")
+    refs = refs if isinstance(refs, dict) else {}
+    failures = []
+    for key, value in refs.items():
+        if not str(key).startswith("conformance_finding_") or not isinstance(
+            value,
+            str,
+        ):
+            continue
+        finding = _read_json(Path(value)).get("output")
+        if not isinstance(finding, dict) or finding.get("verdict") == "faithful":
+            continue
+        failures.append(
+            {
+                name: finding.get(name)
+                for name in (
+                    "candidate_run_ref",
+                    "verdict",
+                    "assessment",
+                    "repair_obligation",
+                    "failure_layer",
+                    "predicate_ref",
+                    "expected_label",
+                    "observed_label",
+                    "decisive_input_summary",
+                    "recommended_route",
+                )
+            }
+        )
+    return failures
 
 
 def _tool_counts(artifact: dict[str, Any]) -> dict[str, int]:

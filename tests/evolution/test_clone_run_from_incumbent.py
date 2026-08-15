@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from experiments.clone_run_from_incumbent import clone_run_from_incumbent
+from search_harness._internal import (
+    evolution_control_values,
+    evolution_effect_values,
+    read_runtime_config,
+)
 from search_harness.evolution.control.domain import (
     EffectResult,
     WorkKind,
@@ -118,6 +123,33 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
             clone_run_from_incumbent(self.source, self.destination)
 
         self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+
+    def test_can_apply_current_runtime_configuration(self) -> None:
+        runtime = read_runtime_config(
+            config_file=Path("config/runtime.yaml")
+        )
+        env_file = self.case_dir / "runtime.env"
+
+        clone_run_from_incumbent(
+            self.source,
+            self.destination,
+            runtime_config=runtime,
+            env_file=env_file,
+        )
+
+        run_payload = self._read_object(self.destination / "run.json")
+        self.assertEqual(
+            run_payload["control_config"],
+            evolution_control_values(runtime),
+        )
+        effects = run_payload["effects_config"]
+        for name, value in evolution_effect_values(runtime).items():
+            self.assertEqual(effects[name], value)
+        self.assertEqual(effects["env_file"], str(env_file.resolve()))
+        self.assertEqual(
+            effects["experience_file"],
+            str((self.destination / "experience_set.jsonl").resolve()),
+        )
 
     def _create_source_run(self) -> None:
         self.source.mkdir(parents=True)

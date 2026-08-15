@@ -196,6 +196,30 @@ class LocalEvaluationBackend:
             "stop_reason": summary.stop_reason,
         }
 
+    def evaluate_existing_rollouts(
+        self,
+        *,
+        rollout_file: Path,
+        output_dir: Path,
+    ) -> dict[str, Any]:
+        """Evaluate a persisted rollout subset with production scoring rules."""
+
+        judge_factory = None
+        if self.config.teacher_judge:
+            judge_factory = lambda: TeacherBinaryJudge(
+                build_teacher_judge_model(env_file=self.config.env_file),
+                HotpotQAEvaluator(),
+            )
+        report = evaluate_rollout_file(
+            rollout_file,
+            HotpotQAEvaluator(),
+            teacher_judge_factory=judge_factory,
+            judge_workers=self.config.judge_workers,
+            show_progress=self.config.show_progress,
+        )
+        write_evaluation_report(report, output_dir)
+        return report
+
     def _rollout_and_evaluate(
         self,
         *,

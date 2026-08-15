@@ -4,6 +4,7 @@ const workId = params.get("work");
 const state = { detail: null, selectedTrajectoryId: null };
 
 const elements = {
+  overviewLink: document.querySelector("#overview-link"),
   document: document.querySelector("#event-document"),
   facts: document.querySelector("#event-facts"),
   trajectories: document.querySelector("#trajectory-list"),
@@ -14,6 +15,10 @@ const elements = {
   collapseSelected: document.querySelector("#collapse-selected"),
   expandSelected: document.querySelector("#expand-selected"),
 };
+
+if (runName) {
+  elements.overviewLink.href = `/?run=${encodeURIComponent(runName)}`;
+}
 
 elements.typeFilter.addEventListener("change", applyBlockFilter);
 elements.expandAll.addEventListener("click", () => setAllCollapsed(false));

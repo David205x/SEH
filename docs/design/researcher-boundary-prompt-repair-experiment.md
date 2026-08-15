@@ -1,8 +1,11 @@
 # Shadow Hypothesis Researcher Prompt 修复实验
 
-状态：待实施  
+状态：历史实验设计；影子实现已于 2026-08-14 清理
 日期：2026-08-13  
 前序实验：`runs/experiments/researcher_boundary_prompt/20260813_023954`
+
+本文中的 `experiments/teacher_query_views/` 与配套运行脚本路径是实验时的历史代码位置；
+正式 Researcher 已吸收验证有效的输入与提示设施，影子执行代码不再保留。
 
 ## 1. 目标
 

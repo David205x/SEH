@@ -13,6 +13,10 @@ python -m evolution_observer --runs-root runs/evolution --port 8766
 服务仅监听 `127.0.0.1`。页面不自动刷新；运行中的 Run 可通过顶栏的“刷新数据”按钮
 重新读取。
 
+主页会把当前选中的 Run 写入 URL 的 `run` 参数，并在当前浏览器标签页使用
+`sessionStorage` 兜底。进入事件详情后，无论使用浏览器后退还是“返回概览”，主页都会
+恢复原 Run；如果该目录已不存在，则安全回退到首个可读取 Run。
+
 ## Overview 聚合
 
 `GET /api/runs/{run}/overview` 在原始 Run 摘要之外提供以下观察器投影：
@@ -55,3 +59,8 @@ Evolution Metrics 的 token 分布读取 Evaluation Report 的 `per_rollout.json
 当前邻近节点映射中，Intervention 同时覆盖 `select_trial` 与 `execute_trial`，
 Candidate Review 同时覆盖 `review_candidate` 与 `reject_candidate`。Trial Reviewer 和
 Evidence Review 共享现有的 `review_evidence` WorkItem；这是当前产物粒度下的只读投影。
+
+详情投影会解包 Conformance checkpoint finding 的 `role_artifact_ref`，并按实际 Batch
+产物路径去重对话。`reject_candidate` 自身没有模型 transcript 时，会沿直接
+`parent_work_id` 回退到触发拒绝的 Conformance Reviewer 或 Candidate Reviewer 对话；
+详情页仍保留原拒绝 WorkItem 的 metadata。

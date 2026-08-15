@@ -2,7 +2,7 @@
 
 ## 1. 范围与读取口径
 
-本文按当前正式 Teacher Template 和 Intervention Runtime，整理模型实际可见的查询类工具。查询类包括只读检索、按需展开和诊断性探测；不包括终态提交、Candidate 文件写入、Mechanism Draft 编辑和 Intervention 动作工具。`probe_mechanism_evaluators` 会真实调用 Hook model 并产生费用，不是纯只读操作，但因其职责是返回诊断信息，仍列在查询类工具中并单独标明。
+本文按当前正式 Teacher Template 和 Intervention Runtime，整理模型实际可见的查询类工具。查询类包括只读检索、按需展开和诊断性实验；不包括终态提交、Candidate 文件写入、Mechanism Draft 编辑和 Intervention 动作工具。`run_student_model_experiment` 会真实调用 Student model 并产生费用，不是纯只读操作，但因其职责是返回描述性诊断信息，仍列在查询类工具中并单独标明。
 
 普通 Teacher 工具的参数通过 API 原生 structured tool calling 传入；返回值统一是 `ToolResult.content` 中的一行 JSON 文本，而不是 Provider 原生结构化对象。下文 JSON 使用结构示意，`null` 表示字段可能为空，`...` 表示由已注明类型定义的开放内容。
 
@@ -434,50 +434,45 @@ Evidence Reviewer 当前没有查询工具。完整 Trial Review、程序维护�
 
 | 工具签名 | 用途 |
 | --- | --- |
-| `list_trial_evidence()` | 列出附加 Trial 及其快速事实。 |
-| `get_trial_evidence(trial_ref: str)` | 读取一条 Trial 的 source/branch/worker 判断目录。 |
-| `get_trial_event(trial_ref: str, stream: Literal["source", "branch", "worker"], event_index: int)` | 按需读取精确 Trial 事件。 |
-| `probe_mechanism_evaluators(draft_id: str, evidence_refs: list[str], repetitions: int = 3)` | 使用正式 Hook-model backend 重复运行草稿中的 `hook_model` predicate fixtures，并返回分类一致性诊断。 |
+| `get_distillation_trial_detail(trial_ref: str)` | 在初始 Distillation Evidence Dossier 不足时，读取一条已附加 Trial 的完整事件目录。 |
+| `run_student_model_experiment(purpose: str, system_prompt: str, cases: list[dict[str, object]], thinking_modes: list[str], repetitions: int = 3)` | 使用 Student profile 执行 Teacher 自定义的描述性模型实验，返回逐次原始输出与 usage。 |
 
-前三项结构和问题见第 5.2–5.3 节。
+Distiller 初始输入已经按 `trial_ref` 对齐冻结 Hypothesis、Evidence Review、Coverage、
+Trial Review、实际 Student-visible mutation、phase effect 和 outcome；通常无需调用详情工具。
+`get_distillation_trial_detail` 返回指定 Trial 的 source/branch/worker 事件目录，供冲突或缺失
+证据下钻，精确事件结构沿用第 5.2 节。
 
-`probe_mechanism_evaluators` 的模型可见返回会去掉逐次 observation：
+`run_student_model_experiment` 的模型可见返回：
 
 ```json
 {
-  "draft_id": "mechanism_draft_001",
-  "probed_phase_count": 1,
-  "summaries": [{
-    "schema_version": 1,
-    "predicate_ref": "phase-1:pre_final",
-    "profile": "student",
-    "repetitions": 3,
-    "fixture_summaries": [{
-      "fixture_id": "...",
-      "expected_label": "positive|negative|uncertain",
-      "observed_label_counts": {"positive": 3},
-      "match_rate": 1.0,
-      "consistent": true,
-      "parse_failure_count": 0
-    }],
-    "label_match_rate": 1.0,
-    "consistent_fixture_count": 3,
-    "parse_failure_count": 0,
-    "usage": {"input_tokens": 1000, "output_tokens": 30, "total_tokens": 1030}
-  }]
+  "experiment_id": "student_model_experiment_001",
+  "purpose": "...",
+  "thinking_modes": ["enabled", "disabled"],
+  "repetitions": 2,
+  "observations": [{
+    "case_id": "...",
+    "thinking_mode": "enabled",
+    "repetition": 1,
+    "raw_output": "...",
+    "usage": {"input_tokens": 1000, "output_tokens": 30, "total_tokens": 1030},
+    "error": null
+  }],
+  "provider_metadata_retained_in_artifact": true
 }
 ```
 
-完整 artifact 另行保存每次 observation：`fixture_id/repetition/expected_label/observed_label/raw_output/parse_error/usage`。
+完整 artifact 另外保存实验 system prompt、每个 case 的完整 user prompt，以及工具视图省略的
+逐请求 provider metadata。工具和程序不接收 expected label，不计算匹配率，也不决定哪个
+thinking mode 通过。
 
 ### 7.2 冗余与可读性
 
-- Trial 查询继承第 5.3 节的问题；Distiller 已在 Role Input 中收到结构化 Trial Review 和 coverage summary，再开放完整 Trial 目录形成第二套证据表达。它适合核验边界，但不应要求无差别读取全部 Trial。
-- Probe 返回的 `fixture_summaries` 和全局 `label_match_rate/consistent_fixture_count/parse_failure_count` 是合理的明细与汇总两层，不属于有害重复。
-- `schema_version/profile/repetitions` 在同一次 draft 的每个 phase summary 中重复，体积影响很小；可以上提到顶层，但优先级低。
-- 逐次 raw output 已从工具回显中移除、只存 artifact，这是良好的上下文控制。
-- `consistent` 只表示重复调用标签一致，不表示标签符合 `expected_label`，字段名容易被误读为“稳定且正确”；`fixture_id` 又没有附带 case-neutral observation 摘要，Distiller 难以定位具体是哪类边界不稳定。
-- parse failure 只回传次数，不回传错误类别。更有操作性的紧凑结果应保留 fixture 的抽象 observation、expected/observed counts 和 parse-error category，减少可从明细推导的聚合数字。
+- Evidence Dossier 将独立 Trial 事实一次性对齐，避免原先 list/get/event 多次调用造成的重复和跨调用拼接；详情工具只在冲突时返回第二套事件表达。
+- Student 实验不在工具结果中重复 system prompt 与 case prompt，只用 `case_id` 对齐逐次结果；完整输入保存在 role artifact，因此审计信息没有丢失。
+- 逐次 raw output 必须保留给 Teacher 解释真实模型行为；只给聚合标签会重新引入程序所有的语义结论。usage 与 error 也是判断 thinking 成本及调用稳定性的基础事实。
+- `purpose`、`thinking_modes` 和 `repetitions` 在工具结果中与调用参数轻度重复，但能让单条 ToolResult 自描述，体积远小于模型输出，保留更稳妥。
+- 当前工具允许一次 1--6 个案例、1--2 种 mode、每项 1--3 次；这是能力上限，不是建议规模。真实 Distiller 验证表明 prompt-only 的“通常 1--3 个案例”不能严格阻止模型使用 5 个案例，需要把软成本纪律与工具合法边界区别开。
 
 ## 8. Mechanism Compiler
 
@@ -510,78 +505,53 @@ Compiler 的 capability packet 是 Role Input 自动注入内容，不是查询�
 
 `query_hook_api("tool")`（Topic）：
 
-```json
-{
-  "status": "resolved",
-  "query_kind": "runtime_input_topic",
-  "query": "tool",
-  "document": {
-    "runtime_input_id": "tool",
-    "description": "...",
-    "preferred_usage": ["..."],
-    "avoid": ["..."],
-    "lifecycle_notes": ["..."],
-    "symbols": ["stage.tool_call", "stage.tool_result", "core.tool_interactions", "..."],
-    "native_reference": "Python-native 类型和签名文本"
-  },
-  "source": "capability_packet|runtime_input_registry",
-  "remaining_unique_queries": 12
-}
+```text
+resolved_topic: tool
+source: capability_packet|runtime_input_registry
+remaining_unique_queries: 12
+<Python-native 类型、签名、生命周期和用法文本>
 ```
 
 `query_hook_api("HookContext.call_model")`（精确 symbol）：
 
-```json
-{
-  "status": "resolved",
-  "query_kind": "symbol",
-  "query": "HookContext.call_model",
-  "contract": {
-    "kind": "method|class|state_key|runtime_view",
-    "symbol": "HookContext.call_model",
-    "signature": "...",
-    "type": "...",
-    "summary": "...",
-    "note": "...",
-    "parameters": [...],
-    "returns": {...},
-    "stability": "stable|experimental",
-    "shape": "closed|open",
-    "...": "随 contract kind 变化"
-  },
-  "native_reference": "由同一 contract 渲染的 Python-native 文本",
-  "related_runtime_inputs": ["model_io"],
-  "source": "capability_packet|continuation_query|exact_query",
-  "remaining_unique_queries": 11
-}
+```text
+resolved_symbol: HookContext.call_model
+source: capability_packet|continuation_query|exact_query
+related_runtime_inputs: model_io
+remaining_unique_queries: 11
+def HookContext.call_model(self, request: HookModelRequest) -> HookModelResponse:
+    """..."""
 ```
 
 未知查询：
 
-```json
-{
-  "status": "rejected",
-  "reason": "unknown_query|empty_query|query_budget_exhausted",
-  "query": "...",
-  "runtime_input_suggestions": ["..."],
-  "symbol_suggestions": ["..."],
-  "remaining_unique_queries": 11
-}
+```text
+status: rejected
+reason: unknown_query|empty_query|query_budget_exhausted
+query: ...
+runtime_input_suggestions: ...
+symbol_suggestions: ...
+remaining_unique_queries: 11
 ```
 
 ### 8.3 冗余与可读性
 
 - `list_harness_files` 和 `read_harness_file` 都很简单；`revision` 对一次列表结果有审计价值，文件字节数能帮助模型控制读取范围。
 - `read_harness_file` 总是返回完整内容，没有行范围或片段读取。当前模板文件普遍不大，尚可接受；对于长源文件，更简单的维护方式不是裁剪语义，而是增加可选 `start_line/end_line`。
-- 精确 symbol 查询同时返回结构化 `contract` 和从该 contract 渲染的 `native_reference`，语义显著重复。对 LLM 来说 Python-native 文本通常更直接；对程序审计则结构化 contract 更稳定。建议工具默认返回 native reference + 最小 metadata，并用 `view="structured"` 按需取得 contract，或反向设计为 `view="native|structured|both"`，默认不要 `both`。
-- Topic 返回 `symbols` 后又在 `native_reference` 中逐个展开这些 symbol，属于目录与正文的轻度重复，但有导航价值；可保留 symbols，只要不再同时返回完整结构化 contracts。
+- 精确 symbol 查询现在只向模型返回 native reference + source/related topic/query budget；底层 store 和 role artifact 仍保留结构化查询事实，不再把 contract 与其等价 native 渲染同时塞入 ToolResult。
+- Topic 查询只返回 topic 的 native reference 和最小查询 metadata，不再重复 symbols 目录；初始 capability packet 则保留 Topic ID 作为导航标题。
 - `source` 与 `remaining_unique_queries` 清楚地说明预算和来源，不应删除。
 
 ## 9. Conformance Reviewer
 
-Conformance Reviewer 当前没有查询工具。Controller 直接提供 `candidate_trajectory_view`、Mechanism Spec、reference observations 和 Trial refs。该角色已经使用专用裁剪视图，不会通过工具读取完整 Candidate rollout；这与 Candidate Reviewer 当前做法形成明显差异。
+Conformance Reviewer 当前没有查询工具。Controller 按 Example 直接提供有序
+`candidate_trajectory_views`、Mechanism Spec、reference observations 和 Trial refs。该角色
+使用专用裁剪视图，不会通过工具读取完整 Candidate rollout。
 
 ## 10. Candidate Reviewer
+
+以下 10.1--10.5 保留 2026-08-14 正式迁移前的审计证据，用于说明原始冗余及设计来源，
+不再描述当前工具返回；当前实现见 10.6。
 
 ### 10.1 工具签名与用途
 
@@ -724,18 +694,37 @@ Conformance Reviewer 当前没有查询工具。Controller 直接提供 `candida
 
 该视图应复用 behavior projection 的事件筛选，并补保留 Candidate 判断所需的 Hook model label/input 摘要、Hook change、defer feedback 和状态预算；不要直接复用完整 Conformance 输入，因为 Candidate Reviewer 关心的是效果与成本，不需要逐 predicate 的全部 reference observation。`full` 只作为运行时故障诊断的显式选项。
 
+### 10.6 当前正式视图
+
+2026-08-14 已实施上述方向，但没有保留 `full` 模式；完整底层 rollout 继续作为 Artifact
+保存，模型按需使用单字段下钻工具。当前签名：
+
+| 工具签名 | 当前返回视图 |
+| --- | --- |
+| `list_candidate_changes(page: int = 1, page_size: int = 100, change: Literal["any", "improved", "regressed", "unchanged"] = "any")` | Markdown 计数表 + changed-first Case 表；unchanged 显式筛选。 |
+| `get_candidate_case(example_id: str)` | 指标对比表、replicate outcome 表、紧凑 JSONL 配对执行事实和 Candidate Hook activity 索引。 |
+| `get_paired_student_trajectory(example_id: str, replicate_id: str)` | 指标/answer 表 + incumbent/candidate 行为 JSONL；保留工具证据、解析动作、Hook decision/effect、终答与错误。 |
+| `get_candidate_harness_diff(path: str = "")` | 小 diff 完整内联；大 diff 先返回 path/operation/字符数目录，再按 path 展开。 |
+| `get_candidate_trajectory_text(example_id: str, replicate_id: str, side: Literal["incumbent", "candidate"], event_index: int, field: Literal["tool_result_content", "hook_raw_output", "hook_model_input", "final_answer"], offset: int = 0, max_characters: int = 4000)` | 精确长文本切片、总字符数、slice 和剩余字符数。 |
+
+默认 trajectory 不再包含累计 `model_input`、被 parsed event 重复表达的 raw model output、
+reasoning、provider usage/provenance、`metadata.results` 或 `omitted` 清单。Case 视图显式保留
+steps、tool calls、retriever errors、duplicate queries 和基础 Student/Hook/total token；不保留
+model call count。Hook activity 只作下钻索引，不能替代 paired trajectory 的语义归因。
+
 ## 11. 跨角色结论与优先级
 
 | 优先级 | 问题 | 影响 |
 | --- | --- | --- |
-| 高 | Candidate Reviewer 的 paired trajectory 返回两份原始 trace | 单次可达 150k–164k 字符，重复上下文显著，模型需要自行对齐且缺少配对指标。 |
+| 已处理 | Candidate Reviewer 的 paired trajectory 曾返回两份原始 trace | 已替换为配对行为/Hook-effect 视图与精确长文本下钻。 |
 | 中 | Intervention active observation 在消息和工具中完全重复 | 每个 activation 重复同一生命周期 JSON，工具本身没有新增信息。 |
 | 高 | Trial list/get 重复大部分派生字段，get 内 summary/catalog 平铺 | 每条 Trial Review 都强制读取，持续增加上下文，并模糊派生结论与原始事件目录的层级。 |
 | 中 | Compiler exact API query 同时返回 contract 与 native reference | 同一契约双重表达；可按 view 选择，默认只给模型更易用的一种。 |
 | 低 | Evaluation case 返回完整报告行 | Judge 原始输出、metadata 与细粒度 token 对 Failure Analyst 通常过多。 |
 | 低 | Harness Manifest 和 Harness diff 偏实现视角 | 当前体积通常可控，但可增加目录/拓扑摘要与按 path 展开。 |
 
-当前最值得先改的是 Candidate Reviewer 的配对行为视图。项目已经有 `_behavior_trajectory` 和 Conformance trajectory view 两个可参考实现，无需设计新的通用轨迹抽象；应先在 CandidateComparisonStore 内建立职责专用的最小投影，再用现有 `20260806_qwen3-8b` 两条已检查案例比较返回体积与 Reviewer 信息完备性。
+Candidate Reviewer 的配对行为视图已按职责专用投影实施；其实现没有引入跨角色通用轨迹
+抽象，底层 Artifact 保持不变。
 
 ## 12. 主要代码依据
 

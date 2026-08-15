@@ -21,7 +21,7 @@ API Key。默认配置文件相对当前 `.env` 所在目录解析，因此项�
 | `request_timeout` | 否 | `60` | 请求超时秒数 |
 | `temperature` | 否 | `0.6` | 采样温度 |
 | `seed` | 否 | 空 | 可选整数 seed |
-| `thinking_mode` | 否 | 自动 | `enabled` 或 `disabled`；只向明确支持的 provider 发送扩展字段 |
+| `thinking_mode` | 否 | 自动 | `enabled` 或 `disabled`；Ollama OpenAI-compatible `/v1` 的 `disabled` 映射为 `reasoning_effort: none`，DeepSeek 使用 `thinking.type` |
 
 API Key 从 `.env` 或进程环境读取，名称为 `STUDENT_API_KEY` 与
 `TEACHER_API_KEY`。Hook model profile 继续使用 `<PROFILE>_API_KEY`；其非敏感模型
@@ -125,6 +125,11 @@ teacher_judge:
 该值缺省时继承 `models.teacher.thinking_mode`。当前正式配置默认关闭 Judge thinking，
 但不改变其余 Teacher Role 的设置。角色与 Judge 的覆盖只会在模型 profile 已声明
 provider 支持 thinking 时发送，切换到不支持该扩展的 OpenAI-compatible API 时不会误发。
+
+对于 Ollama 的 OpenAI-compatible `/v1/chat/completions`，`disabled` 发送顶层
+`reasoning_effort: "none"`；`enabled` 省略该字段，恢复模型默认 thinking。这里不能使用
+Ollama 原生 API 的 `think: false`：实测该字段在 `/v1` 路径被忽略。运行时 provenance 中
+现有 `ollama_think` 布尔值记录的是逻辑开关，不代表请求体仍发送同名字段。
 
 ## 其他配置
 

@@ -44,6 +44,17 @@ from the available evidence using exactly one of `ready_to_distill`, `revise`,
 or `reject`. Preserve material limitations in `assessment` or `key_risk`; do
 not turn an unavailable future trial into `next_obligation`.
 
+The role input also contains authoritative `trial_selection_capabilities`.
+The current selector can locate an unused prefix at the frozen phase and prefer
+a distinct Example or replicate. It cannot inspect a future branch, guarantee a
+Student response, search for a semantic negative/positive predicate, or keep
+sampling until a requested stochastic outcome occurs. A `continue`
+`next_obligation` must be satisfiable by those capabilities. If the missing
+evidence depends on an unselectable semantic or future outcome, do not request
+that outcome again: revise the claim to the observed boundary or reject it.
+Repeated positive outcomes may be reported as an unobserved limitation, but do
+not constitute an instruction to sample until a failure appears.
+
 When default coverage is incomplete and budget remains, choose `continue` and
 target one listed deficit. When it is incomplete and no trial can be scheduled,
 choose `revise` to narrow or reformulate the claim, or `reject` it; do not use

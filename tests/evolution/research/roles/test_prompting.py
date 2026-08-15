@@ -122,7 +122,7 @@ class TeacherPromptSpecTest(TestCase):
             ]
         )
 
-        self.assertIn("When the supplied constraints are sufficient", combined)
+        self.assertIn("feedback is sufficient", combined)
         tool_positions = [
             combined.index(tool)
             for tool in (
@@ -132,6 +132,6 @@ class TeacherPromptSpecTest(TestCase):
             )
         ]
         self.assertEqual(tool_positions, sorted(tool_positions))
-        self.assertIn("never copy a case answer", combined)
+        self.assertIn("never copy case answers", combined)
         self.assertIn("When the decision is `revise`", combined)
         self.assertIn("without inventing missing labels", combined)

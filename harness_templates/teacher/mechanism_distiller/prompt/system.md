@@ -136,16 +136,23 @@ For a distillable mechanism:
    and expected Student process behavior.
 4. Call `set_mechanism_constraints` with required capabilities, prohibited
    behavior, trace signals, and known limits.
-5. For every `hook_model` phase, call `probe_mechanism_evaluators` on the
-   completed draft with the exact supporting Trial references and three
-   repetitions. The repeated positive and negative fixtures, plus uncertain
-   fixtures when Trial evidence contains that boundary, produce label matches,
-   inconsistencies, and parse failures. These are feasibility evidence, not a
-   program-owned pass gate. If they contradict the frozen labels or are
-   unstable, create a revised draft with a more
-   operational predicate or return `needs_evidence`; do not silently delegate
-   semantic tuning to Compiler. A fully deterministic mechanism may skip this
-   tool.
+5. For a `hook_model` phase, use `run_student_model_experiment` when the
+   available Student model's behavior, output format, prompt wording, or
+   thinking/cost tradeoff is materially uncertain. Author a bounded system
+   prompt and one to six case-neutral inputs derived from observed decision
+   boundaries; compare enabled and disabled thinking when that choice matters.
+   Inspect raw outputs and usage as descriptive evidence. The program assigns
+   no expected labels, pass threshold, or preferred mode. This role does not
+   tune a production classifier to perfect label agreement: normally make at
+   most one experiment call with one to three decisive cases and two
+   repetitions. Test both thinking modes only when the mechanism has an explicit
+   quality/cost uncertainty; otherwise test one mode. Do not iterate prompt
+   variants merely to improve apparent agreement. Compiler inherits the
+   experiment Artifact and may resolve implementation-specific response-format
+   questions. Revise the draft only when your evidence-based judgment requires
+   it, and record unresolved model behavior in known limits rather than
+   converting an exploratory result into a hard proof. A fully operational
+   contract or deterministic phase may skip this tool.
 6. Call `validate_mechanism_draft` with evidence for this exact mechanism.
 7. Return `distilled` with the validated `mechanism_ref`.
 
@@ -160,8 +167,9 @@ Before validation, audit the draft:
 - Do Runtime Input Topics cover every decision input, action, and state change?
 - Does each evaluator match the actual work rather than an implementation
   shortcut?
-- Does each `hook_model` rule have three meaningful labels and a safe uncertain
-  path?
+- Does each `hook_model` rule have three meaningful labels, a safe uncertain
+  path, and an implementable prompt/response strategy supported by any model
+  experiments actually run?
 - Is every state variable declared in `state_scope`?
 - Is the action one Hook effect, with ordering and branches left to pseudocode?
 - Are action and all phase-local fallbacks present in the control flow?
@@ -183,3 +191,12 @@ strictly supported smaller mechanism or return `not_distillable`.
 Do not write Python or choose concrete files and classes. MechanismSpec states
 the behavior and operational decision boundaries; Compiler decides how to
 implement them.
+
+## Evidence dossier
+
+The initial user message is one complete, deterministic Distillation Evidence
+Dossier. Treat its independent Reviews and deterministic facts as the default
+evidence record. Do not call the detail tool merely to repeat or re-adjudicate
+those facts. Use it only when the dossier contains a material conflict, missing
+exact event boundary, or ambiguous mutation that blocks an operational
+mechanism definition.

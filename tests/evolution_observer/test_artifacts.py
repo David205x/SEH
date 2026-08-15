@@ -41,11 +41,43 @@ class ArtifactProjectorTest(TestCase):
         self.assertEqual(detail.trajectories, ())
         self.assertIn("没有可转换为对话", detail.detail_message)
 
+    def test_follows_checkpoint_role_artifact_reference(self) -> None:
+        """Conformance finding 包装应解包并去重共享的批次对话。"""
 
-def _work(*, result_ref: str) -> ObservedWorkItem:
+        detail = ArtifactProjector().project(
+            FIXTURES,
+            _work(result_ref="checkpoint_effect.json"),
+        )
+
+        self.assertEqual(len(detail.trajectories), 1)
+        self.assertEqual(
+            detail.trajectories[0].label,
+            "Conformance Reviewer · Batch 001",
+        )
+        self.assertTrue(
+            detail.trajectories[0].source_ref.endswith("batch_001.json")
+        )
+        self.assertIn("conformance_finding_001.role", detail.artifact_refs)
+
+    def test_uses_related_role_trajectory_for_control_event(self) -> None:
+        """Reject 等控制 WorkItem 可复用直接父角色的对话。"""
+
+        detail = ArtifactProjector().project_with_related_fallback(
+            FIXTURES,
+            _work(result_ref="control_effect.json", kind="reject_candidate"),
+            _work(result_ref="effect.json", kind="review_candidate"),
+        )
+
+        self.assertEqual(detail.work.kind, "reject_candidate")
+        self.assertEqual(len(detail.trajectories), 1)
+        self.assertEqual(detail.trajectories[0].label, "Failure Analyst")
+        self.assertIn("related.failure_artifact", detail.artifact_refs)
+
+
+def _work(*, result_ref: str, kind: str = "analyze_failure") -> ObservedWorkItem:
     return ObservedWorkItem(
-        work_id="analyze_failure-fixture",
-        kind="analyze_failure",
+        work_id=f"{kind}-fixture",
+        kind=kind,
         category="teacher_role",
         subject_ref="generation:1:harness_v0001",
         parent_work_id=None,

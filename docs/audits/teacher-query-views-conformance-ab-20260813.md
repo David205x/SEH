@@ -1,5 +1,8 @@
 # Shadow Conformance Reviewer A/B 实验
 
+状态：历史 A/B；Example Batch 与独立 replicate 边界已迁入正式 Conformance Reviewer，
+影子模板和运行入口已于 2026-08-14 清理。本文路径仅记录实验时环境。
+
 ## 1. 目的与边界
 
 本实验只优化 Conformance Reviewer 的模型可见输入和调用粒度，不修改正式 Controller、正式角色协议、Candidate、Mechanism、保存的 Candidate replay 或聚合门禁，也不执行新的 Student rollout。

@@ -222,6 +222,12 @@ _OBJECTS: dict[str, _ObjectPolicy] = {
             "profile": _MemberPolicy(),
             "purpose": _MemberPolicy(),
             "model_input": _MemberPolicy(),
+            "thinking_mode": _MemberPolicy(
+                note=(
+                    "Optional enabled/disabled override for this model call; "
+                    "None inherits the selected profile configuration."
+                )
+            ),
         },
         methods={},
     ),

@@ -37,7 +37,13 @@ Intervention 分支不会把 Hook State 原样交给 Teacher。运行时把下�
 
 ## Hook 模型调用
 
-需要辅助模型时，Hook 声明 `model_profiles` 和 `max_model_calls_per_invocation`，通过 `HookContext.call_model()` 调用。未授权 profile、超预算或未配置 backend 都会失败并记录 `hook_model_error`。模型调用不得绕开 traced runtime。
+需要辅助模型时，Hook 声明 `model_profiles` 和 `max_model_calls_per_invocation`，通过 `HookContext.call_model()` 调用。`HookModelRequest.thinking_mode` 可取 `enabled` 或 `disabled`，用于覆盖该次调用的 profile 配置；缺省时继承 profile。未授权 profile、超预算、未配置 backend，或 provider 无法表达显式 thinking 覆盖时都会失败并记录 `hook_model_error`。模型调用不得绕开 traced runtime。
+
+Ollama 的 OpenAI-compatible `/v1/chat/completions` 路径以顶层
+`reasoning_effort="none"` 表达 `disabled`；`enabled` 省略该字段并使用模型默认 thinking。
+Ollama 原生 API 的 `think` 字段不用于这条 OpenAI-compatible 请求路径。DeepSeek 继续使用
+其 `thinking.type` 扩展。`thinking_mode` 表示请求控制，实际返回仍应以 response metadata 和
+usage 为准。
 
 ## FinalDecision
 

@@ -178,6 +178,7 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
             )
             compiled = await effects.compile_candidate(
                 mechanism=mechanism,
+                student_model_experiments=[],
                 implementation_constraints=[],
                 validation_feedback=[],
                 work_dir=root / "compiled",

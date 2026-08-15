@@ -1,5 +1,8 @@
 # Compiler Shadow Authoring View A/B 实验记录
 
+状态：历史 A/B；验证有效的 native API 视图、packet 去重、continuation 和实验交接设施已
+选择性迁入正式 Compiler，影子角色与入口已于 2026-08-14 清理。
+
 ## 1. 目标与边界
 
 本实验比较正式 Compiler 与 shadow Compiler 在相同 `CompilerInput`、父模板或续编

@@ -25,7 +25,7 @@ from search_harness.evolution.research.resources.base import (
 
 
 class TeacherResourceTest(unittest.TestCase):
-    def test_hook_model_mechanism_requires_probe_before_submission(self) -> None:
+    def test_hook_model_mechanism_has_no_program_owned_probe_gate(self) -> None:
         resources = TeacherResources()
         draft_id = resources.mechanisms.create(goal="Classify evidence support.")
         resources.mechanisms.add_phase(
@@ -66,10 +66,6 @@ class TeacherResourceTest(unittest.TestCase):
             rationale="The bounded behavior is supported.",
         )
 
-        with self.assertRaisesRegex(ValueError, "must run"):
-            resources.validate_mechanism_distillation(result)
-
-        resources.hook_evaluator_probes.append({"draft_id": draft_id})
         resources.validate_mechanism_distillation(result)
 
     def test_distiller_cannot_request_evidence_after_budget_exhaustion(

@@ -26,7 +26,7 @@ Candidate Reviewer 另有两个明确的能力边界：Harness diff 检查只由
 | Evidence Reviewer | `evidence_reviewer` | `@1` | `evidence_review@2` | Native Chat |
 | Mechanism Distiller | `mechanism_distiller` | `@1` | `mechanism_distillation@2` | Native Chat |
 | Mechanism Compiler | `compiler` | `@1` | `compiler_result@2` | Native Chat |
-| Conformance Reviewer | `conformance_reviewer` | `@1` | `conformance_review@3` | Native Chat |
+| Conformance Reviewer | `conformance_reviewer` | `@1` | `conformance_review_batch@5` | Native Chat |
 | Candidate Reviewer | `candidate_reviewer` | `@1` | `candidate_review@2` | Native Chat |
 
 `intervention_worker` 和 `compiler` 是当前稳定内部 ID，不应在面向领域的叙述中替代 Intervention Executor 和 Mechanism Compiler。
@@ -363,16 +363,15 @@ Mechanism Compiler 的 `needs_mechanism_revision` 或 `implementation_blocked` �
 
 工具为：
 
-- `list_trial_evidence`
-- `get_trial_evidence`
+- `get_distillation_trial_detail`
 - `create_mechanism_draft`
 - `add_mechanism_phase`
 - `complete_mechanism_draft`
 - `set_mechanism_constraints`
-- `probe_mechanism_evaluators`
+- `run_student_model_experiment`
 - `validate_mechanism_draft`
 
-Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点是把 Teacher Intervention 降为无需 Teacher 在线参与的最小 Mechanism，显式区分 deterministic guard 与 evaluator，要求模糊术语形成可操作的三值边界，并禁止用关键词/正则伪装语义判断。Intervention Trial 支持语义条件与干预效果；对于 `hook_model`，Distiller 还必须用正式 Student Hook-model backend 对 evidence coverage 派生的 fixture 重复探测。Probe 记录匹配、一致性、解析失败和 usage，不设置程序通过门禁。`runtime_inputs` 仍只选择受控 Topic，Compiler 负责最终集成。
+Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点是把 Teacher Intervention 降为无需 Teacher 在线参与的最小 Mechanism，显式区分 deterministic guard 与 evaluator，要求模糊术语形成可操作的三值边界，并禁止用关键词/正则伪装语义判断。初始 Distillation Evidence Dossier 已按 Trial 对齐 Review、Student-visible mutation、phase effect 和 outcome；只有证据冲突时才下钻完整事件目录。对于 materially uncertain 的 `hook_model` 语义，Distiller 可使用正式 Student profile 运行自定义描述性实验；工具保留原始输出和 usage，不设置 expected label、匹配率或程序通过门禁。`runtime_inputs` 仍只选择受控 Topic，Compiler 负责最终集成。
 
 ### 6.4 程序门禁与缺口
 
@@ -382,7 +381,7 @@ Prompt 位于 `harness_templates/teacher/mechanism_distiller/prompt/`。重点�
 - Mechanism Distiller 接收冻结 Trial/Assignment 预算，预算耗尽时不能返回
   `needs_evidence`；
 - `distilled` 必须引用本次 Role Run 中已经 Pydantic 校验的 Mechanism Spec；
-- 含 `hook_model` phase 的 draft 在提交前必须产生对应 Probe artifact；
+- Student 模型实验是可选的描述性证据，不构成 `hook_model` phase 的提交门禁；
 - phase 唯一、evaluator 值、activation budget 和主要文本字段满足协议。
 
 但当前 `MechanismDraftStore.validate()` 只把模型提供的 `evidence_refs` 放入 Mechanism Spec 并做结构校验：
@@ -410,7 +409,8 @@ Candidate Validation 失败会在 compiler revision 预算内创建一次新的 
 
 ### 7.2 输入与输出
 
-输入：Mechanism Spec、implementation constraints、validation feedback。
+输入：Mechanism Spec、Distiller 已保存的描述性 Student model experiments、
+implementation constraints、validation feedback。
 
 输出 `CompilerResult`：
 
@@ -427,11 +427,14 @@ Manifest 当前显式注册：
 - `list_harness_files`
 - `read_harness_file`
 - `query_hook_api`
+- `run_student_model_experiment`
 - `write_candidate_file`
 - `delete_candidate_file`
 - `finalize_candidate`
 
-Role Input 绑定后，程序根据 Mechanism Spec 的受控 `runtime_inputs` 生成 source-derived capability packet v9，作为主要公开 API。除原有 Python-native API 文档外，packet 还携带各 phase 的 guards、decision contract 和局部 fallback。`query_hook_api` 的查询与预算语义不变。
+Role Input 绑定后，程序根据 Mechanism Spec 的受控 `runtime_inputs` 生成 source-derived capability packet v9，作为主要公开 API。模型视图用 Runtime Input Topic 的 Python-native 文档呈现已覆盖 symbols，只以紧凑 JSONL 补充未覆盖 contract；packet selection 不再重复 Mechanism 已提供的 guards、decision contract、fallback 和 activation budget。`query_hook_api` 默认返回 native reference 与最小来源/预算信息，结构化 contract 仍由底层 store 和 artifact 保留。初始上下文同时提供 manifest、evolution policy 和 Extension 索引；Compiler revision 直接收到续接 Candidate 的精确 changed file 内容。
+
+`run_student_model_experiment` 允许 Compiler 在 prompt wording、response shape 或 per-request thinking mode 仍 materially uncertain 时执行有界 Student profile 实验。工具只返回原始输出、usage 和错误，不产生 expected label 或程序通过门禁；Distiller 已运行的实验通过 `CompilerInput` 直接继承，避免重复调用。
 
 Mechanism Compiler 只能修改内存 Candidate Workspace。Evolution Policy 的 fixed Component、模板路径边界、Python 语法、Manifest/Assembly 和 Hook contract 由 Candidate Validation 与 deterministic source review 检查。Hook 校验既逐 Hook/phase 定位单体契约错误，也用全部 Candidate Hook 构造完整 Pipeline，并在同一 rollout state/store 中重复执行 tool-call、final-answer 和 error 生命周期，检查组合注册、共享状态、写权限、状态类型和重复调用的机械安全性；它不判断 Mechanism 语义。`finalize_candidate` 计算 diff、运行 deterministic review 和 Candidate Validation；失败返回 `repair_required`，通过才冻结 candidate ref。
 
@@ -487,7 +490,12 @@ Manifest 没有暴露 `show_candidate_diff`、`validate_candidate` 或分开的 
 
 ### 8.1 激活与聚合
 
-Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同 Example，并在冻结 Evolution Set 中定位它们。每个 Example 固定执行 3 条 Candidate Student Rollout；成功 Rollout 并发调用 Conformance Reviewer，Runner error 则直接生成确定性 `runtime_error` Finding。Replay suite 和每条规范化 Finding 以 Candidate、Mechanism、Trial 与 Evolution Set 的内容摘要建立 checkpoint；Work 重试只补做未完成 Finding，不重跑已经完成的 replay 或审查。
+Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同 Example，并在冻结
+Evolution Set 中定位它们。每个 Example 固定执行 3 条 Candidate Student Rollout；同一
+Example 的成功 Rollout 一次提交给 Conformance Reviewer，Runner error 则直接生成确定性
+`runtime_error` Finding。Replay suite、Example Review Batch 和每条规范化 Finding 以
+Candidate、Mechanism、Trial 与 Evolution Set 的内容摘要建立 checkpoint；Work 重试不重跑
+已经完成的 replay 或 Review Batch。
 
 聚合规则：
 
@@ -499,9 +507,13 @@ Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同
 
 ### 8.2 输入与输出
 
-输入包含 Mechanism Spec、该 Example 对应 trial refs、reference observations、Example/Replicate identity 和 lossless-for-conformance `candidate_trajectory_view`；完整 replay 仍保存在 checkpoint，但不直接进入模型上下文。
+输入包含 Mechanism Spec、该 Example 对应 trial refs、完整 reference observations、Example
+identity 和有序的 lossless-for-conformance `candidate_trajectory_views`；共享证据只呈现一次，
+每个 replicate 拥有明确的紧凑 JSON 边界。完整 replay 仍保存在 checkpoint，但不直接进入
+模型上下文。每条 view 还提供 Hook-model profile、purpose、thinking mode、调用次数和基础
+token 事实，供角色检查 Mechanism 明示的调用与成本边界。
 
-模型输出 `ConformanceReview`：
+模型输出 `ConformanceReviewBatch`，其中每个 replicate 对应一条 `ConformanceReview`：
 
 | 字段 | 约束与职责 |
 | --- | --- |
@@ -514,17 +526,32 @@ Candidate Validation 通过后，程序从所有 Intervention Trial 提取不同
 | `decisive_input_summary` | 不复制案例文本的决定性输入摘要 |
 | `recommended_route` | `evidence`、`mechanism` 或 `implementation` |
 
-`candidate_run_ref` 与 `trial_refs` 是程序已知的路由身份，不再要求模型复制。程序将其附加到规范化 `ConformanceFinding` 后再持久化和聚合。
+模型只复制程序提供的 `replicate_id`。`candidate_run_ref` 与 `trial_refs` 是程序已知的路由
+身份，程序严格校验 Finding 顺序并附加这些 identity，再持久化和聚合。
 
-该角色没有工具，全部 Evidence 通过输入提供。Prompt 位于 `harness_templates/teacher/conformance_reviewer/prompt/`，明确禁止以答案正确性替代实现保真，并要求 Reviewer 独立把 trace-visible decision inputs 判为 positive、negative 或 uncertain：对应 fallback 正确才可视为 conformant；positive 被 Hook model、解析、状态或控制逻辑送入 fallback 则是 `implementation_mismatch`；规格边界本身不足时标为 `ambiguous_spec` 并回到 mechanism。该判断不由确定性激活率门禁替代。
+该角色没有工具，全部 Evidence 通过输入提供。Prompt 位于
+`harness_templates/teacher/conformance_reviewer/prompt/`，明确禁止以答案正确性替代实现
+保真，并要求 Reviewer 对每个 replicate 独立把 trace-visible decision inputs 判为 positive、
+negative 或 uncertain：对应 fallback 正确才可视为 conformant；positive 被 Hook model、
+解析、状态或控制逻辑送入 fallback 则是 `implementation_mismatch`；规格边界本身不足时标为
+`ambiguous_spec` 并回到 mechanism。必须执行的 Harness action 与随后 Student effect 分开
+判断，后续正确行为不能补偿 action 内容缺失。该判断不由确定性激活率门禁替代。
 
 ### 8.3 程序后处理
 
-程序为模型输出附加权威 run/trial refs。若 Reviewer 返回 Mechanism Spec 之外的 `observed_phases`，会删除越界 phase；若原 verdict 是 `faithful` 且删除后无合法 phase，则改为 `inconclusive` 并生成 repair obligation。清洗后的 Finding 是单条 checkpoint 的 `output`，也是 aggregate 的唯一输入；原始 Role artifact 单独保留在 `role_artifact`。
+程序为模型输出附加权威 run/trial refs。若 Reviewer 返回 Mechanism Spec 之外的
+`observed_phases`，会删除越界 phase；若原 verdict 是 `faithful` 且删除后无合法 phase，
+则改为 `inconclusive` 并生成 repair obligation。清洗后的 Finding 是单条 checkpoint 的
+`output`，也是 aggregate 的唯一输入；原始 Role artifact 只保存在 Example Batch
+checkpoint，单条 Finding 通过 `role_artifact_ref` 引用，避免重复大体积 transcript。
 
 ### 8.4 失败恢复与用量
 
-单条审查失败会持久化 Finding identity、失败阶段、完整 traceback、Role failure artifact/部分 transcript 与已产生 usage。批次失败 artifact 汇总失败 Finding 引用和 checkpoint 目录；`work_failed.total_tokens` 计入 Control State。后续 Work retry 使用相同内容摘要，只补做缺失 Finding，成功 Effect 只上报本次新增 token，避免批次重跑、漏计和重复计数。
+Example Batch 审查失败会持久化首条 Finding identity、失败阶段、完整 traceback、Role failure
+artifact/部分 transcript 与已产生 usage。批次失败 artifact 汇总失败引用和 checkpoint 目录；
+`work_failed.total_tokens` 计入 Control State。后续 Work retry 使用相同内容摘要，只重试尚未
+完成的 Example Batch，成功 Effect 只上报本次新增 token，避免 replay 重跑、漏计和重复
+计数。
 
 ---
 
@@ -544,9 +571,12 @@ Conformance pass 且完整 Candidate Evaluation 完成后激活。Candidate Revi
 
 ### 9.2 输入与输出
 
-输入：Mechanism Spec、组合 validation summary、Mechanism Compiler implementation summary、unresolved risk，以及 `historical_experience`。
+协议输入仍包含 Mechanism Spec、组合 validation summary、Mechanism Compiler implementation
+summary、unresolved risk 和 `historical_experience`。模型可见的专用 brief 不重复呈现完整
+Candidate Validation Report，只说明静态检查已通过，并呈现压缩 Conformance、一次
+Incumbent/Candidate 指标对比、change landscape 与实现摘要。
 
-当前组合 summary 包含：
+底层组合 summary 保留：
 
 - Compiler/Candidate Validation Report；
 - 压缩 Conformance Summary；
@@ -563,12 +593,23 @@ CandidateComparisonStore 要求 incumbent 与 candidate report 的 Example ID �
 - `get_candidate_case`
 - `get_paired_student_trajectory`
 - `get_candidate_harness_diff`
+- `get_candidate_trajectory_text`
 
-提交前程序要求至少读取一条 paired Student trajectory；若存在 improved 或 regressed Example，必须分别覆盖至少一条相应 paired trajectory。
+提交前程序要求至少读取一条 paired Student trajectory；若存在 improved 或 regressed Example，
+必须分别覆盖至少一条相应 paired trajectory。Case 视图提供逐 replicate outcome、执行/token
+delta 和 Hook activity 索引，帮助模型选择混合标签或真实变化的 replicate；完整语义仍需
+trajectory 下钻。Harness diff 支持大文件按 path 展开，长轨迹文本支持按 event/field 精确
+切片。
 
 ### 9.4 Prompt 与当前边界
 
-Prompt 位于 `harness_templates/teacher/candidate_reviewer/prompt/`。它要求综合 Conformance、准确率/稳定性、target cases、gain/loss、token 成本和 Harness diff，不使用隐含的 `accuracy_delta >= 0` 规则。Conformance Finding 在自身范围内仍是权威事实，但不自动证明正向机制已稳定激活或产生收益；Reviewer 必须在检查的 target-relevant trajectory 中区分合理 non-trigger fallback 与遗漏触发，fallback-only 证据不能被描述为正向机制已经观察到。
+Prompt 位于 `harness_templates/teacher/candidate_reviewer/prompt/`。它要求综合 Conformance、
+准确率/稳定性、target cases、gain/loss、token 成本和 Harness diff，不使用隐含的
+`accuracy_delta >= 0` 规则。Conformance Finding 在自身范围内仍是权威事实，但不自动证明
+正向机制已稳定激活或产生收益；Reviewer 必须在检查的 target-relevant trajectory 中区分
+合理 non-trigger fallback 与遗漏触发，fallback-only 证据不能被描述为正向机制已经观察到。
+`revise` 还必须满足“单一 obligation 完成后，该 Candidate 不再遗留独立 reject 理由”；
+否则直接 `reject`。
 
 当前存在两个明确边界：
 

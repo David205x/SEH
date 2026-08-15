@@ -1,0 +1,10 @@
+{
+  "failure_cases": 13,
+  "calls": 39,
+  "parse_valid_rate": 1.0,
+  "baseline_gold_absent_calls": 21,
+  "alternate_recovery_call_rate": 0.6190476190476191,
+  "recovered_any_case_count": 5,
+  "recovered_all_replicates_case_count": 3,
+  "stable_query_case_rate": 0.0
+}

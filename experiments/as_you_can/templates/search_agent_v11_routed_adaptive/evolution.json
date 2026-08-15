@@ -1,0 +1,4 @@
+{
+  "schema_version": 1,
+  "mutable_components": ["extension:question_router", "extension:adaptive_decompose"]
+}

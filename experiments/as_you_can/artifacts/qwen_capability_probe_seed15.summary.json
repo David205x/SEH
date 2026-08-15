@@ -1,0 +1,36 @@
+{
+  "cases": 18,
+  "calls": 54,
+  "parse_valid_rate": 1.0,
+  "action_accuracy": 0.5925925925925926,
+  "sufficiency_positive_action_accuracy": 0.4722222222222222,
+  "sufficiency_negative_action_accuracy": 0.8333333333333334,
+  "answer_exact_match_when_gold_present": 0.3055555555555556,
+  "quote_valid_when_gold_present": 0.2222222222222222,
+  "next_query_nonempty_when_gold_absent": 1.0,
+  "next_query_novel_when_gold_absent": 1.0,
+  "fully_stable_case_rate": 0.5555555555555556,
+  "by_bucket": {
+    "right_present": {
+      "count": 18,
+      "parse_valid_rate": 1.0,
+      "action_accuracy": 0.7222222222222222,
+      "answer_exact_match_rate": 0.5555555555555556,
+      "quote_valid_rate": 0.3333333333333333
+    },
+    "wrong_absent": {
+      "count": 18,
+      "parse_valid_rate": 1.0,
+      "action_accuracy": 0.8333333333333334,
+      "answer_exact_match_rate": 0.0,
+      "quote_valid_rate": 0.16666666666666666
+    },
+    "wrong_present": {
+      "count": 18,
+      "parse_valid_rate": 1.0,
+      "action_accuracy": 0.2222222222222222,
+      "answer_exact_match_rate": 0.05555555555555555,
+      "quote_valid_rate": 0.1111111111111111
+    }
+  }
+}

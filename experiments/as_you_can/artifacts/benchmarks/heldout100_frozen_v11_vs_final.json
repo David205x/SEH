@@ -1,0 +1,46 @@
+{
+  "overall": {
+    "count": 100,
+    "baseline_semantic_accuracy": 0.52,
+    "candidate_semantic_accuracy": 0.6,
+    "baseline_exact_match": 0.35,
+    "candidate_exact_match": 0.4
+  },
+  "by_type": {
+    "bridge": {
+      "count": 85,
+      "baseline_semantic_accuracy": 0.4588235294117647,
+      "candidate_semantic_accuracy": 0.5647058823529412,
+      "baseline_exact_match": 0.25882352941176473,
+      "candidate_exact_match": 0.35294117647058826
+    },
+    "comparison": {
+      "count": 15,
+      "baseline_semantic_accuracy": 0.8666666666666667,
+      "candidate_semantic_accuracy": 0.8,
+      "baseline_exact_match": 0.8666666666666667,
+      "candidate_exact_match": 0.6666666666666666
+    }
+  },
+  "by_level": {
+    "hard": {
+      "count": 100,
+      "baseline_semantic_accuracy": 0.52,
+      "candidate_semantic_accuracy": 0.6,
+      "baseline_exact_match": 0.35,
+      "candidate_exact_match": 0.4
+    }
+  },
+  "paired_semantic": {
+    "candidate_gains": 13,
+    "candidate_losses": 5,
+    "ties": 82,
+    "exact_mcnemar_two_sided_p": 0.09625244140625
+  },
+  "paired_exact_match": {
+    "candidate_gains": 11,
+    "candidate_losses": 6,
+    "ties": 83,
+    "exact_mcnemar_two_sided_p": 0.332305908203125
+  }
+}

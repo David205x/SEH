@@ -168,6 +168,7 @@ class ModelDrivenDecisionHook(BaseHook):
                 model_input=ModelInput.from_messages(
                     [ChatMessage(role="user", content=context.state.get("core.question"))]
                 ),
+                thinking_mode="disabled",
             )
         )
         context.state.set(
@@ -336,6 +337,8 @@ class HookPipelineTest(TestCase):
         )
         self.assertEqual(model_event.payload["hook_id"], "model_decision")
         self.assertEqual(model_event.payload["profile"], "student")
+        self.assertEqual(model_event.payload["thinking_mode"], "disabled")
+        self.assertEqual(backend.requests[0].thinking_mode, "disabled")
         self.assertEqual(model_event.payload["metadata"]["usage"]["total_tokens"], 7)
         applied_event = next(
             event

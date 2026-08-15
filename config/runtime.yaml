@@ -31,13 +31,13 @@ models:
 # 每个 Teacher Role 独立控制单次响应预算、合法终态前的回合上限与 thinking
 teacher_roles:
   failure_analyst: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
-  hypothesis_researcher: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  hypothesis_researcher: {max_tokens: 12288, max_turns: 20, thinking_mode: enabled}
   intervention_worker: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
   trial_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
-  evidence_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
-  mechanism_distiller: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
-  compiler: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
-  candidate_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  evidence_reviewer: {max_tokens: 12288, max_turns: 20, thinking_mode: enabled}
+  mechanism_distiller: {max_tokens: 16384, max_turns: 20, thinking_mode: enabled}
+  compiler: {max_tokens: 12288, max_turns: 30, thinking_mode: enabled}
+  candidate_reviewer: {max_tokens: 12288, max_turns: 20, thinking_mode: enabled}
   conformance_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
 
 # Teacher Judge 是评估组件而非 Teacher Role，单独控制；默认关闭以降低判分成本

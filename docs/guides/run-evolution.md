@@ -53,7 +53,8 @@ rollout 与判分：
 ```powershell
 python -m experiments.clone_run_from_incumbent `
   runs/evolution/source_run `
-  runs/evolution/new_debug_run
+  runs/evolution/new_debug_run `
+  --env-file .env
 python -m search_harness evolve resume `
   --env-file .env `
   runs/evolution/new_debug_run
@@ -67,7 +68,9 @@ Version Store 使用独立身份，且不继承未接受的 Candidate Attempt；
 Controller transition 排队 `analyze_failure`，不会复制 Failure Analyst 及其下游
 产物。原 evaluation 的 token 指标保留在 artifact 和复用 provenance 中，但因新
 Run 没有重新调用模型，其 Control 预算记账为 0。目标目录必须不存在，源 Run 不会
-被修改。
+被修改。传入 `--env-file` 时，脚本还会从该文件相邻的 `config/runtime.yaml` 重新投影
+当前 Control 与 Effect 配置；这样复用的是旧 evaluation 证据，而不是旧 Run 已冻结的
+运行超参数。省略该参数时，为兼容已有调试脚本，仍沿用源 Run 的 Control/Effect 配置。
 
 Controller 会重建 agenda，复用完整 effect artifact，并从未完成的工作继续。不要手动删除单个失败 work artifact 或拼接多个 Run。
 

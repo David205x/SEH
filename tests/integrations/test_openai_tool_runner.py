@@ -115,6 +115,40 @@ def _tool_call(name: str, call_id: str, arguments: str) -> dict[str, Any]:
 
 
 class OpenAICompatibleToolRunnerTest(unittest.IsolatedAsyncioTestCase):
+    async def test_sends_ollama_reasoning_effort_when_disabled(self) -> None:
+        client = _ReplayClient(
+            [_tool_call("finish", "finish_1", '{"answer":"done"}')]
+        )
+        config = OpenAICompatibleConfig(
+            base_url="http://127.0.0.1:11434/v1",
+            model_id="qwen3:8b",
+            ollama_think=False,
+        )
+
+        await OpenAICompatibleToolRunner(
+            config=config,
+            client=client,
+        ).run(
+            messages=[{"role": "user", "content": "begin"}],
+            tools=(),
+            terminal_tool_name="finish",
+            terminal_tool_description="Finish.",
+            terminal_output_schema={"type": "object"},
+            missing_terminal_message="Submit now.",
+            submit_terminal=lambda arguments: (
+                arguments,
+                "accepted",
+                {"terminal": True},
+            ),
+            max_turns=1,
+            run_label="test operation",
+        )
+
+        self.assertEqual(
+            client.completions.requests[0]["reasoning_effort"],
+            "none",
+        )
+
     async def test_runs_tools_and_uses_caller_terminal_language(self) -> None:
         client = _ReplayClient(
             [
@@ -221,6 +255,25 @@ class OpenAICompatibleToolRunnerTest(unittest.IsolatedAsyncioTestCase):
 
 
 class OpenAICompatibleToolSessionTest(unittest.TestCase):
+    def test_sends_ollama_reasoning_effort_when_disabled(self) -> None:
+        client = _SyncReplayClient([_tool_call("echo", "echo_1", '{}')])
+        session = OpenAICompatibleToolSession(
+            config=OpenAICompatibleConfig(
+                base_url="http://127.0.0.1:11434/v1",
+                model_id="qwen3:8b",
+                ollama_think=False,
+            ),
+            messages=[{"role": "user", "content": "begin"}],
+            client=client,
+        )
+
+        session.complete(tools=(_EchoTool(),))
+
+        self.assertEqual(
+            client.completions.requests[0]["reasoning_effort"],
+            "none",
+        )
+
     def test_persists_native_messages_across_dynamic_tool_turns(self) -> None:
         client = _SyncReplayClient(
             [

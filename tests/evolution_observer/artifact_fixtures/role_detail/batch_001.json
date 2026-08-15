@@ -1,0 +1,12 @@
+{
+  "status": "completed",
+  "role_artifact": {
+    "role": {"id": "conformance_reviewer"},
+    "model": {"provider": "test", "model_id": "teacher-test"},
+    "usage": {"total_tokens": 30},
+    "transcript": [
+      {"role": "user", "content": "Inspect candidate conformance."},
+      {"role": "assistant", "content": "The candidate is faithful."}
+    ]
+  }
+}

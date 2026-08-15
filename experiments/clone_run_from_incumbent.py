@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from search_harness._internal import (
+    evolution_control_values,
+    evolution_effect_values,
+    read_runtime_config,
+)
 from search_harness.evolution.control.domain import (
     ControlState,
     EffectResult,
@@ -41,10 +46,24 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         help="New Evolution Run directory; it must not already exist.",
     )
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        help=(
+            "Apply the current runtime configuration beside this environment "
+            "file to the cloned run instead of retaining source run limits."
+        ),
+    )
     return parser.parse_args()
 
 
-def clone_run_from_incumbent(source_run: Path, new_run: Path) -> Path:
+def clone_run_from_incumbent(
+    source_run: Path,
+    new_run: Path,
+    *,
+    runtime_config: dict[str, Any] | None = None,
+    env_file: Path | None = None,
+) -> Path:
     """Clone baseline evidence and schedule a fresh Failure Analyst work item."""
 
     source = source_run.resolve()
@@ -96,6 +115,8 @@ def clone_run_from_incumbent(source_run: Path, new_run: Path) -> Path:
             new_work=new_evaluation,
             source_effect=source_effect,
             relative_refs=relative_refs,
+            runtime_config=runtime_config,
+            env_file=env_file,
         )
         destination.parent.mkdir(parents=True, exist_ok=True)
         staging.rename(destination)
@@ -117,6 +138,8 @@ def _materialize_clone(
     new_work: WorkItem,
     source_effect: EffectResult,
     relative_refs: dict[str, Path],
+    runtime_config: dict[str, Any] | None,
+    env_file: Path | None,
 ) -> None:
     staging.mkdir(parents=True)
     source_store = TemplateVersionStore(
@@ -162,6 +185,8 @@ def _materialize_clone(
         new_work=new_work,
         source_effect=source_effect,
         new_store_id=new_store_id,
+        runtime_config=runtime_config,
+        env_file=env_file,
     )
     _write_object(staging / "run.json", cloned_payload)
 
@@ -221,12 +246,19 @@ def _cloned_run_payload(
     new_work: WorkItem,
     source_effect: EffectResult,
     new_store_id: str,
+    runtime_config: dict[str, Any] | None,
+    env_file: Path | None,
 ) -> dict[str, Any]:
     payload = dict(source_payload)
     effects_config = _required_object(payload, "effects_config")
     effects_config["experience_file"] = str(
         (destination / "experience_set.jsonl").resolve()
     )
+    if runtime_config is not None:
+        payload["control_config"] = evolution_control_values(runtime_config)
+        effects_config.update(evolution_effect_values(runtime_config))
+    if env_file is not None:
+        effects_config["env_file"] = str(env_file.resolve())
     experience_set = _required_object(payload, "experience_set")
     experience_set["path"] = str(
         (destination / "experience_set.jsonl").resolve()
@@ -459,7 +491,17 @@ def _required_string(value: dict[str, Any], name: str) -> str:
 
 def main() -> None:
     args = _parse_args()
-    result = clone_run_from_incumbent(args.source_run, args.new_run)
+    runtime = (
+        read_runtime_config(env_file=args.env_file)
+        if args.env_file is not None
+        else None
+    )
+    result = clone_run_from_incumbent(
+        args.source_run,
+        args.new_run,
+        runtime_config=runtime,
+        env_file=args.env_file,
+    )
     print(f"Evolution Run created: {result}")
     print("Next work: analyze_failure")
 

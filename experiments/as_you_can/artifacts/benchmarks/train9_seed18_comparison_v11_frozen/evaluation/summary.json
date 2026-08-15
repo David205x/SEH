@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "D:\\_Project\\Agent\\search_harness\\experiments\\as_you_can\\artifacts\\benchmarks\\train9_seed18_comparison_v11_frozen\\rollouts.jsonl",
+  "created_at": "2026-08-14T07:15:24.124493+00:00",
+  "provenance": {
+    "dataset": "train",
+    "dataset_path": "D:\\_Project\\Agent\\corpus_filter\\output\\train\\supported.jsonl",
+    "selection_seed": 20260814,
+    "ids_file": "D:\\_Project\\Agent\\search_harness\\experiments\\as_you_can\\splits\\train40_seed18_comparison9.txt",
+    "sampling_seed": 42,
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_id": "qwen3:8b",
+      "max_tokens": 4096,
+      "timeout": 120.0,
+      "temperature": 0.65,
+      "seed": 42,
+      "ollama_think": false,
+      "thinking_mode": null
+    },
+    "max_steps": 20
+  },
+  "evaluation_config": {
+    "teacher_judge": false,
+    "judge_workers": 1
+  },
+  "metrics": {
+    "answers": {
+      "scored_count": 8,
+      "correct_count": 8,
+      "accuracy": 1.0,
+      "static_pass_count": 8,
+      "teacher_judged_count": 0,
+      "unresolved_count": 1,
+      "example_count": 9,
+      "stable_correct_count": 8,
+      "stable_failure_count": 0,
+      "unstable_count": 0,
+      "unresolved_example_count": 1,
+      "stable_correct_rate": 0.8888888888888888,
+      "stable_failure_rate": 0.0,
+      "unstable_rate": 0.0,
+      "majority_correct_rate": 0.8888888888888888,
+      "pass_at_n": 0.8888888888888888,
+      "mean_example_success_rate": 1.0,
+      "mean_answer_consistency": 1.0
+    },
+    "execution": {
+      "record_count": 9,
+      "completed_rate": 1.0,
+      "status_counts": {
+        "completed": 9
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 2.3333333333333335,
+      "mean_model_calls": 2.3333333333333335,
+      "mean_tool_calls": 1.2222222222222223,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": 23280,
+      "output_tokens": 14393,
+      "total_tokens": 37673,
+      "student_input_tokens": 21739,
+      "student_output_tokens": 11610,
+      "student_total_tokens": 33349,
+      "hook_input_tokens": 1541,
+      "hook_output_tokens": 2783,
+      "hook_total_tokens": 4324,
+      "coverage_rate": 1.0
+    }
+  }
+}

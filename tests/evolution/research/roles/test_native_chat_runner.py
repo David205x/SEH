@@ -383,7 +383,6 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                         {
                             "example_id": "example_1",
                             "replicate_id": "r000",
-                            "view": "behavior",
                         },
                     ),
                     (
@@ -392,7 +391,6 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                         {
                             "example_id": "example_2",
                             "replicate_id": "r000",
-                            "view": "behavior",
                         },
                     ),
                 ]

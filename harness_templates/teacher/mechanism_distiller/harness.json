@@ -3,24 +3,10 @@
   "harness_id": "teacher_mechanism_distiller_v2",
   "tools": [
     {
-      "instance_id": "list_trial_evidence",
+      "instance_id": "get_distillation_trial_detail",
       "entrypoint": "tools/runtime/component.py:build",
       "config": {
-        "kind": "list_trial_evidence"
-      }
-    },
-    {
-      "instance_id": "get_trial_evidence",
-      "entrypoint": "tools/runtime/component.py:build",
-      "config": {
-        "kind": "get_trial_evidence"
-      }
-    },
-    {
-      "instance_id": "get_trial_event",
-      "entrypoint": "tools/runtime/component.py:build",
-      "config": {
-        "kind": "get_trial_event"
+        "kind": "get_distillation_trial_detail"
       }
     },
     {
@@ -52,10 +38,10 @@
       }
     },
     {
-      "instance_id": "probe_mechanism_evaluators",
+      "instance_id": "run_student_model_experiment",
       "entrypoint": "tools/runtime/component.py:build",
       "config": {
-        "kind": "probe_mechanism_evaluators"
+        "kind": "run_student_model_experiment"
       }
     },
     {

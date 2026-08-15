@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "harness_id": "as_you_can_search_v8_static_decompose",
+  "tools": [
+    {
+      "instance_id": "search",
+      "entrypoint": "tools/retriever_search/component.py:build",
+      "config": {"default_topk": 5}
+    }
+  ],
+  "prompt": {
+    "instance_id": "evidence_search",
+    "entrypoint": "prompt/component.py:build",
+    "config": {}
+  },
+  "output": {
+    "instance_id": "tagged_output",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": [
+    {
+      "instance_id": "static_decompose",
+      "entrypoint": "extensions/static_decompose/component.py:build",
+      "config": {
+        "planner_prompt_file": "extensions/static_decompose/templates/planner.md",
+        "subtask_system_prompt_file": "extensions/static_decompose/templates/subtask_system.md",
+        "synthesis_system_prompt_file": "extensions/static_decompose/templates/synthesis_system.md",
+        "max_subtasks": 2,
+        "topk": 5,
+        "max_evidence_chars": 5000
+      }
+    },
+    {
+      "instance_id": "runtime_guards",
+      "entrypoint": "extensions/runtime_guards/component.py:build",
+      "config": {"topk": 5}
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "overall": {
+    "count": 100,
+    "baseline_semantic_accuracy": 0.61,
+    "candidate_semantic_accuracy": 0.68,
+    "baseline_exact_match": 0.47,
+    "candidate_exact_match": 0.56
+  },
+  "by_type": {
+    "bridge": {
+      "count": 73,
+      "baseline_semantic_accuracy": 0.5616438356164384,
+      "candidate_semantic_accuracy": 0.6027397260273972,
+      "baseline_exact_match": 0.410958904109589,
+      "candidate_exact_match": 0.4794520547945205
+    },
+    "comparison": {
+      "count": 27,
+      "baseline_semantic_accuracy": 0.7407407407407407,
+      "candidate_semantic_accuracy": 0.8888888888888888,
+      "baseline_exact_match": 0.6296296296296297,
+      "candidate_exact_match": 0.7777777777777778
+    }
+  },
+  "by_level": {
+    "easy": {
+      "count": 19,
+      "baseline_semantic_accuracy": 0.8421052631578947,
+      "candidate_semantic_accuracy": 0.8947368421052632,
+      "baseline_exact_match": 0.7368421052631579,
+      "candidate_exact_match": 0.7894736842105263
+    },
+    "hard": {
+      "count": 22,
+      "baseline_semantic_accuracy": 0.6363636363636364,
+      "candidate_semantic_accuracy": 0.6818181818181818,
+      "baseline_exact_match": 0.4090909090909091,
+      "candidate_exact_match": 0.5909090909090909
+    },
+    "medium": {
+      "count": 59,
+      "baseline_semantic_accuracy": 0.5254237288135594,
+      "candidate_semantic_accuracy": 0.6101694915254238,
+      "baseline_exact_match": 0.4067796610169492,
+      "candidate_exact_match": 0.4745762711864407
+    }
+  },
+  "paired_semantic": {
+    "candidate_gains": 13,
+    "candidate_losses": 6,
+    "ties": 81,
+    "exact_mcnemar_two_sided_p": 0.1670684814453125
+  },
+  "paired_exact_match": {
+    "candidate_gains": 14,
+    "candidate_losses": 5,
+    "ties": 81,
+    "exact_mcnemar_two_sided_p": 0.063568115234375
+  }
+}

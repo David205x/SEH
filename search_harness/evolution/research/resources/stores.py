@@ -373,13 +373,31 @@ class CompilerWorkspaceStore:
     def initial_context(self) -> dict[str, Any]:
         manifest = json.loads(self.workspace.read_text("harness.json"))
         policy = json.loads(self.workspace.read_text("evolution.json"))
+        continuation_changed_files = None
+        if self.continuation is not None:
+            continuation_changed_files = {
+                str(path): (
+                    self.workspace.read_text(path)
+                    if self.workspace.exists(path)
+                    else None
+                )
+                for path in self.workspace.changed_paths
+            }
         return {
             "parent_template_root": str(self.config.parent_template_root.resolve()),
             "parent_digest": self.workspace.parent.digest,
             "harness_id": manifest.get("harness_id"),
             "file_count": len(self.workspace.parent.files),
             "fixed_components": _fixed_component_ids(manifest, policy),
+            "manifest": manifest,
+            "evolution_policy": policy,
+            "extension_index": _extension_index(
+                manifest=manifest,
+                policy=policy,
+                workspace=self.workspace,
+            ),
             "continuation": self.continuation,
+            "continuation_changed_files": continuation_changed_files,
             "exact_api_query": {
                 "unique_symbol_budget": COMPILER_EXACT_QUERY_BUDGET,
                 "scope": (
@@ -600,6 +618,25 @@ class CompilerWorkspaceStore:
 
         if not summary.strip():
             raise ValueError("candidate summary must not be empty")
+        if (
+            self.continuation is not None
+            and self.workspace.digest
+            == self.continuation["candidate_digest"]
+        ):
+            return {
+                "status": "repair_required",
+                "revision": self.workspace.revision,
+                "candidate_digest": self.workspace.digest,
+                "changed_paths": [
+                    str(path) for path in self.workspace.changed_paths
+                ],
+                "errors": [
+                    "The continued Candidate is byte-for-byte identical to "
+                    "the rejected revision. Modify the workspace to satisfy "
+                    "the supplied feedback, or return a non-submission "
+                    "Compiler decision with an exact next_obligation."
+                ],
+            }
         diff = self.diff()
         review_errors = review_compiler_candidate(self.workspace)
         validation = self.validate()
@@ -951,6 +988,46 @@ def _fixed_component_ids(
         if isinstance(item, dict)
         and policies.get(item.get("instance_id")) == "fixed"
     ]
+
+
+def _extension_index(
+    *,
+    manifest: dict[str, Any],
+    policy: dict[str, Any],
+    workspace: CandidateWorkspace,
+) -> list[dict[str, Any]]:
+    """Return exact extension registry facts without reading component source."""
+
+    policies = policy.get("components", {})
+    if not isinstance(policies, dict):
+        raise TypeError("evolution.json components must be an object")
+    extensions = manifest.get("extensions", [])
+    if not isinstance(extensions, list):
+        raise TypeError("harness.json extensions must be an array")
+    index = []
+    for extension in extensions:
+        if not isinstance(extension, dict):
+            continue
+        instance_id = extension.get("instance_id")
+        entrypoint = extension.get("entrypoint")
+        source_path = (
+            str(entrypoint).split(":", 1)[0]
+            if isinstance(entrypoint, str) and entrypoint
+            else None
+        )
+        index.append(
+            {
+                "instance_id": instance_id,
+                "entrypoint": entrypoint,
+                "mutability": policies.get(instance_id, "unavailable"),
+                "source_bytes": (
+                    len(workspace.read_text(source_path).encode("utf-8"))
+                    if source_path is not None and workspace.exists(source_path)
+                    else None
+                ),
+            }
+        )
+    return index
 
 
 def _student_hooks(extension_bindings: tuple[object, ...]) -> tuple[BaseHook, ...]:

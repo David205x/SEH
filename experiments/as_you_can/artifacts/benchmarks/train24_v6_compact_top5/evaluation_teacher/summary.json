@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "task": "hotpotqa",
+  "source_file": "experiments\\as_you_can\\artifacts\\benchmarks\\train24_v6_compact_top5\\rollouts.jsonl",
+  "created_at": "2026-08-13T19:54:01.044136+00:00",
+  "provenance": {
+    "dataset": "train",
+    "dataset_path": "D:\\_Project\\Agent\\corpus_filter\\output\\train\\supported.jsonl",
+    "selection_seed": 20260814,
+    "ids_file": null,
+    "sampling_seed": 42,
+    "model": {
+      "provider": "openai_compatible",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model_id": "qwen3:8b",
+      "max_tokens": 4096,
+      "timeout": 120.0,
+      "temperature": 0.65,
+      "seed": 42,
+      "ollama_think": false,
+      "thinking_mode": null
+    },
+    "max_steps": 20
+  },
+  "evaluation_config": {
+    "teacher_judge": true,
+    "judge_workers": 8
+  },
+  "metrics": {
+    "answers": {
+      "scored_count": 24,
+      "correct_count": 14,
+      "accuracy": 0.5833333333333334,
+      "static_pass_count": 11,
+      "teacher_judged_count": 13,
+      "unresolved_count": 0,
+      "example_count": 24,
+      "stable_correct_count": 14,
+      "stable_failure_count": 10,
+      "unstable_count": 0,
+      "unresolved_example_count": 0,
+      "stable_correct_rate": 0.5833333333333334,
+      "stable_failure_rate": 0.4166666666666667,
+      "unstable_rate": 0.0,
+      "majority_correct_rate": 0.5833333333333334,
+      "pass_at_n": 0.5833333333333334,
+      "mean_example_success_rate": 0.5833333333333334,
+      "mean_answer_consistency": 1.0
+    },
+    "execution": {
+      "record_count": 24,
+      "completed_rate": 1.0,
+      "status_counts": {
+        "completed": 24
+      },
+      "retriever_error_rate": 0.0,
+      "mean_steps": 2.125,
+      "mean_model_calls": 2.125,
+      "mean_tool_calls": 1.125,
+      "mean_duplicate_queries": 0
+    },
+    "tokens": {
+      "input_tokens": 44589,
+      "output_tokens": 26975,
+      "total_tokens": 71564,
+      "student_input_tokens": 44589,
+      "student_output_tokens": 26975,
+      "student_total_tokens": 71564,
+      "hook_input_tokens": null,
+      "hook_output_tokens": null,
+      "hook_total_tokens": null,
+      "coverage_rate": 1.0
+    }
+  }
+}

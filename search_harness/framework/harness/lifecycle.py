@@ -243,6 +243,7 @@ class _TracedHookModelBackend:
             "phase": self._phase,
             "profile": request.profile,
             "purpose": request.purpose,
+            "thinking_mode": request.thinking_mode,
             "model_input": request.model_input.to_dict(),
         }
         try:

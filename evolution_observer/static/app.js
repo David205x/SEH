@@ -1,5 +1,7 @@
+const SELECTED_RUN_STORAGE_KEY = "evolution-observer:selected-run";
+
 const state = {
-  runs: [], selectedRun: null, journalVisible: false, overview: null,
+  runs: [], selectedRun: initialSelectedRun(), journalVisible: false, overview: null,
   selectedGeneration: null, selectedFlowNode: null, turnScope: "run",
 };
 
@@ -42,6 +44,7 @@ async function loadRuns() {
     if (!state.selectedRun || !state.runs.some((run) => run.directory_name === state.selectedRun)) {
       state.selectedRun = state.runs.find((run) => run.read_status === "readable")?.directory_name ?? null;
     }
+    persistSelectedRun();
     renderRuns();
     await refreshSelectedRun();
   } catch (error) { elements.runList.replaceChildren(emptyState(`无法读取实验：${error.message}`)); }
@@ -53,7 +56,10 @@ async function selectRun(runName) {
     state.selectedFlowNode = null;
     state.turnScope = "run";
   }
-  state.selectedRun = runName; renderRuns(); await refreshSelectedRun();
+  state.selectedRun = runName;
+  persistSelectedRun();
+  renderRuns();
+  await refreshSelectedRun();
 }
 
 async function refreshSelectedRun() {
@@ -478,6 +484,21 @@ function formatTimestamp(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+function initialSelectedRun() {
+  const queryRun = new URLSearchParams(location.search).get("run");
+  if (queryRun) return queryRun;
+  try { return sessionStorage.getItem(SELECTED_RUN_STORAGE_KEY); }
+  catch { return null; }
+}
+function persistSelectedRun() {
+  if (!state.selectedRun) return;
+  try { sessionStorage.setItem(SELECTED_RUN_STORAGE_KEY, state.selectedRun); }
+  catch { /* URL state remains available when storage is disabled. */ }
+  const url = new URL(location.href);
+  if (url.searchParams.get("run") === state.selectedRun) return;
+  url.searchParams.set("run", state.selectedRun);
+  history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 function runUrl(endpoint) { return `/api/runs/${encodeURIComponent(state.selectedRun)}/${endpoint}`; }
 async function requestJson(url) { const response = await fetch(url); const payload = await response.json(); if (!response.ok) throw new Error(payload.error ?? `请求失败 (${response.status})`); return payload; }

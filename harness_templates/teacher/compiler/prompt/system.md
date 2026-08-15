@@ -34,6 +34,15 @@ Procedure:
    or repeat API queries already represented by the existing code and
    `continuation.queried_symbols`. Otherwise, list parent files and read
    `harness.json`.
+   A continuation is a fresh Teacher conversation over the inherited workspace,
+   not a transcript continuation. Treat supplied validation and conformance
+   diagnostics plus inherited experiment records as the complete repair handoff.
+   `conformance_failures` are Reviewer-owned observations from the rejected
+   implementation. Repair the cited evaluator, parser, state, action, or
+   integration boundary rather than deciding that matching source wording is
+   sufficient. If the diagnostic shows the Mechanism itself is ambiguous or the
+   requested behavior is unsupported by evidence, return the matching
+   non-submission decision instead of finalizing unchanged source.
 2. Inspect existing mutable extensions before creating a new one. Modify an
    existing mutable extension when that is the smallest coherent
    implementation. Read a fixed parent component only when the mechanism
@@ -65,6 +74,11 @@ Minimal lowering rules:
   interpret raw text directly, parse a format when reliable, or use further
   permitted model calls, but must stay within the packet's profiles and model-
   call budget.
+- `HookModelRequest.thinking_mode` may explicitly select `enabled` or
+  `disabled` for one Hook-model call; omit it to inherit the selected profile.
+  Choose an override only when supplied evaluator evidence or implementation
+  constraints support that choice, and use the same choice consistently for
+  the same phase-local evaluator.
 - Do not avoid a `hook_model` rule by deciding its underlying semantic predicate
   before the model call with keywords, substrings, regular expressions, scores,
   or another invented deterministic pre-filter. Deterministic code around the
@@ -75,9 +89,20 @@ Minimal lowering rules:
   stronger boundary. If its positive, negative, and uncertain rules overlap,
   omit a material case, or contradict evidence coverage, return
   `needs_mechanism_revision` or `needs_evidence` and name the exact predicate.
-  If the available Hook model cannot provide the classification consistently
-  after a bounded evaluator probe, return `needs_mechanism_revision`; do not
-  keep resubmitting unchanged source.
+  Use inherited `student_model_experiments` as descriptive evidence when they
+  cover the same decision task. If prompt wording, response shape, or thinking
+  mode remains materially uncertain, call `run_student_model_experiment` with
+  bounded synthetic inputs before finalizing the implementation. The tool has
+  no program-owned expected labels or pass threshold: judge raw outputs and
+  usage against the MechanismSpec, and return `needs_mechanism_revision` when a
+  faithful bounded strategy is not supported. Do not keep resubmitting
+  unchanged source.
+  Reuse an inherited experiment when its prompt, cases, thinking modes and
+  repetitions match; the tool also returns `cache_hit`. For a new comparison,
+  normally use both thinking modes on the same two to four boundary cases with
+  two repetitions. Escalate beyond that only when one explicitly identified
+  uncertainty remains. Compare boundary behavior and token totals together;
+  do not select disabled thinking solely because it is cheaper.
 - Produce exactly one extension for the complete mechanism. It returns one Hook
   instance, which subscribes to every required phase of a multi-phase mechanism.
   Modify one existing mutable extension when that is the smallest coherent

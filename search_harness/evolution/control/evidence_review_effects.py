@@ -261,6 +261,18 @@ class EvidenceReviewEffects:
                     ],
                     "coverage_summary": coverage_payload,
                     "budget": budget,
+                    "trial_selection_capabilities": {
+                        "addressable": [
+                            "unused prefix at the frozen fork_phase",
+                            "prefer a previously unused Example",
+                            "prefer a previously unused replicate",
+                        ],
+                        "not_addressable": [
+                            "future Student or Hook-model outcome",
+                            "semantic positive or negative predicate",
+                            "sampling until a requested stochastic outcome",
+                        ],
+                    },
                     "prior_obligation": prior_obligation,
                 },
                 resource_config=TeacherResourceConfig(),

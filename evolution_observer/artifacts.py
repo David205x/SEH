@@ -6,7 +6,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .models import ContentBlock, ObservedTrajectory, ObservedWorkDetail, ObservedWorkItem
+from .models import (
+    ContentBlock,
+    ObservedTrajectory,
+    ObservedWorkDetail,
+    ObservedWorkItem,
+)
 
 
 class ArtifactProjector:
@@ -18,6 +23,7 @@ class ArtifactProjector:
         artifact_refs: dict[str, str] = {}
         artifact_errors: dict[str, str] = {}
         trajectories: list[ObservedTrajectory] = []
+        seen_trajectory_sources: set[str] = set()
         if work.result_ref is None:
             return ObservedWorkDetail(
                 work=work,
@@ -49,7 +55,7 @@ class ArtifactProjector:
                         _resolve_reference(reference, run_dir, effect_path.parent)
                     )
 
-        for name, reference in artifact_refs.items():
+        for name, reference in list(artifact_refs.items()):
             if name == "effect":
                 continue
             artifact_path = Path(reference)
@@ -59,7 +65,19 @@ class ArtifactProjector:
                 artifact_errors[name] = str(exc)
                 continue
             trajectory = _role_trajectory(name, artifact_path, artifact)
+            if trajectory is None:
+                trajectory = _referenced_role_trajectory(
+                    name,
+                    artifact_path,
+                    artifact,
+                    run_dir,
+                    artifact_refs,
+                    artifact_errors,
+                )
             if trajectory is not None:
+                if trajectory.source_ref in seen_trajectory_sources:
+                    continue
+                seen_trajectory_sources.add(trajectory.source_ref)
                 trajectories.append(trajectory)
 
         message = None
@@ -71,6 +89,42 @@ class ArtifactProjector:
             artifact_refs=artifact_refs,
             artifact_errors=artifact_errors,
             detail_message=message,
+        )
+
+    def project_with_related_fallback(
+        self,
+        run_dir: Path,
+        work: ObservedWorkItem,
+        related_work: ObservedWorkItem,
+    ) -> ObservedWorkDetail:
+        """缺少自身对话时，投影直接关联 WorkItem 的角色轨迹。"""
+
+        detail = self.project(run_dir, work)
+        if detail.trajectories:
+            return detail
+        related = self.project(run_dir, related_work)
+        if not related.trajectories:
+            return detail
+        return ObservedWorkDetail(
+            work=work,
+            trajectories=related.trajectories,
+            artifact_refs={
+                **detail.artifact_refs,
+                **{
+                    f"related.{name}": reference
+                    for name, reference in related.artifact_refs.items()
+                },
+            },
+            artifact_errors={
+                **detail.artifact_errors,
+                **{
+                    f"related.{name}": error
+                    for name, error in related.artifact_errors.items()
+                },
+            },
+            detail_message=(
+                f"对话来自触发该事件的父 WorkItem：{related_work.work_id}。"
+            ),
         )
 
 
@@ -98,7 +152,7 @@ def _role_trajectory(
         "provider": provider,
         "usage": usage if isinstance(usage, dict) else {},
     }
-    label = str(role_id or reference_name).replace("_", " ").title()
+    label = _trajectory_label(role_id, reference_name, artifact_path)
     summary_parts = [f"{len(blocks)} blocks"]
     if isinstance(model_id, str):
         summary_parts.append(model_id)
@@ -110,6 +164,44 @@ def _role_trajectory(
         blocks=tuple(blocks),
         metadata=metadata,
     )
+
+
+def _trajectory_label(
+    role_id: object,
+    reference_name: str,
+    artifact_path: Path,
+) -> str:
+    label = str(role_id or reference_name).replace("_", " ").title()
+    if not reference_name.startswith("conformance_finding_"):
+        return label
+    source_label = artifact_path.stem.replace("_", " ").title()
+    return f"{label} · {source_label}"
+
+
+def _referenced_role_trajectory(
+    reference_name: str,
+    artifact_path: Path,
+    artifact: dict[str, Any],
+    run_dir: Path,
+    artifact_refs: dict[str, str],
+    artifact_errors: dict[str, str],
+) -> ObservedTrajectory | None:
+    """解包 checkpoint finding 指向的角色会话产物。"""
+
+    role_reference = artifact.get("role_artifact_ref")
+    if not isinstance(role_reference, str):
+        return None
+    nested_name = f"{reference_name}.role"
+    role_path = _resolve_reference(role_reference, run_dir, artifact_path.parent)
+    artifact_refs[nested_name] = str(role_path)
+    try:
+        role_wrapper = _read_json_object(role_path)
+    except (FileNotFoundError, ValueError) as exc:
+        artifact_errors[nested_name] = str(exc)
+        return None
+    embedded_role = role_wrapper.get("role_artifact")
+    role_artifact = embedded_role if isinstance(embedded_role, dict) else role_wrapper
+    return _role_trajectory(nested_name, role_path, role_artifact)
 
 
 def _transcript_blocks(transcript: list[object]) -> list[ContentBlock]:
@@ -208,7 +300,11 @@ def _format_content(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2)
 
 
-def _resolve_reference(reference: str, run_dir: Path, base_dir: Path | None = None) -> Path:
+def _resolve_reference(
+    reference: str,
+    run_dir: Path,
+    base_dir: Path | None = None,
+) -> Path:
     path = Path(reference)
     if path.is_absolute():
         return path.resolve()

@@ -130,14 +130,14 @@ class TeacherContractTest(unittest.TestCase):
                 "conformance_reviewer",
                 1,
             ).output_contract_id,
-            "conformance_review",
+            "conformance_review_batch",
         )
         self.assertEqual(
             get_teacher_role(
                 "conformance_reviewer",
                 1,
             ).output_contract_version,
-            3,
+            5,
         )
         self.assertEqual(
             get_teacher_role(
@@ -158,6 +158,8 @@ class TeacherContractTest(unittest.TestCase):
                 observed_phases=[],
                 assessment="No phase was observed.",
                 repair_obligation=None,
+                local_efficacy="inconclusive",
+                local_efficacy_assessment="No completed rollout was available.",
             )
 
     def test_conformance_evaluator_failure_requires_decision_labels(
@@ -178,6 +180,8 @@ class TeacherContractTest(unittest.TestCase):
                 "The candidate explicitly declines to assert an answer."
             ),
             recommended_route="mechanism",
+            local_efficacy="harmful",
+            local_efficacy_assessment="The scored outcome regressed.",
         )
 
         self.assertEqual(review.failure_layer, "evaluator")
@@ -201,6 +205,8 @@ class TeacherContractTest(unittest.TestCase):
                     "asserted answer."
                 ),
                 recommended_route="implementation",
+                local_efficacy="inconclusive",
+                local_efficacy_assessment="The score evidence was incomplete.",
             )
         with self.assertRaises(ValidationError):
             ConformanceReview(
@@ -208,6 +214,8 @@ class TeacherContractTest(unittest.TestCase):
                 observed_phases=[],
                 assessment="The mechanism was not observed.",
                 repair_obligation=None,
+                local_efficacy="inconclusive",
+                local_efficacy_assessment="The score evidence was incomplete.",
             )
 
     def test_continue_review_requires_next_obligation(self) -> None:

@@ -33,7 +33,7 @@ Evaluation 目录包含：
 
 当前 `schema_version` 为 `1`。共享 envelope 包含 `created_at`、`template_root`、`harness_id`、`role`、`output_contract`、`runtime`、非秘密 model provenance、实际 `role_budget`、validated input/output、resource config/artifacts、tool calls、usage 与 transcript。`output_contract.schema_digest` 用于确认本次运行实际使用的 JSON Schema。
 
-Evidence Reviewer artifact 的 validated input 含完整 `trial_reviews` 和程序维护的 `coverage_summary`；同一 Effect 另写 `coverage_summary.json`，供恢复和外部审计直接读取。Mechanism Distiller artifact 的 `resource_artifacts.hook_evaluator_probes` 保存每个已探测 draft 的重复分类观察、匹配率、一致性、解析失败与 token usage；工具回显只返回去除逐次原始输出的紧凑摘要，避免扩张角色上下文。
+Evidence Reviewer artifact 的 validated input 含完整 `trial_reviews`、程序维护的 `coverage_summary` 与当前 `trial_selection_capabilities`；同一 Effect 另写 `coverage_summary.json`，供恢复和外部审计直接读取。Mechanism Distiller 与 Compiler artifact 的 `resource_artifacts.student_model_experiments` 保存 Teacher 发起的描述性 Student 模型实验：稳定 `experiment_signature`、实验目的、完整 system prompt、案例输入、逐请求 thinking mode、原始输出、错误、usage 和 provider metadata。工具回显按 case/mode 聚合原始输出与总 token，不生成 expected label、匹配率或程序所有的通过结论；相同签名在后续 Compiler revision 中直接复用。提交的 `candidate_workspace.json` 同步携带这些实验以支持新 Role Session 的结构化接续。
 
 Evidence Review 在总评前把每条已完成的 Trial Reviewer artifact 写入 `trial_reviews/trial_review_NNN.json`。同一 Work 重试会发现并复用这些 checkpoint；若后续角色失败，failure artifact 的 usage 同时计入本次已完成但尚未形成 Effect Receipt 的子角色调用，避免漏记或重复调用。
 
@@ -68,17 +68,29 @@ example、replicate 与 prefix 组成只由 `assignments` 审计。Controller pa
 | --- | --- |
 | `suite.json` | 输入摘要、Candidate 身份、rollout summary 与本次 replay token 用量 |
 | `candidate_replays.jsonl` | 固定复用的 Candidate replay suite |
-| `findings/finding_NNN.json` | 程序附加 identity 后的规范化 Finding、原始 Role artifact 与单次 usage |
-| `failures/finding_NNN_<suffix>.json` | 单条审查失败阶段、traceback、部分 transcript 与已产生 usage |
+| `local_evaluation/` | 对同一 replay suite 使用正式 Evaluation/Judge 规则生成的 report |
+| `batches/batch_NNN.json` | 同一 Example 的有序 Review Batch、一次 Role artifact 与批次 usage |
+| `findings/finding_NNN.json` | 程序附加 identity 后的规范化 Finding及其 Batch artifact 引用；不复制 Role artifact |
+| `failures/finding_NNN_<suffix>.json` | Example 批次审查失败阶段、traceback、部分 transcript 与已产生 usage |
 | `summary.json` | 仅从规范化 Finding 确定性聚合的 Conformance Summary |
 
-每条 Finding 的角色输入保存 `candidate_trajectory_view`，而不是完整 Candidate trace。该 view 是可重建的审查投影，不替代 `candidate_replays.jsonl` 中用于复现的原始运行记录。
+每个 Batch 的角色输入保存同一 Example 的有序 `candidate_trajectory_views`，而不是完整
+Candidate trace。该 view 是可重建的审查投影，不替代 `candidate_replays.jsonl` 中用于
+复现的原始运行记录。Mechanism 与 reference observations 在批次输入中只呈现一次；每条
+Finding 通过 `role_artifact_ref` 指回该 Batch。
 
-Conformance Finding v3 对非 faithful 结果保存 `failure_layer`、`decisive_input_summary`、`recommended_route`，并在 evaluator/parsing 问题上保存 `predicate_ref` 与期望/实际标签。Summary 汇总 `failure_layer_counts`、`recommended_route_counts`、最终 `recommended_route` 及按路由分组的 `route_feedback`；这些均来自 Reviewer 判断，程序只负责聚合与路由。
+Conformance Review Batch v5 为每个 replicate 保存一条 Review；程序附加权威 identity 后
+形成 Finding。非 faithful 结果保存 `failure_layer`、`decisive_input_summary`、
+`recommended_route`，并在 evaluator/parsing 问题上保存 `predicate_ref` 与期望/实际标签。
+每条 Finding 另保存独立的 `local_efficacy` 与短 assessment；Reviewer 只能依据投影中的
+正式 score/Teacher assessment 和 Trial outcome 判断，不自行重判答案。Summary 汇总
+`failure_layer_counts`、`recommended_route_counts`、`local_efficacy_counts`、
+`local_efficacy_gate`、最终 `recommended_route` 及按路由分组的 `route_feedback`。明确局部
+伤害但实现保真时路由 evidence；若同时存在实现硬失败，则 implementation repair 优先。
 
-Controller Work 重试复用同一内容摘要目录，只重新调用没有完成 Finding checkpoint
-的 Reviewer。成功重试的 Effect usage 只报告本次新产生的 token；先前失败尝试的
-token 已由对应 `work_failed` 事件计入，避免漏计或重复计数。
+Controller Work 重试复用同一内容摘要目录；完整 Batch 已存在时不会重复调用 Reviewer，
+只有尚未完成的 Example Batch 才会重试。成功重试的 Effect usage 只报告本次新产生的
+token；先前失败尝试的 token 已由对应 `work_failed` 事件计入，避免漏计或重复计数。
 
 ## Evolution Run
 
@@ -99,6 +111,9 @@ Control State 从 `events.jsonl` 投影，不从 `artifacts/` 猜测 Run Agenda�
 Version 历史与当前模板，不复制未接受的 Candidate Attempt。其 journal 将复制的
 Incumbent Evaluation 记为已完成且计费为 0，再通过正式 transition 排队 Failure
 Analyst；下游研究产物不得随之复制。
+克隆命令若提供 `--env-file`，新 `run.json` 的 `control_config` 和通用
+`effects_config` 由当前 runtime 配置重新生成，路径型的 Evolution Set 与独立 Version
+Store provenance 仍由克隆过程确定；未提供时则保留源 Run 的冻结配置。
 
 ## Template Version Store
 

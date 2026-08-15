@@ -210,11 +210,13 @@ class InterventionRuntimeTest(TestCase):
 
         self.assertEqual(student.inputs[1].messages[-1].content, "condensed fresh evidence")
         directory_result = teacher.requests[2]["messages"][-1]["content"]
-        self.assertIn('"block_id": 6', directory_result)
-        self.assertIn('"kind": "tool_result"', directory_result)
-        self.assertNotIn('"content"', directory_result)
+        self.assertIn("| 6 | tool_result |", directory_result)
+        self.assertNotIn("--- BEGIN EXACT CONTENT ---", directory_result)
         selected_result = teacher.requests[3]["messages"][-1]["content"]
-        self.assertIn('"content": "search result for fresh"', selected_result)
+        self.assertIn(
+            "--- BEGIN EXACT CONTENT ---\nsearch result for fresh",
+            selected_result,
+        )
         action = artifact["intervention_changes"][1]["action"]
         self.assertEqual(action["kind"], "apply_context_patch")
         self.assertNotIn("metadata", json.dumps(action))
@@ -249,7 +251,12 @@ class InterventionRuntimeTest(TestCase):
                 student_model=student,
                 teacher_config=_teacher_config(),
                 teacher_client=teacher,
-                judge_model=JudgeModel(['{"score":1}']),
+                judge_model=JudgeModel(
+                    [
+                        '{"score":1,"assessment":'
+                        '"The prediction identifies the reference author."}'
+                    ]
+                ),
             )
 
             artifact = runner.run(
@@ -326,10 +333,13 @@ class InterventionRuntimeTest(TestCase):
         self.assertNotIn("worker_summary", persisted)
         self.assertNotIn("worker_summary", artifact)
         projection = teacher.requests[1]["messages"][-1]["content"]
-        self.assertIn('"block_id": 4', projection)
-        self.assertIn('"summary": "retrieved evidence: Tolkien"', projection)
+        self.assertIn("| 4 |", projection)
+        self.assertIn("retrieved evidence: Tolkien", projection)
         inspected = teacher.requests[2]["messages"][-1]["content"]
-        self.assertIn('"content": "retrieved evidence: Tolkien"', inspected)
+        self.assertIn(
+            "--- BEGIN EXACT CONTENT ---\nretrieved evidence: Tolkien",
+            inspected,
+        )
         first_tools = {
             tool["function"]["name"]
             for tool in teacher.requests[0]["tools"]
@@ -354,8 +364,6 @@ class InterventionRuntimeTest(TestCase):
             )
             teacher = NativeSequenceClient(
                 outputs=[
-                    '<tool_call>{"name":"inspect_active_observation",'
-                    '"arguments":{}}</tool_call>',
                     '<tool_call>{"name":"defer_final_answer","arguments":'
                     '{"feedback":"","reason":"Incomplete first attempt."}}</tool_call>',
                     '<tool_call>{"name":"defer_final_answer","arguments":'
@@ -387,9 +395,11 @@ class InterventionRuntimeTest(TestCase):
         activation_message = teacher.requests[0]["messages"][-1]["content"]
         self.assertIn('"active_stage": {"final_decision":', activation_message)
         self.assertIn('"answer": "Shakespeare"', activation_message)
-        observation_result = teacher.requests[1]["messages"][-1]["content"]
-        self.assertIn('"answer": "Shakespeare"', observation_result)
-        self.assertNotIn("editable_context", observation_result)
+        first_tools = {
+            tool["function"]["name"]
+            for tool in teacher.requests[0]["tools"]
+        }
+        self.assertNotIn("inspect_active_observation", first_tools)
         tool_errors = [
             event
             for event in artifact["worker_trace"]

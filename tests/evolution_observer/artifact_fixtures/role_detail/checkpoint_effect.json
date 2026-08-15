@@ -1,0 +1,8 @@
+{
+  "outcome": {"status": "completed"},
+  "artifact_refs": {
+    "conformance_finding_001": "finding_001.json",
+    "conformance_finding_002": "finding_002.json"
+  },
+  "usage": {"total_tokens": 30}
+}

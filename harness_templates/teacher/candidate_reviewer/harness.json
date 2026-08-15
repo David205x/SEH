@@ -29,6 +29,13 @@
       "config": {
         "kind": "get_candidate_harness_diff"
       }
+    },
+    {
+      "instance_id": "get_candidate_trajectory_text",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_candidate_trajectory_text"
+      }
     }
   ],
   "prompt": {

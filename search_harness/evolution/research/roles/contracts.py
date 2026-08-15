@@ -849,6 +849,9 @@ class EvidenceReviewerInput(TeacherPayload):
     trial_reviews: list[TrialReview] = Field(min_length=1)
     coverage_summary: EvidenceCoverageSummary | None = None
     budget: EvidenceReviewBudget
+    trial_selection_capabilities: dict[str, list[str]] = Field(
+        default_factory=dict
+    )
     prior_obligation: str | None = None
 
 
@@ -887,8 +890,12 @@ class CompilerInput(TeacherPayload):
     """Compiler 的已验证机制与本轮修订约束。"""
 
     mechanism: MechanismSpec
+    student_model_experiments: list[dict[str, Any]] = Field(
+        default_factory=list
+    )
     implementation_constraints: list[str] = Field(default_factory=list)
     validation_feedback: list[str] = Field(default_factory=list)
+    conformance_failures: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class CandidateReviewerInput(TeacherPayload):
@@ -929,17 +936,22 @@ ConformanceRevisionRoute = Literal[
     "mechanism",
     "evidence",
 ]
+ConformanceLocalEfficacy = Literal[
+    "beneficial",
+    "neutral",
+    "harmful",
+    "inconclusive",
+]
 
 
 class ConformanceReviewerInput(TeacherPayload):
-    """Conformance Reviewer 的单条 Candidate 行为视图审阅任务。"""
+    """Conformance Reviewer 的 Example 级 Candidate 行为审阅任务。"""
 
     mechanism: MechanismSpec
     trial_refs: list[str] = Field(min_length=1)
     reference_observations: list[dict[str, Any]] = Field(min_length=1)
     example_id: str = Field(min_length=1)
-    replicate_id: str = Field(min_length=1)
-    candidate_trajectory_view: dict[str, Any]
+    candidate_trajectory_views: list[dict[str, Any]] = Field(min_length=1)
 
 
 class ConformanceReview(TeacherPayload):
@@ -955,6 +967,8 @@ class ConformanceReview(TeacherPayload):
     failure_layer: ConformanceFailureLayer | None = None
     decisive_input_summary: str | None = Field(default=None, max_length=500)
     recommended_route: ConformanceRevisionRoute | None = None
+    local_efficacy: ConformanceLocalEfficacy
+    local_efficacy_assessment: str = Field(min_length=1, max_length=400)
 
     @model_validator(mode="after")
     def validate_repair_obligation(self) -> "ConformanceReview":
@@ -1023,6 +1037,25 @@ class ConformanceReview(TeacherPayload):
                 raise ValueError(
                     "ambiguous_spec finding must route to mechanism"
                 )
+        return self
+
+
+class ConformanceBatchFinding(ConformanceReview):
+    """Example batch 中一条独立 replicate Finding。"""
+
+    replicate_id: str = Field(min_length=1)
+
+
+class ConformanceReviewBatch(TeacherPayload):
+    """Conformance Reviewer 对同一 Example 的有序独立 Findings。"""
+
+    findings: list[ConformanceBatchFinding] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_unique_replicates(self) -> "ConformanceReviewBatch":
+        replicate_ids = [item.replicate_id for item in self.findings]
+        if len(replicate_ids) != len(set(replicate_ids)):
+            raise ValueError("conformance batch must not repeat replicate_id")
         return self
 
 
@@ -1114,9 +1147,9 @@ _ROLE_DEFINITIONS = {
         role_id="conformance_reviewer",
         version=1,
         input_type=ConformanceReviewerInput,
-        output_contract_id="conformance_review",
-        output_contract_version=3,
-        output_type=ConformanceReview,
+        output_contract_id="conformance_review_batch",
+        output_contract_version=5,
+        output_type=ConformanceReviewBatch,
     ),
 }
 
