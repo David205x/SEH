@@ -35,6 +35,8 @@ Evaluation 目录包含：
 
 Evidence Reviewer artifact 的 validated input 含完整 `trial_reviews`、程序维护的 `coverage_summary` 与当前 `trial_selection_capabilities`；同一 Effect 另写 `coverage_summary.json`，供恢复和外部审计直接读取。Mechanism Distiller 与 Compiler artifact 的 `resource_artifacts.student_model_experiments` 保存 Teacher 发起的描述性 Student 模型实验：稳定 `experiment_signature`、实验目的、完整 system prompt、案例输入、逐请求 thinking mode、原始输出、错误、usage 和 provider metadata。工具回显按 case/mode 聚合原始输出与总 token，不生成 expected label、匹配率或程序所有的通过结论；相同签名在后续 Compiler revision 中直接复用。提交的 `candidate_workspace.json` 同步携带这些实验以支持新 Role Session 的结构化接续。
 
+`verify_hook_feasibility` 写入 `probe.json` 与 Hook Feasibility Reviewer 的 `role.json`。Probe 按 phase 保存冻结 decision contract、Trial Review reference label、原 prefix 的 Student-visible observation、实际 system/user prompt、thinking mode、repetition、raw output、错误、usage 与 provider metadata；不保存恢复后的 Student 分支，因为该调用在 Hook 判断后终止。Reviewer artifact 的 `resource_artifacts.hook_feasibility_probe` 保留同一完整 Probe，Effect Receipt 分别引用两份文件。进入 Compiler 时，各 phase 的 experiment 以原 `experiment_signature` 合入 `student_model_experiments`，Reviewer 的 `compiler_guidance` 进入实现约束。
+
 Evidence Review 在总评前把每条已完成的 Trial Reviewer artifact 写入 `trial_reviews/trial_review_NNN.json`。同一 Work 重试会发现并复用这些 checkpoint；若后续角色失败，failure artifact 的 usage 同时计入本次已完成但尚未形成 Effect Receipt 的子角色调用，避免漏记或重复调用。
 
 Trial Selector 的 `selection.json` 保存 `status`、`selection_mode`、有序
@@ -50,6 +52,11 @@ example、replicate 与 prefix 组成只由 `assignments` 审计。Controller pa
 写入 `artifacts/evidence_review_checkpoints/<digest>/trial_reviews/`。每个子任务使用独立
 文件，聚合结果仍保持 Assignment/Trial 输入顺序。失败诊断保存在同一 checkpoint 的
 `failures/` 下；Controller Work retry 会复用已完成子产物，已计费调用不会重复执行。
+
+Intervention Trial 记录 `runtime.extended_worker_tools`、每次改写的 source/live scope、
+phase 和终态 action；扩展工具启用时另保存最终 `trial_state`，并在各 activation trace 中
+记录 `trial_state_before`/`trial_state_after`。Scratch state 只属于当前 Assignment branch，
+不会进入 Student Model Input，也不替代底层完整 trajectory。
 
 原生 Teacher 工具循环耗尽时不会伪造 Role Output。Controller 在对应 Work Artifact
 目录写入 `<role_id>.failed.json`：`status` 为 `failed`、`output` 为 `null`，并保留
@@ -82,15 +89,20 @@ Finding 通过 `role_artifact_ref` 指回该 Batch。
 Conformance Review Batch v5 为每个 replicate 保存一条 Review；程序附加权威 identity 后
 形成 Finding。非 faithful 结果保存 `failure_layer`、`decisive_input_summary`、
 `recommended_route`，并在 evaluator/parsing 问题上保存 `predicate_ref` 与期望/实际标签。
-每条 Finding 另保存独立的 `local_efficacy` 与短 assessment；Reviewer 只能依据投影中的
+每条 Finding 另保存独立的 `local_efficacy`、`target_behavior_observed` 与短 assessment；Reviewer 只能依据投影中的
 正式 score/Teacher assessment 和 Trial outcome 判断，不自行重判答案。Summary 汇总
 `failure_layer_counts`、`recommended_route_counts`、`local_efficacy_counts`、
-`local_efficacy_gate`、最终 `recommended_route` 及按路由分组的 `route_feedback`。明确局部
+`local_efficacy_gate`、`effect_goal`、目标行为逻辑样本数、最终 `recommended_route` 及按路由分组的 `route_feedback`。明确局部
 伤害但实现保真时路由 evidence；若同时存在实现硬失败，则 implementation repair 优先。
 
 Controller Work 重试复用同一内容摘要目录；完整 Batch 已存在时不会重复调用 Reviewer，
 只有尚未完成的 Example Batch 才会重试。成功重试的 Effect usage 只报告本次新产生的
 token；先前失败尝试的 token 已由对应 `work_failed` 事件计入，避免漏计或重复计数。
+
+Candidate Evaluation 完成后，Candidate Review Work 保存
+`candidate_outcome_digest.json`；它只含配对变化、Hook 活动与归因计数、邻近样本引用、
+机制指纹和实现摘要，不复制轨迹。Review 或 Gate 完成后，Promote/Reject Work 另保存带
+`candidate_review` 和 `promotion_gate` 的最终 Digest，并以同名 Artifact ref 覆盖后续读取。
 
 ## Evolution Run
 

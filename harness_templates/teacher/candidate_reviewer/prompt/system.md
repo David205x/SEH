@@ -62,7 +62,22 @@ positive opportunity, or whether visible opportunities were missed:
   parsing, state, or control logic is an implementation concern;
 - mixed activation and fallback may be acceptable only when each inspected path
   is supported by its own visible trigger inputs and the broader gains, losses,
-  stability, and cost support adoption.
+stability, and cost support adoption.
+
+Apply the declared `mechanism.effect_goal` explicitly:
+
+- For `task_outcome`, require measurable full-evaluation improvement and at
+  least one directly attributable beneficial logical example. Neutral aggregate
+  effect, incidental variance, or an observed process change without task
+  benefit is insufficient.
+- For `behavioral_intermediate`, require the declared target behavior across
+  more than one applicable logical example, nonzero positive-path coverage,
+  justified fallbacks, no broad false-positive pattern, and accuracy within the
+  stated safety guardrail. Do not silently promote it as a task-outcome claim.
+
+Use the deterministic Candidate Outcome Digest as an index, then verify decisive
+attribution with paired case and trajectory views. Its counts do not replace
+semantic review.
 
 Recommend:
 

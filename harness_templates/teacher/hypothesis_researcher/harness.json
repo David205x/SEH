@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "harness_id": "teacher_hypothesis_researcher_v4",
+  "harness_id": "teacher_hypothesis_researcher_v5",
   "tools": [
     {
       "instance_id": "get_student_trajectory",
@@ -64,6 +64,31 @@
       "config": {
         "kind": "get_trial_event"
       }
+    },
+    {
+      "instance_id": "get_recent_candidate_digest",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_digest"}
+    },
+    {
+      "instance_id": "list_recent_candidate_cases",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "list_recent_candidate_cases"}
+    },
+    {
+      "instance_id": "get_recent_candidate_case",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_case"}
+    },
+    {
+      "instance_id": "get_recent_candidate_trajectory",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_trajectory"}
+    },
+    {
+      "instance_id": "get_recent_candidate_implementation",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_implementation"}
     }
   ],
   "prompt": {
@@ -73,7 +98,8 @@
       "instructions": "system.md",
       "user_template": "user.md",
       "continuations": {
-        "evidence_reviewer": "continuations/evidence_reviewer.md"
+        "evidence_reviewer": "continuations/evidence_reviewer.md",
+        "hook_feasibility_reviewer": "continuations/hook_feasibility_reviewer.md"
       }
     }
   },

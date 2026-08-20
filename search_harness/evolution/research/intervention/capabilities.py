@@ -23,6 +23,23 @@ _ACTION_SPECS: dict[str, dict[str, Any]] = {
         "compatible_phases": (HookPhase.POST_PROMPT, HookPhase.POST_TOOL),
         "persistence": "next_generation",
     },
+    "apply_active_stage_patch": {
+        "effect": (
+            "Replace only the editable semantic fields of the active raw model "
+            "output, parsed action, Tool Call, or Tool Result while preserving "
+            "program-maintained metadata. Raw output, parsed action, and Tool "
+            "Call edits require a live branch activation after an earlier "
+            "recoverable prefix; a source-boundary post_tool result remains "
+            "directly editable."
+        ),
+        "compatible_phases": (
+            HookPhase.POST_MODEL,
+            HookPhase.POST_PARSE,
+            HookPhase.PRE_TOOL,
+            HookPhase.POST_TOOL,
+        ),
+        "persistence": "current_hook_transaction",
+    },
     "defer_final_answer": {
         "effect": (
             "Reject the active final candidate once, append feedback, and "
@@ -35,6 +52,14 @@ _ACTION_SPECS: dict[str, dict[str, Any]] = {
         "effect": "Continue the branch without changing Student context.",
         "compatible_phases": "all_recoverable",
         "persistence": "none",
+    },
+    "update_trial_state": {
+        "effect": (
+            "Create or replace bounded JSON state visible to later Hook "
+            "activations in the same Intervention Trial branch."
+        ),
+        "compatible_phases": "all_recoverable",
+        "persistence": "trial_branch",
     },
 }
 
@@ -82,6 +107,13 @@ def intervention_capabilities() -> dict[str, Any]:
             "student_continues_from_selected_prefix": True,
             "teacher_loop_inside_actor": False,
             "context_patch_is_atomic": True,
+            "extended_tools_configurable": True,
+            "trial_state_scope": "one_trial_branch",
+            "trial_state_reset": "each_assignment",
+            "source_boundary_stage_patch": (
+                "post_tool_only; post_model, post_parse, and pre_tool require "
+                "a preceding fork phase and a later live activation"
+            ),
         },
         "observability": {
             "selected_prefix": [
@@ -99,6 +131,8 @@ def intervention_capabilities() -> dict[str, Any]:
                 "phase-specific values listed under each phase.stage"
             ),
             "native_reasoning": "trace_only_not_hook_visible",
+            "active_stage_projection": "on_demand_semantic_fields_only",
+            "trial_state": "bounded_json_injected_at_each_activation",
             "inband_thinking": (
                 "available through raw model text at post_model and "
                 "ParsedOutput at post_parse"

@@ -26,8 +26,10 @@ class InterventionCapabilityCatalogTest(unittest.TestCase):
             {item["name"] for item in catalog["actions"]},
             {
                 "apply_context_patch",
+                "apply_active_stage_patch",
                 "defer_final_answer",
                 "continue_without_change",
+                "update_trial_state",
             },
         )
 
@@ -50,6 +52,23 @@ class InterventionCapabilityCatalogTest(unittest.TestCase):
         self.assertEqual(
             actions["apply_context_patch"]["persistence"],
             "next_generation",
+        )
+        self.assertEqual(
+            actions["apply_active_stage_patch"]["compatible_phases"],
+            [
+                HookPhase.POST_MODEL,
+                HookPhase.POST_PARSE,
+                HookPhase.PRE_TOOL,
+                HookPhase.POST_TOOL,
+            ],
+        )
+        self.assertIn(
+            "post_tool_only",
+            catalog["execution"]["source_boundary_stage_patch"],
+        )
+        self.assertEqual(
+            actions["update_trial_state"]["persistence"],
+            "trial_branch",
         )
         self.assertIn(
             "editable_context.block_id",

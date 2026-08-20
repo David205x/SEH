@@ -44,7 +44,12 @@ class ConformanceAggregationTest(unittest.TestCase):
 
         cases = (_case("example-1"), _case("example-2"))
         findings = [
-            _finding("example-1", 0, "faithful"),
+            _finding(
+                "example-1",
+                0,
+                "faithful",
+                local_efficacy="beneficial",
+            ),
             _finding("example-1", 1, "not_observed"),
             _finding("example-1", 2, "inconclusive"),
             _finding("example-2", 0, "not_observed"),
@@ -63,6 +68,49 @@ class ConformanceAggregationTest(unittest.TestCase):
             summary.per_example["example-1"]["faithful_count"],
             1,
         )
+
+    def test_task_outcome_revises_when_all_local_effects_are_neutral(
+        self,
+    ) -> None:
+        """结果型机制不能以保真实现替代局部任务收益。"""
+
+        findings = [
+            _finding("example-1", index, "faithful")
+            for index in range(3)
+        ]
+
+        summary = aggregate_conformance(
+            cases=(_case("example-1"),),
+            findings=findings,
+            finding_refs=["finding-0", "finding-1", "finding-2"],
+            effect_goal="task_outcome",
+        )
+
+        self.assertEqual(summary.decision, "revise")
+        self.assertEqual(summary.recommended_route, "evidence")
+
+    def test_behavioral_goal_requires_observed_target_behavior(self) -> None:
+        """中间行为型机制可保持结果中性，但正向行为必须真实出现。"""
+
+        findings = [
+            _finding(
+                "example-1",
+                index,
+                "faithful",
+                target_behavior_observed=(index == 0),
+            )
+            for index in range(3)
+        ]
+
+        summary = aggregate_conformance(
+            cases=(_case("example-1"),),
+            findings=findings,
+            finding_refs=["finding-0", "finding-1", "finding-2"],
+            effect_goal="behavioral_intermediate",
+        )
+
+        self.assertEqual(summary.decision, "pass")
+        self.assertEqual(summary.target_behavior_example_count, 1)
 
     def test_revises_when_any_runtime_or_implementation_failure_exists(
         self,
@@ -308,6 +356,7 @@ def _finding(
     verdict: str,
     *,
     local_efficacy: str | None = None,
+    target_behavior_observed: bool = False,
 ) -> ConformanceFinding:
     return ConformanceFinding(
         trial_refs=[f"trial-{example_id}"],
@@ -333,4 +382,5 @@ def _finding(
             "neutral" if verdict == "faithful" else "inconclusive"
         ),
         local_efficacy_assessment="The local score did not regress.",
+        target_behavior_observed=target_behavior_observed,
     )

@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0",
+  "start_id": "START-001",
+  "version": 4,
+  "status": "accepted",
+  "created_at": "2026-08-20T12:42:40+08:00",
+  "updated_at": "2026-08-20T23:55:15+08:00",
+  "input": {
+    "kind": "research_scope",
+    "research_scope": "Evidence-Gated Harness Evolution：为固定小模型 Student 的 Harness 自进化增加 Candidate 编译前的局部干预证据门、实现无关 Mechanism 表示和 target-model realizability gate。",
+    "seed_paper_refs": [],
+    "failure_evidence_ref": null,
+    "previous_start_ref": null,
+    "reused_candidate_refs": []
+  },
+  "literature": {
+    "search_cutoff_date": "2026-08-20",
+    "recency_window": "2023-08-20 至 2026-08-20；重点覆盖 2025-2026 的 Harness Evolution 与 Agent Optimization 工作",
+    "added_papers": [
+      {"paper_id":"P001","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Meta-Harness, Sec. 3 and Algorithm 1"},
+      {"paper_id":"P002","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Self-Harness, Secs. 3.2-3.4"},
+      {"paper_id":"P003","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Harness-R1, Sec. 3.1 and Appendix C"},
+      {"paper_id":"P004","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"AHE, Secs. 3.1-3.3 and 4.4"},
+      {"paper_id":"P005","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"DemoEvolve, abstract and introduction"},
+      {"paper_id":"P006","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Harness Updating Is Not Harness Benefit, Sec. 4.3"},
+      {"paper_id":"P007","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"TTHE, method and experiments"},
+      {"paper_id":"P008","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Shepherd, Sec. 5.2 and Appendix F Algorithm 1"},
+      {"paper_id":"P009","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"TraceGraph, trap-aware recovery pipeline"},
+      {"paper_id":"P010","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"HASP, Sec. 3.1 and Appendices B-C"},
+      {"paper_id":"P011","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"HarnessBank, Sec. 3.3"},
+      {"paper_id":"P012","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"DREvo, function anchoring and recalibration"},
+      {"paper_id":"P013","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"HSI, Secs. 1 and 3.1"},
+      {"paper_id":"P014","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"VeRO, Sec. 1 and Figure 1"},
+      {"paper_id":"P015","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"HarnessCompass, introduction and main results"},
+      {"paper_id":"P016","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Rethinking Evaluation of Harness Evolution, Secs. 3-4"},
+      {"paper_id":"P017","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"G-Memory, abstract and Secs. 3-4; direct counterevidence to role-specific-memory novelty"},
+      {"paper_id":"P018","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Intrinsic Memory Agents, abstract and Secs. 3.1-3.2; direct counterevidence to role-aligned-memory novelty"},
+      {"paper_id":"P019","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"LLMA-Mem, Secs. 3.2-3.4 and 4.5; direct counterevidence to experience-taxonomy novelty"},
+      {"paper_id":"P020","identity_status":"verified","relevance":"direct","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"Auto-Robotist, abstract and Add/Diagnose/Merge method; direct counterevidence to search-memory novelty"},
+      {"paper_id":"P021","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"ExpeL, experience gathering and insight extraction; supporting counterevidence"},
+      {"paper_id":"P022","identity_status":"verified","relevance":"supporting","within_recency_window":true,"counts_toward_minimum":true,"evidence_locator":"A-MEM, abstract and memory evolution method; supporting counterevidence"}
+    ],
+    "qualified_count": 22,
+    "registry_ref": ".cvpr/literature/文献注册表.jsonl",
+    "problem_status_matrix_ref": ".cvpr/literature/问题状态矩阵.yaml"
+  },
+  "user_material_check": {
+    "status": "checked",
+    "input_refs": [
+      "0820_report.md",
+      "search_harness/",
+      "docs/architecture/evolution.md",
+      "docs/design/hook-model-feasibility.md",
+      "docs/design/candidate-feedback-and-effect-goals.md",
+      "docs/design/intervention-worker-complex-contract-experiment-report.md",
+      "runs/evolution/20260815_qwen3-8b_hook_feasibility/"
+    ],
+    "findings": [
+      "项目已有事件驱动的 Evidence-Gated Evolution 主链、Hook Feasibility Gate、分层回流和真实 Evolution artifacts。",
+      "真实 Run 证明 Gate 可以在 Compiler 前暴露 Student 边界，但两个完整 Candidate 均低于 Incumbent，尚未证明最终效用或成本收益。",
+      "复杂 Intervention Contract 实验显示单 phase 执行稳定，但多 phase state 与 evidence-readiness 仍有显著职责和成本风险。",
+      "docs 部分描述已过时；本次判断以当前代码、真实 artifacts 和运行日志优先。"
+    ],
+    "evidence_refs": [
+      ".cvpr/project.yaml",
+      ".cvpr/state.yaml",
+      "docs/design/hook-model-feasibility.md",
+      "docs/design/intervention-worker-complex-contract-experiment-report.md",
+      "runs/evolution/20260815_qwen3-8b_hook_feasibility/events.jsonl"
+    ]
+  },
+  "problem_statuses": [
+    {"problem_id":"Q1","status":"partially_open","judgment":"主流近期工作仍较早物化 Candidate；Shepherd 已有 executable edit replay，因此只能主张严格的 hypothesis-first、non-deployable trial 与 evidence-gated compilation 边界。"},
+    {"problem_id":"Q2","status":"open_with_strong_motivation","judgment":"现有工作测量 activation/adherence 或陈述 backbone capability bound；未发现逐职责、真实 prefix、编译前的 Student realizability gate。"},
+    {"problem_id":"Q3","status":"partially_open","judgment":"Program Function 与组件化 substrate 已覆盖部分表示需求；空间在同一机制的责任、状态、fallback、invariant 与多 realization transport，而不在增加字段。"},
+    {"problem_id":"Q4","status":"unresolved_empirically","judgment":"成本、有效 Candidate 产出率、false promotion 和 false rejection 均须在预算匹配实验中验证。"},
+    {"problem_id":"Q5","status":"mostly_closed_as_primary_novelty","judgment":"typed routing、receipt 与 conformance 适合作为 supporting systems contribution，不宜单独承担主 novelty。"},
+    {"problem_id":"Q6","status":"open_as_integrated_empirical_hypothesis","judgment":"角色专属消费、三类经验 taxonomy 和从轨迹提炼经验已有强先例；仍可检验 typed verification provenance、严格 consumer/scope/invalidation、搜索优先级控制与 false-pruning safeguard 的联合协议。"}
+  ],
+  "candidates": [
+    {
+      "idea_id":"IDEA-001R",
+      "status":"audited",
+      "title":"Pre-Materialization Evidence-Gated Harness Evolution",
+      "research_problem":"能否在任何可复用 executable edit 形成前，先验证 implementation-independent mechanism，再做 Student responsibility admission？",
+      "core_hypothesis":"Hypothesis 到 non-deployable trial、evidence、mechanism、responsibility feasibility、realization 和 candidate 的类型化链条，能在预算匹配下改善 Candidate 预测、产出率、效用或错误归因。",
+      "proposed_change":"把不可部署、不可进入 Candidate pool、不得包含完整 reusable guard/action 的局部干预作为最早实验单位，并在编译前加入 evidence 与 responsibility gate。",
+      "falsification_test":"若 Trial 实质等价于 provisional executable patch，或在严格预算下不优于 Direct、Shepherd/CRO、HarnessBank screening 及简单 parallel/sequential baselines，则主张被否证。",
+      "novelty_boundary":"不主张 fork/replay、Candidate gate、guard/action 或 Reviewer 首创；只主张 pre-materialization artifact invariant、机制证据链与 Student responsibility admission 的组合协议。",
+      "literature_evidence":[
+        {"paper_id":"P008","locator":"Sec. 5.2 and Appendix F Algorithm 1","recency":"recent"},
+        {"paper_id":"P011","locator":"Sec. 3.3","recency":"recent"},
+        {"paper_id":"P016","locator":"Secs. 3-4","recency":"recent"}
+      ],
+      "counterevidence":["Shepherd 已对 executable edit 做 prefix replay。","HarnessBank 已做 Candidate validity、activation、paired significance 与 gain gate。"],
+      "existing_solutions":["Direct Candidate generation","Shepherd/CRO-style localized replay","HarnessBank-style Candidate screening","budget-matched parallel sampling and sequential refinement"],
+      "risks":["当前 75 题尚未隔离各阶段。","soft budget 可超支。","代码与环境尚未冻结。","目前只有单 task family。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-002R",
+      "status":"audited",
+      "title":"Responsibility-Level Student Realizability Gate",
+      "research_problem":"固定 Student 是否能在真实 prefix 上承担机制要求的 semantic recognition、decision、fallback 与 adherence，并应由谁承担失败职责？",
+      "core_hypothesis":"逐职责 admission 与 ownership reassignment 能预测 runtime activation、adherence 和 Candidate utility，并减少机制正确但 Student 不可实现的错误提升。",
+      "proposed_change":"把 recognition、fallback、adherence 和 utility 分离测试，并在 Student、deterministic logic、Teacher 与 reject 之间显式分配职责。",
+      "falsification_test":"若 feasibility score 对 runtime adherence 或 utility 无预测效度，或 false rejection 与 overhead 抵消收益，则 gate 无效。",
+      "novelty_boundary":"不主张 activation beacon、mock execution、Teacher review 或 frozen-target rerun 首创；只主张独立责任标签下的 pre-compilation semantic capability test 与 ownership reassignment。",
+      "literature_evidence":[
+        {"paper_id":"P006","locator":"Sec. 4.3","recency":"recent"},
+        {"paper_id":"P010","locator":"Sec. 3.1 and Appendices B-C","recency":"recent"},
+        {"paper_id":"P013","locator":"Secs. 1 and 3.1","recency":"recent"}
+      ],
+      "counterevidence":["已有方法测试 activation/adherence 或由 Teacher 审核程序。","当前 4-prefix feasibility 结果只证明 operability。"],
+      "existing_solutions":["activation beacon","mock execution","Teacher review","frozen-target rerun"],
+      "risks":["Teacher 可能形成循环自证。","Hook token 已占 Candidate token 约 50%-70%。","标签与测试 prefix 若复用会泄漏。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-003R",
+      "status":"audited",
+      "title":"Mechanism-to-Realization Transport and Student-Aware Lowering",
+      "research_problem":"同一 evidence-backed mechanism 在 prompt、deterministic hook、hook_model、tool/parser 等 realization 间是否发生可测 transport drift？",
+      "core_hypothesis":"含 ownership、attachment、observability、state、fallback 与 invariants 的 contract，加上同机制多 lowering 和盲法 conformance，可降低实现漂移并选出更可执行、低成本的 realization。",
+      "proposed_change":"实现每个机制至少三种真实 lowering，并用固定、deterministic-first、Teacher-choice 与 Student-aware 策略选择 realization。",
+      "falsification_test":"若 IR 不降低 conformance 或 transport failure，或选择策略不优于简单固定策略，则主张被否证并降级为 supporting component。",
+      "novelty_boundary":"不主张 Program Function、typed hook 或组件化 substrate 首创；贡献必须来自同一机制跨多个真实 lowering 的 transport 测量和选择。",
+      "literature_evidence":[
+        {"paper_id":"P010","locator":"Sec. 3.1 and Appendices B-C","recency":"recent"},
+        {"paper_id":"P003","locator":"Appendix C","recency":"recent"},
+        {"paper_id":"P015","locator":"Introduction and main results","recency":"recent"}
+      ],
+      "counterevidence":["HASP 已有 Program Function。","Harness-R1 与 AHE 已有 typed/component substrate。"],
+      "existing_solutions":["fixed surface lowering","Teacher-selected component substrate","direct patch generation"],
+      "risks":["当前没有 portfolio compiler。","Compiler WorkItem 单次约 0.76M-1.40M token。","语义等价与允许差异难以预定义。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-004R",
+      "status":"audited",
+      "title":"Matched Prefix Evidence for Candidate-Effect Prediction",
+      "research_problem":"怎样的 paired/repeated prefix trial 才能稳定预测 compiled Candidate 效应，而不只提高 Reviewer 自信？",
+      "core_hypothesis":"同 prefix 多次 baseline/intervention continuation、跨 prefix/case 测试与层级统计能提高 gate decision 稳定性和 Candidate effect 方向预测。",
+      "proposed_change":"随机化执行顺序，在嵌套 prefix/case/hypothesis 结构上做重复双臂 continuation，并预注册 process 与 task outcome。",
+      "falsification_test":"若严格配对不提升 decision stability 或 local-to-global prediction，则该方法主张被否证。",
+      "novelty_boundary":"不主张 fork、same-prefix continuation 或 paired statistics 首创；只研究 pre-materialization mechanism evidence 对 downstream Candidate effect 的预测协议。",
+      "literature_evidence":[
+        {"paper_id":"P005","locator":"Abstract and introduction","recency":"recent"},
+        {"paper_id":"P008","locator":"Sec. 5.2 and Appendix F","recency":"recent"},
+        {"paper_id":"P011","locator":"Sec. 3.3","recency":"recent"}
+      ],
+      "counterevidence":["fork 与 same-prefix recovery 已存在。","paired significance gate 已存在。"],
+      "existing_solutions":["single trial review","unpaired evaluation","Candidate subset screening"],
+      "risks":["独立新颖性偏低。","重复 continuation 成本高。","实验单位存在嵌套和相关性。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-005R",
+      "status":"audited",
+      "title":"Attribution-Grounded Typed Revision Routing",
+      "research_problem":"类型化路由能否在有多标签真值的故障上，比 flat retry 更准确定位 failure layer 并减少重做？",
+      "core_hypothesis":"在受控 fault injection 与 organic failures 上，typed routing 能提高 route precision/recall、降低重复失败、修订轮数与 tokens。",
+      "proposed_change":"为 hypothesis、evidence、mechanism、Student feasibility、implementation conformance 与 global regression 注入可审计故障，并测试多标签路由。",
+      "falsification_test":"若 route precision/recall、修订效率或最终修复率无改善，或错误路由增加跨层遗漏，则主张被否证。",
+      "novelty_boundary":"不主张 versioning、typed trace、manifest 或 evidence anchoring 首创；只主张有故障真值的跨层归因与路由效果。",
+      "literature_evidence":[
+        {"paper_id":"P004","locator":"Sec. 3.3 and 4.4","recency":"recent"},
+        {"paper_id":"P008","locator":"Typed trace and replay design","recency":"recent"},
+        {"paper_id":"P012","locator":"Function anchoring and recalibration","recency":"recent"}
+      ],
+      "counterevidence":["现有系统已有 typed trace 和 versioned artifact。","Reviewer agreement 不等于 attribution accuracy。"],
+      "existing_solutions":["flat retry","stage-local retry","Teacher-directed rerouting"],
+      "risks":["独立算法新颖性有限。","合成故障可能不代表 organic failures。","多标签真值需要盲审。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-001R2",
+      "status":"audited",
+      "title":"Evidence-Gated Harness Evolution with Target-Model Realizability",
+      "research_problem":"对固定小模型 Student，在真实 rollout 的冻结 Prefix 上先用不可部署局部干预检验行为假设，再独立验证证据支持机制的 Student 逐职责可实现性，能否比 candidate-first evolution 更有效地筛选和归因可执行机制？",
+      "core_hypothesis":"把 non-deployable matched-prefix evidence 与 target-Student responsibility feasibility 设为 Candidate 编译前的两道门，能在严格预算匹配下提高 useful Candidate yield、减少无效完整评估，并改善失败归因。",
+      "proposed_change":"以确定性 Trial Selector 冻结真实 Student Prefix，重复比较 no-op control 与 Teacher soft-intervention 实验臂；通过 Evidence Gate 后蒸馏 implementation-independent mechanism，再测试 Student recognition、decision、adherence 与 fallback，之后才编译 Candidate。typed reject/revise 另外生成受证据治理的 Experience Candidate，并按 Student 能力、角色协作和已实验方向形成支持性跨 Run 投影。",
+      "falsification_test":"若双门在预算匹配下不优于 Candidate-first、Shepherd/HarnessBank-style screening、parallel sampling 或 sequential refinement，不能预测 downstream Candidate effect，或 false rejection 抵消收益，则主假设被否证。若经验投影不能减少重复失败，或产生明显 false suppression，则取消其效率贡献。",
+      "novelty_boundary":"不主张 Prefix-Fork、Teacher、falsifiable hypothesis、Candidate gate、Program Function、typed trace、routing 或 memory 首创；只检验 non-deployable pre-materialization experiment 与逐职责 Student realizability gate 的联合 protocol。经验系统仅为 planned and evaluated supporting subsystem，除非专项检索和独立消融支持提升。",
+      "literature_evidence":[
+        {"paper_id":"P008","locator":"Sec. 5.2 and Appendix F Algorithm 1: executable edit replay nearest neighbor","recency":"recent"},
+        {"paper_id":"P011","locator":"Sec. 3.3: candidate-level validity, activation and paired screening","recency":"recent"},
+        {"paper_id":"P006","locator":"Sec. 4.3: weak-model activation and adherence failure","recency":"recent"},
+        {"paper_id":"P010","locator":"Sec. 3.1 and Appendices B-C: Program Function and Teacher review","recency":"recent"},
+        {"paper_id":"P012","locator":"Function anchoring and state-dependent evidence recalibration","recency":"recent"}
+      ],
+      "counterevidence":["Shepherd 已有 executable edit replay。","HarnessBank 已有 Candidate-level paired screening。","HASP 已有 should_activate 与 intervene 程序结构。","DREvo 已有 historical evidence anchoring 与 recalibration。"],
+      "existing_solutions":["Candidate-first direct compile","Shepherd/CRO-style localized candidate replay","HarnessBank-style Candidate screening","DREvo-like historical evidence recalibration","budget-matched parallel sampling and sequential refinement"],
+      "risks":["当前 Trial 尚不是严格的 repeated matched-prefix 双臂实验。","当前 Hook Feasibility 主要覆盖 hook_model label recognition，尚未覆盖所有 Student-owned responsibility 与 in-loop adherence。","Experience Store、Curator、Attempt Ledger、role projection 和 usage receipt 尚未实现。","当前只有单 task family，且既有 Run 曾越过 soft token budget。"],
+      "review_verdict":"pass"
+    },
+    {
+      "idea_id":"IDEA-001R3",
+      "status":"user_selected",
+      "title":"Evidence-Gated and Experience-Guided Harness Evolution",
+      "research_problem":"对固定小模型 Student，能否在单个研究 episode 内用不可部署局部干预与逐职责 Student realizability 决定什么机制值得编译，并在已结算 attempt/candidate 之间把各验证层结果转为只投影给指定角色的研究经验，以减少跨 attempt/generation 重复探索而不造成过度误剪？",
+      "core_hypothesis":"双时间尺度协议能在严格预算匹配下同时改善 Candidate 前的机制信用分配与跨 episode 搜索效率：H1 检验局部干预证据，H2a 检验 Student realizability probe 的预测效度，H2b 检验基于 probe 的责任/实现路由，H3 检验验证证据驱动的角色定向经验能否降低能力越界提案、同角色重复错误和重复方向，提高 useful Candidate yield，同时保持 held-out utility 且控制 false pruning。",
+      "proposed_change":"单个 episode 内执行冻结 Prefix 后 repeated matched no-op 与 soft-intervention 两臂、Evidence Gate、Mechanism Distillation 与 Student recognition/decision/adherence/fallback feasibility 后再编译；结算后由全部有研究意义的 typed verdict 与终态形成三种定向经验，reject/revise 可即时产生 provisional Experience Candidate。Student capability boundary 与 experiment-direction map 只给 Hypothesis Researcher；Researcher 将能力经验转成当前设计合同，其他角色不读取原始能力经验。Teacher role work experience 只给同一 role/model/base-prompt/contract。经验有 evidence provenance、hard/soft scope、确定性 evidence grade、失效条件、usage receipt、blinded proposal audit、exploration bypass 和 negative recheck。",
+      "falsification_test":"若 H1/H2 在 candidate-first、H1-only、H2-only、H1+H2 及预算匹配最近邻下不能分别证明局部 evidence 预测、Student probe 预测或 adaptive routing 增益，则只撤回对应主张；若 H3 在冻结的 H1/H2 上相对 no-memory、global/shared、generic role-local、DREvo-like 和 Auto-Robotist-like baselines 不减少跨 episode 重复或提高 useful yield，或超过预注册 held-out 非劣界与 false-pruning 上限，则经验贡献失败并降级为工程功能。",
+      "novelty_boundary":"不主张 Prefix-Fork、Teacher intervention、Candidate gate、Program Function、typed routing、agent-specific/role-aligned memory、episodic/procedural/transactive taxonomy、experience extraction 或 search-trace skill library 首创。只检验两项联合协议：pre-materialization evidence + target-Student responsibility admission；以及由分层验证 verdict 写入、严格按 optimizer role 投影、可失效且带误剪控制的跨 settled episode research experience，其作用延续到后续 generation。",
+      "literature_evidence":[
+        {"paper_id":"P008","locator":"Sec. 5.2 and Appendix F: executable-edit replay nearest neighbor","recency":"recent"},
+        {"paper_id":"P011","locator":"Sec. 3.3: Candidate-level validity, activation and paired screening","recency":"recent"},
+        {"paper_id":"P006","locator":"Sec. 4.3: weak Student activation/adherence failure","recency":"recent"},
+        {"paper_id":"P017","locator":"cross-trial and agent-specific hierarchical memory","recency":"recent"},
+        {"paper_id":"P019","locator":"role-local episodic/procedural/transactive lifelong memory","recency":"recent"},
+        {"paper_id":"P020","locator":"evidence-grounded search-trace skill library with exploration path","recency":"recent"}
+      ],
+      "counterevidence":["Shepherd 已有 executable edit replay。","HarnessBank 已有 Candidate-level paired screening。","G-Memory 与 Intrinsic Memory Agents 已有 agent-specific/role-aligned cross-trial memory。","LLMA-Mem 三类 memory 与本项目三类经验高度同构。","Auto-Robotist 已把搜索结果蒸馏成带证据的可审计技能库。"],
+      "existing_solutions":["Candidate-first direct compile","Shepherd/CRO-style localized candidate replay","HarnessBank-style candidate screening","DREvo-like function-anchored state-recalibrated historical evidence","global/shared memory","G-Memory/Intrinsic/LLMA-Mem-style role-local multi-agent memory","ExpeL-style experiential insight extraction","Auto-Robotist-like evidence-grounded search-trace skill library","budget-matched parallel sampling and sequential refinement"],
+      "risks":["H3 尚未实现且没有任何本地实证。","当前代码 generation 只在 promotion 后递增，必须按 settled optimizer episode 定义经验生效时点。","早期弱证据可能过度剪枝并造成路径依赖，且必须通过 blinded shortlist/bypass 才能估计反事实误剪。","Student、Teacher、base prompt、contract 或 base harness 漂移会使经验过时。","不同 Teacher 模型间的角色经验可能不迁移。","经验检索与总结本身有 token 成本，而当前 Controller 只有 soft token check，正式比较前需要 hard budget ledger。","当前 Trial 与 Student feasibility 仍未达到拟议的严格协议。","H3 必须在 H1/H2 pipeline 经验证并冻结后评估。"],
+      "review_verdict":"pass"
+    }
+  ],
+  "someagents_review": {
+    "mode":"B",
+    "status":"completed",
+    "input_snapshot_id":"START-001-SNAPSHOT-v5.1",
+    "role_results":[
+      {"agent_id":"v3_problem_evidence","independent":true,"status":"completed","input_snapshot_id":"START-001-SNAPSHOT-v5.1","covered_axes":["source_recency","problem_evidence"],"initial_verdict":"revise","final_verdict":"pass"},
+      {"agent_id":"v3_novelty","independent":true,"status":"completed","input_snapshot_id":"START-001-SNAPSHOT-v5.1","covered_axes":["novelty_related_work"],"initial_verdict":"revise","final_verdict":"pass"},
+      {"agent_id":"v3_method_feasibility","independent":true,"status":"completed","input_snapshot_id":"START-001-SNAPSHOT-v5.1","covered_axes":["method_falsifiability","feasibility_review_risk"],"initial_verdict":"revise","final_verdict":"pass"}
+    ],
+    "covered_axes":["source_recency","problem_evidence","novelty_related_work","method_falsifiability","feasibility_review_risk"],
+    "minority_findings":[
+      "Student capability experience 必须保持 Researcher-only；Distiller 只接收 Researcher 形成的正常设计合同或本次 feasibility obligation。",
+      "当前 generation 是 promotion-only 计数，正式表述必须使用 settled optimizer episode，并另报跨 generation 结果。",
+      "H3 只有击败 DREvo-like 与 Auto-Robotist-like 最近邻并完成 provenance/scope/safeguard 消融后，才能提升为并列方法贡献。"
+    ],
+    "unresolved_blockers":[],
+    "final_verdict":"pass",
+    "review_ref":".cvpr/start_artifacts/someagents_review_v5_final.md"
+  },
+  "discussion":{
+    "substantive_rounds":3,
+    "rounds":[
+      {
+        "round":1,
+        "summary":"统一呈报五个通过审查的候选，并建议以 IDEA-001R 为总问题、IDEA-002R 为核心门、IDEA-004R 为测量协议、IDEA-005R 为支持系统。",
+        "user_decision":"未确认；要求解释各候选，并指出呈报没有充分恢复 0820_report.md 中 pre-compilation intervention 与 Student realizability 的核心优势。",
+        "evidence_ref":".cvpr/start_artifacts/候选讨论稿_round1.md"
+      },
+      {
+        "round":2,
+        "summary":"重读 0820_report.md 后，将 IDEA-001R 与 IDEA-002R 合并为双门主线，用具体例子解释五个候选，并把 reject-triggered Research Experience 纳入支持性闭环和独立消融。",
+        "user_decision":"未最终确认；明确要求最终方向考虑 Student 能力边界、Teacher 角色工作经验和已实验方向记录三类经验。",
+        "evidence_ref":".cvpr/start_artifacts/第二轮解释与主线修订_v4.md"
+      },
+      {
+        "round":3,
+        "summary":"根据用户指定的唯一消费者重新定位经验系统：它成为跨 settled attempt/candidate 并延续到后续 generation 的 integrated empirical hypothesis H3；Student capability 与方向地图只给 Researcher，对应 Teacher 工作经验只给该 role/model/contract。专项检索表明角色记忆、三类 taxonomy 与 search-trace memory 均有先例，因此新颖性收缩到 typed verification provenance、严格 scope/invalidation 和 false-pruning audit 的联合协议。三位独立审查者初审 revise、修订后全部 pass。",
+        "user_decision":"用户明确确认 IDEA-001R3 为当前最终 IDEA，并要求进入 cvpr-goal；后续新证据可触发正式修订。",
+        "evidence_ref":".cvpr/start_artifacts/第三轮经验系统定位_v5.md"
+      }
+    ]
+  },
+  "final_idea":{
+    "idea_id":"IDEA-001R3",
+    "user_confirmed":true,
+    "confirmed_at":"2026-08-20T23:55:15+08:00",
+    "confirmation_evidence_ref":".cvpr/decisions.jsonl#DEC-20260820-002",
+    "research_problem":"对固定小模型 Student，能否在单个研究 episode 内用不可部署局部干预与逐职责 Student realizability 决定什么机制值得编译，并在已结算 attempt/candidate 之间把分层验证结果转为只投影给指定角色的研究经验，以减少跨 attempt/generation 重复探索而不造成过度误剪？",
+    "core_hypothesis":"双时间尺度协议能改善 Candidate 前的机制信用分配与跨 settled episode 搜索效率：H1 检验 pre-materialization intervention evidence，H2a/H2b 分别检验 Student realizability probe 与 adaptive responsibility/lowering routing，H3 检验 verification-grounded role-scoped experience 是否在控制 false pruning 和 held-out utility 的条件下减少重复探索并提高 useful Candidate yield per budget。",
+    "expected_contributions":[
+      "一套在 persistent Candidate 生成前用冻结 Prefix 上 matched no-op/soft-intervention continuation 检验行为假设的 evidence gate，并测量其对 downstream Candidate effect 的预测与误拒。",
+      "一套面向固定 Student 的逐职责 realizability admission，将 probe 的预测效度与基于 probe 的 reject/simplify/deterministic/ownership routing 增量收益分开验证。",
+      "一项并列但待实证的 integrated hypothesis：把 typed verification verdict 与终态转为有 provenance、严格 consumer/scope、可失效和可复查的 optimizer experience，检验其跨 settled attempt/candidate 及后续 generation 的搜索指导价值。"
+    ],
+    "conditions":[
+      "Student 参数、任务 evaluator 与基础 agent loop 固定；只允许 Prompt、Tool、Parser、Lifecycle Hook 等模型外 Harness 机制演化。",
+      "H1/H2 与 H3 分阶段验证；正式 H3 比较前先验证并冻结 H1/H2 pipeline、标签与 Gate 规则。",
+      "所有方法与基线按硬 token、rollout 和完整 Candidate evaluation 预算匹配，Curator、检索和经验上下文成本全部计费。",
+      "训练/研究、Gate audit 与 held-out evaluation 保持 split firewall；H3 各条件使用独立 Store、配对种子和相同任务顺序。"
+    ],
+    "boundaries":[
+      "不主张 Prefix-Fork、Teacher intervention、Candidate gate、Program Function、typed routing、role-aligned memory、三类经验 taxonomy、experience extraction 或 search-trace memory 首创。",
+      "Student capability boundary 与 experiment-direction map 只投影给 Hypothesis Researcher；Teacher role work experience 只投影给对应 role/model/base-prompt/contract。",
+      "经验只改变搜索优先级或角色工作上下文，不作为当前 Gate 的替代证据，也不构成永久黑名单。",
+      "当前 H3 尚未实现且无本地效果证据；现有 Run 只证明部分 gate operability，不能证明最终性能或成本收益。"
+    ],
+    "falsification_conditions":[
+      "H1 的局部证据不能预测 downstream Candidate effect、不能改善 budget-matched useful Candidate yield，或 Gate false rejection 抵消节省。",
+      "H2a 的 probe 对独立 Prefix 上真实 in-loop recognition、decision、adherence、fallback 或 parse failure 无预测价值。",
+      "H2b 的 adaptive routing 不优于 always-Student、always-deterministic 或无 feasibility routing 的固定策略。",
+      "H3 相对 no-memory、shared/global、generic role-local、DREvo-like 与 Auto-Robotist-like 最近邻不能改善跨 episode 效率，或超过预注册 held-out 非劣界、false-pruning 上限及总预算。"
+    ],
+    "preliminary_acceptance_targets":[
+      "H1：报告局部 evidence 对 Candidate effect 的校准/排序、Gate false-negative rate、完整评估节省和 budget-matched useful Candidate yield。",
+      "H2a/H2b：分别报告 Student 职责 probe 预测效度，以及 adaptive routing 对可实现 Candidate 比例、浪费和 held-out utility 的增量作用。",
+      "H3：以完整 multi-episode/multi-generation run/seed 为实验单位，报告重复方向、能力越界提案、role obligation recurrence、useful yield、总成本、held-out utility、false pruning 与 bypass/recheck 恢复。",
+      "所有 required claim 具有冻结配置、原始 Run、统计产物、usage/effect receipt 与可复查负面结果；具体数值阈值由 cvpr-goal 依据实测基线或正式先导协议确定。"
+    ]
+  },
+  "blockers":[],
+  "supersedes":"START-001@v3"
+}

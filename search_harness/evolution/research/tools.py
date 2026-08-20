@@ -96,6 +96,13 @@ def build_builtin_tool(
         "get_paired_student_trajectory": _get_paired_student_trajectory,
         "get_candidate_harness_diff": _get_candidate_harness_diff,
         "get_candidate_trajectory_text": _get_candidate_trajectory_text,
+        "get_recent_candidate_digest": _get_recent_candidate_digest,
+        "list_recent_candidate_cases": _list_recent_candidate_cases,
+        "get_recent_candidate_case": _get_recent_candidate_case,
+        "get_recent_candidate_trajectory": _get_recent_candidate_trajectory,
+        "get_recent_candidate_implementation": (
+            _get_recent_candidate_implementation
+        ),
     }
     try:
         factory = factories[kind]
@@ -577,10 +584,22 @@ def _create_mechanism_draft(resources: TeacherResources) -> CallableTool:
             str,
             ToolArg("General Student behavior the mechanism must cause."),
         ],
+        effect_goal: Annotated[
+            str,
+            ToolArg(
+                "Promotion objective: task_outcome requires attributable task "
+                "benefit; behavioral_intermediate requires the declared process "
+                "change while task outcome remains a safety guardrail.",
+                choices=("task_outcome", "behavioral_intermediate"),
+            ),
+        ] = "task_outcome",
     ) -> ToolResult:
         """Create an empty no-Teacher mechanism draft."""
 
-        draft_id = resources.mechanisms.create(goal=goal)
+        draft_id = resources.mechanisms.create(
+            goal=goal,
+            effect_goal=effect_goal,
+        )
         return _json_result(
             "create_mechanism_draft",
             {"draft_id": draft_id},
@@ -1377,6 +1396,120 @@ def _get_candidate_trajectory_text(
                 offset=offset,
                 max_characters=max_characters,
             ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_recent_candidate_digest(resources: TeacherResources) -> CallableTool:
+    @tool(name="get_recent_candidate_digest")
+    def invoke() -> ToolResult:
+        """Read the most recent rejected Candidate's compact outcome summary."""
+
+        store = _require_candidate_review(resources)
+        return _json_result("get_recent_candidate_digest", store.outcome_digest())
+
+    return CallableTool.from_callable(invoke)
+
+
+def _list_recent_candidate_cases(resources: TeacherResources) -> CallableTool:
+    @tool(name="list_recent_candidate_cases")
+    def invoke(
+        category: Annotated[
+            str,
+            ToolArg(
+                "Nearby-case category from the Candidate outcome digest.",
+                choices=(
+                    "beneficial_activation",
+                    "harmful_activation",
+                    "neutral_activation",
+                    "missed_target",
+                    "false_positive",
+                    "parse_failure",
+                    "unattributed_improvement",
+                    "unattributed_regression",
+                ),
+            ),
+        ],
+        page: Annotated[int, ToolArg("One-based page number.", minimum=1)] = 1,
+        page_size: Annotated[
+            int,
+            ToolArg("Cases per page.", minimum=1, maximum=20),
+        ] = 10,
+    ) -> ToolResult:
+        """List high-value nearby cases from the rejected Candidate."""
+
+        store = _require_candidate_review(resources)
+        digest = store.outcome_digest()
+        nearby = digest.get("nearby_cases")
+        nearby = nearby if isinstance(nearby, dict) else {}
+        items = nearby.get(category)
+        items = items if isinstance(items, list) else []
+        start = (page - 1) * page_size
+        return _json_result(
+            "list_recent_candidate_cases",
+            {
+                "category": category,
+                "page": page,
+                "page_size": page_size,
+                "total_items": len(items),
+                "items": items[start : start + page_size],
+            },
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_recent_candidate_case(resources: TeacherResources) -> CallableTool:
+    @tool(name="get_recent_candidate_case")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Nearby Candidate example ID.")],
+    ) -> ToolResult:
+        """Read one paired case from the most recent rejected Candidate."""
+
+        store = _require_candidate_review(resources)
+        return _text_result(
+            "get_recent_candidate_case",
+            render_candidate_case(store, example_id),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_recent_candidate_trajectory(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="get_recent_candidate_trajectory")
+    def invoke(
+        example_id: Annotated[str, ToolArg("Nearby Candidate example ID.")],
+        replicate_id: Annotated[str, ToolArg("Decisive replicate ID.")],
+    ) -> ToolResult:
+        """Read one compact paired trajectory from the rejected Candidate."""
+
+        store = _require_candidate_review(resources)
+        return _text_result(
+            "get_recent_candidate_trajectory",
+            render_paired_candidate_trajectory(
+                store,
+                example_id=example_id,
+                replicate_id=replicate_id,
+            ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _get_recent_candidate_implementation(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="get_recent_candidate_implementation")
+    def invoke() -> ToolResult:
+        """Read the rejected solution summary and bounded Compiler risks."""
+
+        store = _require_candidate_review(resources)
+        return _json_result(
+            "get_recent_candidate_implementation",
+            store.implementation_view(),
         )
 
     return CallableTool.from_callable(invoke)

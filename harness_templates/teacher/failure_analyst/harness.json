@@ -46,6 +46,31 @@
       "instance_id": "get_student_capability_view",
       "entrypoint": "tools/runtime/component.py:build",
       "config": {"kind": "get_student_capability_view"}
+    },
+    {
+      "instance_id": "get_recent_candidate_digest",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_digest"}
+    },
+    {
+      "instance_id": "list_recent_candidate_cases",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "list_recent_candidate_cases"}
+    },
+    {
+      "instance_id": "get_recent_candidate_case",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_case"}
+    },
+    {
+      "instance_id": "get_recent_candidate_trajectory",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_trajectory"}
+    },
+    {
+      "instance_id": "get_recent_candidate_implementation",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "get_recent_candidate_implementation"}
     }
   ],
   "prompt": {

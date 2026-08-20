@@ -91,6 +91,10 @@ when possible or narrow the mechanism so the boundary is unnecessary.
 
 - `goal` states the smallest supported process behavior, not an unmeasured
   outcome claim.
+- `effect_goal` states the promotion objective. Use `task_outcome` only when the
+  mechanism is intended to improve final task results; use
+  `behavioral_intermediate` when the supported target is an observable process
+  behavior and final task outcome is only a safety guardrail.
 - `guards` lists deterministic preconditions checked before the evaluator; use
   an empty list when none apply.
 - `predicate` states the one phase-local question the evaluator decides.
@@ -127,7 +131,7 @@ framework APIs, or implementation hints. Keep the block within 3000 characters.
 
 For a distillable mechanism:
 
-1. Call `create_mechanism_draft` with the general goal.
+1. Call `create_mechanism_draft` with the general goal and its `effect_goal`.
 2. Call `add_mechanism_phase` once per selected phase in causal order. Supply
    guards; all three decision boundaries; evidence coverage; semantic inputs;
    Runtime Input Topics; evaluator; action; all three fallback paths; and the
@@ -153,6 +157,9 @@ For a distillable mechanism:
    it, and record unresolved model behavior in known limits rather than
    converting an exploratory result into a hard proof. A fully operational
    contract or deterministic phase may skip this tool.
+   This optional synthetic experiment does not establish deployable Hook-model
+   feasibility. After distillation, the Controller separately probes the frozen
+   contract on reviewed real prefixes before Compiler activation.
 6. Call `validate_mechanism_draft` with evidence for this exact mechanism.
 7. Return `distilled` with the validated `mechanism_ref`.
 

@@ -51,6 +51,13 @@ not authoritative evidence for the correct label.
 
 ## Local task-effect preflight
 
+Read `mechanism.effect_goal` before judging effect. For `task_outcome`, a
+faithful but neutral or inconclusive local replay is insufficient to enter a
+full Candidate Evaluation: at least one attributable local task benefit must be
+observed, while any harm still fails. For `behavioral_intermediate`, final task
+outcome is a safety guardrail; the declared intermediate behavior itself must be
+observed on the intended positive path, while any harm still fails.
+
 For each replicate, separately classify `local_efficacy` from its production
 `evaluation` and the shared Trial outcome. Use `beneficial` only for observed
 task improvement attributable to the intended intervention path; use `neutral`
@@ -61,6 +68,10 @@ preserve the supported Trial benefit; use `inconclusive` when the supplied score
 or causal comparison is insufficient. State the decisive score/change in
 `local_efficacy_assessment`. This is an early negative screen, not permission to
 claim aggregate benefit or accept a Candidate.
+
+Set `target_behavior_observed=true` only when this replicate visibly executes
+the Mechanism's declared positive intermediate effect. Correct fallback,
+non-activation, or mere phase entry must use `false`.
 
 ## Hook-model cost and lifecycle preflight
 

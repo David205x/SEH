@@ -1,0 +1,25 @@
+schema_version: "1.0"
+records:
+  P001: https://arxiv.org/abs/2603.28052v1
+  P002: https://arxiv.org/abs/2606.09498v2
+  P003: https://arxiv.org/abs/2608.02276v1
+  P004: https://arxiv.org/abs/2604.25850v4
+  P005: https://arxiv.org/abs/2605.24539v1
+  P006: https://arxiv.org/abs/2605.30621v1
+  P007: https://arxiv.org/abs/2607.08124v1
+  P008: https://arxiv.org/abs/2605.10913v3
+  P009: https://arxiv.org/abs/2605.31308v1
+  P010: https://arxiv.org/abs/2605.17734v1
+  P011: https://arxiv.org/abs/2607.13683v2
+  P012: https://arxiv.org/abs/2607.26722v2
+  P013: https://arxiv.org/abs/2608.08466v1
+  P014: https://arxiv.org/abs/2602.22480v4
+  P015: https://arxiv.org/abs/2608.01918v1
+  P016: https://arxiv.org/abs/2607.12227v1
+  P017: https://arxiv.org/abs/2506.07398v2
+  P018: https://arxiv.org/abs/2508.08997v2
+  P019: https://arxiv.org/abs/2604.03295v1
+  P020: https://arxiv.org/abs/2605.25832v1
+  P021: https://arxiv.org/abs/2308.10144v3
+  P022: https://arxiv.org/abs/2502.12110v11
+note: "正文定位以 arxiv_id 与本映射锁定的版本为准；注册表未版本化 URL 仅作 canonical landing page。"

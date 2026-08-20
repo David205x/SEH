@@ -158,8 +158,8 @@ def serve(*, runs_root: Path, port: int) -> None:
     if not 1 <= port <= 65535:
         raise ValueError("port must be between 1 and 65535")
     service = ObserverService(runs_root)
-    server = ThreadingHTTPServer(("0.0.0.0", port), _handler_for(service))
-    print(f"Evolution Experiment Observer: http://0.0.0.0:{port}")
+    server = ThreadingHTTPServer(("127.0.0.1", port), _handler_for(service))
+    print(f"Evolution Experiment Observer: http://127.0.0.1:{port}")
     print(f"Runs root: {service.discovery.runs_root}")
     try:
         server.serve_forever()

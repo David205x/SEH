@@ -863,18 +863,16 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next_work.payload["generation"], 1)
         self.assertEqual(next_work.payload["version_id"], "harness_v0001")
         self.assertIn(
-            "different bounded failure pattern",
+            "one rejected solution does not invalidate",
             next_work.payload["analysis_focus"],
         )
         self.assertLessEqual(len(next_work.payload["analysis_focus"]), 300)
         self.assertNotIn("trial_count", next_work.payload)
         self.assertNotIn("compiler_revision", next_work.payload)
+        self.assertEqual(next_work.input_refs["report_dir"], "incumbent-report")
         self.assertEqual(
-            next_work.input_refs,
-            {
-                "report_dir": "incumbent-report",
-                "rollout_file": "incumbent-rollouts.jsonl",
-            },
+            next_work.input_refs["rollout_file"],
+            "incumbent-rollouts.jsonl",
         )
 
     def test_promotion_gate_reject_starts_new_research_attempt(self) -> None:
@@ -970,7 +968,10 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next_work.payload["research_attempt"], 2)
         self.assertNotIn("compiler_revision", next_work.payload)
         self.assertNotIn("validation_feedback", next_work.payload)
-        self.assertNotIn("compiler_artifact", next_work.input_refs)
+        self.assertEqual(
+            next_work.input_refs["compiler_artifact"],
+            "compiler.json",
+        )
 
     def test_compiler_routes_explicit_upstream_decisions(self) -> None:
         """验证 Compiler 的证据与机制请求返回对应职责层。"""
@@ -1218,6 +1219,41 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             plan.next_items[0].kind,
             WorkKind.EVALUATE_CANDIDATE,
+        )
+
+    def test_resumed_neutral_task_conformance_is_rechecked(self) -> None:
+        """旧 Summary 在恢复时也必须服从当前 effect_goal。"""
+
+        plan = transition_completed(
+            item=WorkItem(
+                work_id="verify-conformance-legacy-neutral",
+                kind=WorkKind.VERIFY_CONFORMANCE,
+                subject_ref="generation:1",
+                payload={
+                    "candidate_attempt_id": "candidate_attempt-1",
+                    "effect_goal": "task_outcome",
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "decision": "pass",
+                    "summary": {
+                        "decision": "pass",
+                        "finding_counts": {"faithful": 12},
+                        "local_efficacy_counts": {"neutral": 12},
+                        "route_feedback": {},
+                        "per_example": {},
+                        "finding_refs": [],
+                    },
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertEqual(plan.next_items[0].kind, WorkKind.REJECT_CANDIDATE)
+        self.assertEqual(
+            plan.next_items[0].payload["after_rejection"]["target"],
+            "evidence",
         )
 
     def test_execute_trial_rejects_removed_result_kind(self) -> None:
@@ -1673,6 +1709,41 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 for reason in decision.safety_reasons
             )
         )
+
+    def test_promotion_applies_effect_goal_specific_attribution_gates(
+        self,
+    ) -> None:
+        """目标类型决定收益、伤害和行为覆盖的确定性阈值。"""
+
+        task = evaluate_promotion(
+            reviewer_recommendation="accept",
+            validation_summary={"passed": True},
+            incumbent_metrics=_metrics(accuracy=0.50, tokens=100),
+            candidate_metrics=_metrics(accuracy=0.50, tokens=110),
+            config=EvolutionControlConfig(),
+            effect_goal="task_outcome",
+            effect_summary={
+                "attributed_beneficial_example_count": 0,
+                "attributed_harmful_example_count": 1,
+                "target_behavior_example_count": 3,
+            },
+        )
+        behavioral = evaluate_promotion(
+            reviewer_recommendation="accept",
+            validation_summary={"passed": True},
+            incumbent_metrics=_metrics(accuracy=0.50, tokens=100),
+            candidate_metrics=_metrics(accuracy=0.49, tokens=110),
+            config=EvolutionControlConfig(),
+            effect_goal="behavioral_intermediate",
+            effect_summary={
+                "attributed_beneficial_example_count": 0,
+                "attributed_harmful_example_count": 0,
+                "target_behavior_example_count": 2,
+            },
+        )
+
+        self.assertFalse(task.safety_passed)
+        self.assertTrue(behavioral.safety_passed)
 
     async def test_recovers_persisted_effect_after_controller_interruption(
         self,
@@ -2416,7 +2487,11 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                                     if item["replicate_id"] == "r000"
                                     else "implementation"
                                 ),
-                                "local_efficacy": "neutral",
+                                "local_efficacy": (
+                                    "beneficial"
+                                    if item["replicate_id"] == "r000"
+                                    else "neutral"
+                                ),
                                 "local_efficacy_assessment": (
                                     "The scored outcome was preserved."
                                 ),
@@ -2660,7 +2735,11 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                                 "observed_phases": ["pre_final"],
                                 "assessment": "The declared phase was observed.",
                                 "repair_obligation": None,
-                                "local_efficacy": "neutral",
+                                "local_efficacy": (
+                                    "beneficial"
+                                    if replicate_id == "r000"
+                                    else "neutral"
+                                ),
                                 "local_efficacy_assessment": (
                                     "The scored outcome was preserved."
                                 ),

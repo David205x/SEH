@@ -10,8 +10,16 @@ from search_harness.evolution.research.resources.base import (
     TeacherResourceConfig,
 )
 from search_harness.evolution.research.resources.stores import (
+    CandidateComparisonStore,
     CandidateReviewResourceConfig,
     CompilerResourceConfig,
+)
+from search_harness.evolution.research.candidate_digest import (
+    build_candidate_outcome_digest,
+    write_candidate_outcome_digest,
+)
+from search_harness.evolution.research.hook_feasibility import (
+    mechanism_requires_hook_feasibility,
 )
 from search_harness.evolution.research.roles.contracts import (
     CandidateReview,
@@ -39,11 +47,13 @@ class ResearchRoleEffects:
         store: TemplateVersionStore,
         env_file: Path,
         teacher_template_root: Path,
+        hook_feasibility_enabled: bool = False,
     ) -> None:
         self.role_runner = role_runner
         self.store = store
         self.env_file = env_file
         self.teacher_template_root = teacher_template_root
+        self.hook_feasibility_enabled = hook_feasibility_enabled
 
     async def analyze_failure(
         self,
@@ -51,6 +61,7 @@ class ResearchRoleEffects:
         analysis_focus: object,
         report_dir: Path,
         rollout_file: Path,
+        recent_candidate: CandidateReviewResourceConfig | None = None,
         work_dir: Path,
     ) -> EffectResult:
         artifact = await self.role_runner.run(
@@ -62,6 +73,7 @@ class ResearchRoleEffects:
                 report_dir=report_dir,
                 rollout_file=rollout_file,
                 student_template_root=self.store.template_dir,
+                candidate_review=recent_candidate,
             ),
         )
         output = FailureDirection.model_validate(artifact.get("output"))
@@ -78,6 +90,7 @@ class ResearchRoleEffects:
         problem_direction: dict[str, Any],
         report_dir: Path,
         rollout_file: Path,
+        recent_candidate: CandidateReviewResourceConfig | None = None,
         work_dir: Path,
     ) -> EffectResult:
         artifact = await self.role_runner.run(
@@ -89,6 +102,7 @@ class ResearchRoleEffects:
                 report_dir=report_dir,
                 rollout_file=rollout_file,
                 student_template_root=self.store.template_dir,
+                candidate_review=recent_candidate,
             ),
         )
         return _hypothesis_result(artifact, work_dir)
@@ -161,10 +175,24 @@ class ResearchRoleEffects:
                 mechanism.model_dump(mode="json"),
             )
             refs["mechanism_file"] = str(mechanism_path)
-        return _role_result(
+        result = _role_result(
             output.model_dump(mode="json"),
             artifact,
             refs,
+        )
+        if output.decision != "distilled":
+            return result
+        return EffectResult(
+            outcome={
+                **result.outcome,
+                "requires_hook_feasibility": (
+                    self.hook_feasibility_enabled
+                    and mechanism_requires_hook_feasibility(mechanism)
+                ),
+                "effect_goal": mechanism.effect_goal,
+            },
+            artifact_refs=result.artifact_refs,
+            usage=result.usage,
         )
 
     async def compile_candidate(
@@ -242,8 +270,49 @@ class ResearchRoleEffects:
         candidate_rollout_file: Path,
         work_dir: Path,
     ) -> EffectResult:
+        comparison_config = CandidateReviewResourceConfig(
+            incumbent_report_dir=incumbent_report_dir,
+            candidate_report_dir=candidate_report_dir,
+            incumbent_rollout_file=incumbent_rollout_file,
+            candidate_rollout_file=candidate_rollout_file,
+            incumbent_template_root=self.store.template_dir,
+        )
+        report_summaries = (
+            incumbent_report_dir / "summary.json",
+            candidate_report_dir / "summary.json",
+        )
+        if all(path.is_file() for path in report_summaries):
+            outcome_digest = build_candidate_outcome_digest(
+                store=CandidateComparisonStore.load(comparison_config),
+                mechanism=mechanism.model_dump(mode="json"),
+                implementation_summary=(
+                    compiler_output.implementation_summary
+                ),
+            )
+        elif any(path.exists() for path in report_summaries):
+            raise FileNotFoundError(
+                "Candidate outcome digest requires both Evaluation reports"
+            )
+        else:
+            outcome_digest = {
+                "schema_version": 1,
+                "effect_goal": mechanism.effect_goal,
+                "implementation_summary": (
+                    compiler_output.implementation_summary
+                ),
+                "hook_activity": {},
+                "nearby_cases": {},
+                "status": "unavailable_in_synthetic_role_test",
+            }
+        digest_path = write_candidate_outcome_digest(
+            work_dir / "candidate_outcome_digest.json",
+            outcome_digest,
+        )
         attempt = self.store.resume_candidate_attempt(candidate_attempt_id)
         with attempt.stage() as candidate_template_root:
+            comparison_config = comparison_config.model_copy(
+                update={"candidate_template_root": candidate_template_root}
+            )
             artifact = await self.role_runner.run(
                 template_root=self._template("candidate_reviewer"),
                 role_id="candidate_reviewer",
@@ -254,18 +323,12 @@ class ResearchRoleEffects:
                     "implementation_summary": (
                         compiler_output.implementation_summary
                     ),
+                    "candidate_outcome_digest": outcome_digest,
                     "unresolved_risk": compiler_output.unresolved_risk,
                     "historical_experience": [],
                 },
                 resource_config=TeacherResourceConfig(
-                    candidate_review=CandidateReviewResourceConfig(
-                        incumbent_report_dir=incumbent_report_dir,
-                        candidate_report_dir=candidate_report_dir,
-                        incumbent_rollout_file=incumbent_rollout_file,
-                        candidate_rollout_file=candidate_rollout_file,
-                        incumbent_template_root=self.store.template_dir,
-                        candidate_template_root=candidate_template_root,
-                    )
+                    candidate_review=comparison_config
                 ),
             )
         output = CandidateReview.model_validate(artifact.get("output"))
@@ -273,7 +336,11 @@ class ResearchRoleEffects:
         return _role_result(
             output.model_dump(mode="json"),
             artifact,
-            {"candidate_reviewer_artifact": str(path)},
+            {
+                "candidate_reviewer_artifact": str(path),
+                "candidate_outcome_digest": str(digest_path),
+            },
+            extra_outcome={"candidate_outcome_digest": outcome_digest},
         )
 
     def _template(self, role_id: str) -> Path:
@@ -306,6 +373,7 @@ def _role_result(
     output: dict[str, Any],
     artifact: dict[str, Any],
     refs: dict[str, str],
+    extra_outcome: dict[str, Any] | None = None,
 ) -> EffectResult:
     usage = artifact.get("usage")
     total_tokens = (
@@ -314,7 +382,7 @@ def _role_result(
         else 0
     )
     return EffectResult(
-        outcome={"output": output},
+        outcome={"output": output, **(extra_outcome or {})},
         artifact_refs=refs,
         usage={"total_tokens": _non_negative_int(total_tokens)},
     )

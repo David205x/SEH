@@ -67,11 +67,19 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 | `max_candidate_revisions` | Candidate 的最大修改次数 |
 | `max_work_retries` | 单个 WorkItem 失败后的最大重试次数 |
 | `max_work_items` | 一个 Run 最多执行的 WorkItem 数 |
-| `max_total_tokens` | Run 总 token 上限；`null` 表示不设置该上限 |
+| `max_total_tokens` | 新 WorkItem 启动前检查的 Run 总 token 上限；已启动单项不会被中断，完成后可能越界；`null` 表示不限制 |
 | `min_accuracy_delta` | Promotion Gate 允许的最低准确率变化 |
+| `task_outcome_min_accuracy_delta` | 结果型 Mechanism 的最低准确率变化 |
+| `task_outcome_min_attributed_beneficial_examples` | 结果型 Mechanism 至少直接改善的逻辑样本数 |
+| `task_outcome_max_attributed_harmful_examples` | 结果型 Mechanism 最多直接伤害的逻辑样本数 |
+| `behavioral_min_accuracy_delta` | 中间行为型 Mechanism 的准确率安全下限 |
+| `behavioral_min_target_behavior_examples` | 中间行为型 Mechanism 至少覆盖的目标行为逻辑样本数 |
+| `behavioral_max_attributed_harmful_examples` | 中间行为型 Mechanism 最多直接伤害的逻辑样本数 |
 | `max_total_token_ratio` | Promotion Gate 允许的最大总 token 比率 |
 
-`max_trial_assignments` 不得小于 `max_trials_per_hypothesis`。
+`min_accuracy_delta` 只作为旧 Run 或缺少 Candidate Outcome Digest 时的兼容下限；新 Run
+按 `effect_goal` 使用目标专用阈值。`max_trial_assignments` 不得小于
+`max_trials_per_hypothesis`。
 
 ### `evolution.effects`
 
@@ -83,6 +91,11 @@ Evolution 的预算、重试、并发和评估门限统一放在 `evolution.cont
 | `rollouts_per_example` | 每个样本的 Rollout 次数 |
 | `judge_workers` | Evaluation Judge、Conformance Reviewer 与 Trial Reviewer 的并发上限 |
 | `candidate_error_streak_limit` | Candidate 连续出现相同运行错误时提前停止评估的阈值 |
+| `intervention_extended_tools` | 是否为 Intervention Worker 启用 live stage 语义编辑与 Trial 局部状态；关闭可回退到 Context Patch 和终答控制工具面 |
+| `hook_feasibility_enabled` | 是否在含 `hook_model` 的 Mechanism 与 Compiler 之间启用真实 prefix 能力验证；旧 Run 缺省为关闭 |
+| `hook_feasibility_max_cases` | 每个 Hook-model phase 最多选择的已审阅真实 prefix 数，范围 1–6 |
+| `hook_feasibility_repetitions` | 每个 prefix、每种 thinking mode 的独立重复次数，范围 1–3 |
+| `hook_feasibility_thinking_modes` | Probe 实际比较的 Student thinking mode 列表，可取 `enabled`、`disabled` 或两者 |
 
 `evolve start` 和专用 research-to-candidate 实验入口在创建 Run 时读取这些值，并分别
 冻结到 `run.json.control_config` 与 `run.json.effects_config`。`evolve resume` 只使用 Run
@@ -108,7 +121,7 @@ evidence_reviewer:
 
 当前活动角色为 `failure_analyst`、`hypothesis_researcher`、
 `intervention_worker`、`trial_reviewer`、`evidence_reviewer`、
-`mechanism_distiller`、`compiler`、`candidate_reviewer` 和
+`mechanism_distiller`、`hook_feasibility_reviewer`、`compiler`、`candidate_reviewer` 和
 `conformance_reviewer`。Role Artifact 的模型 provenance 记录实际 thinking 设置；
 `role_budget` 继续记录 token 和回合预算。
 

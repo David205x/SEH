@@ -45,6 +45,12 @@ _EVOLUTION_CONTROL_FIELDS = frozenset(
         "max_work_items",
         "max_total_tokens",
         "min_accuracy_delta",
+        "task_outcome_min_accuracy_delta",
+        "task_outcome_min_attributed_beneficial_examples",
+        "task_outcome_max_attributed_harmful_examples",
+        "behavioral_min_accuracy_delta",
+        "behavioral_min_target_behavior_examples",
+        "behavioral_max_attributed_harmful_examples",
         "max_total_token_ratio",
     }
 )
@@ -57,6 +63,11 @@ _EVOLUTION_EFFECT_FIELDS = frozenset(
         "rollouts_per_example",
         "judge_workers",
         "candidate_error_streak_limit",
+        "intervention_extended_tools",
+        "hook_feasibility_enabled",
+        "hook_feasibility_max_cases",
+        "hook_feasibility_repetitions",
+        "hook_feasibility_thinking_modes",
     }
 )
 

@@ -20,7 +20,7 @@ Candidate Reviewer 另有两个明确的能力边界：Harness diff 检查只由
 | 规范角色 | 当前内部 ID | Role contract | Output contract | 正式 Controller Runtime |
 | --- | --- | --- | --- | --- |
 | Failure Analyst | `failure_analyst` | `@1` | `failure_direction@1` | Native Chat |
-| Hypothesis Researcher | `hypothesis_researcher` | `@1` | `intervention_hypothesis@4` | Native Chat + Role Continuation |
+| Hypothesis Researcher | `hypothesis_researcher` | `@1` | `intervention_hypothesis@5` | Native Chat + Role Continuation |
 | Intervention Executor | `intervention_worker` | `@1` | `intervention_worker_result@4` | Persistent Intervention Branch |
 | Trial Reviewer | `trial_reviewer` | `@1` | `trial_review@2` | Native Chat |
 | Evidence Reviewer | `evidence_reviewer` | `@1` | `evidence_review@2` | Native Chat |

@@ -201,6 +201,11 @@ class TeacherResources:
                 raise ValueError("Failure Analyst requires evaluation resources")
             return {
                 "evaluation": self.evaluation.failure_analyst_context(),
+                "recent_candidate": (
+                    self.candidate_review.initial_context()
+                    if self.candidate_review is not None
+                    else None
+                ),
             }
         if role_id == "hypothesis_researcher":
             if self.evaluation is None:
@@ -210,6 +215,11 @@ class TeacherResources:
             return {
                 "evaluation": (
                     self.evaluation.hypothesis_researcher_context()
+                ),
+                "recent_candidate": (
+                    self.candidate_review.initial_context()
+                    if self.candidate_review is not None
+                    else None
                 ),
             }
         return {
@@ -1647,12 +1657,14 @@ class MechanismDraftStore:
         self,
         *,
         goal: str,
+        effect_goal: str = "task_outcome",
     ) -> str:
         """创建尚未添加 phase rule 的机制草稿。"""
 
         draft_id = f"mechanism_draft_{len(self._drafts) + 1:03d}"
         self._drafts[draft_id] = {
             "goal": goal,
+            "effect_goal": effect_goal,
             "phase_rules": [],
         }
         return draft_id

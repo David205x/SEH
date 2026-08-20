@@ -17,6 +17,7 @@ class WorkKind(str, Enum):
     EXECUTE_TRIAL = "execute_trial"
     REVIEW_EVIDENCE = "review_evidence"
     DISTILL_MECHANISM = "distill_mechanism"
+    VERIFY_HOOK_FEASIBILITY = "verify_hook_feasibility"
     COMPILE_CANDIDATE = "compile_candidate"
     STAGE_CANDIDATE = "stage_candidate"
     VERIFY_CONFORMANCE = "verify_conformance"
@@ -202,6 +203,12 @@ class EvolutionControlConfig:
     max_work_items: int = 80
     max_total_tokens: int | None = None
     min_accuracy_delta: float = -0.02
+    task_outcome_min_accuracy_delta: float = 0.0
+    task_outcome_min_attributed_beneficial_examples: int = 1
+    task_outcome_max_attributed_harmful_examples: int = 0
+    behavioral_min_accuracy_delta: float = -0.02
+    behavioral_min_target_behavior_examples: int = 2
+    behavioral_max_attributed_harmful_examples: int = 0
     max_total_token_ratio: float | None = 3.0
 
     def __post_init__(self) -> None:
@@ -226,6 +233,18 @@ class EvolutionControlConfig:
             "max_compiler_revisions": self.max_compiler_revisions,
             "max_candidate_revisions": self.max_candidate_revisions,
             "max_work_retries": self.max_work_retries,
+            "task_outcome_min_attributed_beneficial_examples": (
+                self.task_outcome_min_attributed_beneficial_examples
+            ),
+            "task_outcome_max_attributed_harmful_examples": (
+                self.task_outcome_max_attributed_harmful_examples
+            ),
+            "behavioral_min_target_behavior_examples": (
+                self.behavioral_min_target_behavior_examples
+            ),
+            "behavioral_max_attributed_harmful_examples": (
+                self.behavioral_max_attributed_harmful_examples
+            ),
         }
         for name, value in non_negative.items():
             if value < 0:
@@ -237,8 +256,18 @@ class EvolutionControlConfig:
             and self.max_total_token_ratio <= 0
         ):
             raise ValueError("max_total_token_ratio must be positive")
-        if not -1.0 <= self.min_accuracy_delta <= 1.0:
-            raise ValueError("min_accuracy_delta must be between -1 and 1")
+        accuracy_floors = {
+            "min_accuracy_delta": self.min_accuracy_delta,
+            "task_outcome_min_accuracy_delta": (
+                self.task_outcome_min_accuracy_delta
+            ),
+            "behavioral_min_accuracy_delta": (
+                self.behavioral_min_accuracy_delta
+            ),
+        }
+        for name, value in accuracy_floors.items():
+            if not -1.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be between -1 and 1")
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,7 @@
 | `execute_trial` | Intervention Executor；Trial Reviewer 随后审阅轨迹 | 在 `rollout_workers` 限制内并发消费批次 Assignment；正确不干预也是可审阅 Trial |
 | `review_evidence` | Trial Reviewer → Evidence Reviewer | 整批 Assignment 处理完后，在 `judge_workers` 限制内并发形成逐 phase predicate observation，程序按 Trial 输入顺序聚合当前 Hypothesis 的累计跨案例正负覆盖，再统一判断是否继续、修订、拒绝或进入蒸馏 |
 | `distill_mechanism` | Mechanism Distiller | Evidence Reviewer 返回 `ready_to_distill`；Distiller 读取结构化 Trial observations 与 coverage summary，必要时自行发起描述性 Student Model Experiment |
+| `verify_hook_feasibility` | Student Hook Probe → Hook Feasibility Reviewer | 配置启用且已蒸馏 Mechanism 至少有一个 `hook_model` phase；在已审阅的真实 prefix 上独立调用 Student 作三值判断，不恢复轨迹 |
 | `compile_candidate` | Mechanism Compiler | 得到已蒸馏机制；或验证/实现反馈要求修订 |
 | `stage_candidate` | Candidate Attempt + Candidate Validation | Mechanism Compiler 提交 Candidate Template |
 | `verify_conformance` | Conformance Reviewer + 小样本 Evaluation | candidate 校验通过；按参考 trial 检查行为保真，并用正式 Judge 结果做局部效果负向预检 |
@@ -31,17 +32,18 @@
 
 - Evidence Reviewer 的 `continue` 回到试验选择，`revise/reject` 回到 Hypothesis Researcher。
 - Mechanism Distiller 的 `needs_evidence` 在 Trial/Assignment 预算仍可调度时回到试验选择；预算耗尽时必须就现有证据终结蒸馏判断。
+- Hook Feasibility 的 `feasible` 进入 Compiler；`needs_spec_revision` 只把操作定义或 runtime input 歧义交回 Distiller；模型边界不稳定、支持范围需要变化或代表性证据缺失时以 `needs_research_revision` 回到同一 Hypothesis Researcher Session。
 - Mechanism Compiler 的 `needs_evidence` 回到试验选择，`needs_mechanism_revision` 或 `implementation_blocked` 回到 Mechanism Distiller；`submitted` 才能建立 Candidate。
 - Candidate Validation 失败回到 Mechanism Compiler。
 - Conformance Reviewer 为失败标明 evidence、mechanism 或 implementation 路由；Controller 按 Reviewer 的结构化诊断回到相应阶段。
 - Candidate Reviewer 的 `revise` 可明确指向 evidence、mechanism 或 implementation。
-- Candidate Reviewer 的真正 `reject` 或 Promotion Gate 的最终拒绝只结束当前 Research Attempt；Controller 保留当前 Accepted Template Version 与 incumbent 评估，在全局 Work Item/token 预算允许时从新的 Failure Analysis 开始同一 Generation 内的下一次 Research Attempt。
+- Candidate Reviewer 的真正 `reject` 或 Promotion Gate 的最终拒绝只结束当前 Solution Attempt；Controller 保留当前 Accepted Template Version、incumbent 评估和上一 Candidate 的紧凑效果引用，在全局 Work Item/token 预算允许时从 Failure Analysis 复核开始同一 Generation 内的下一次 Research Attempt。一次失败不自动替换 Problem Direction。
 
 每条回流受独立预算限制，不依赖一个不断增长的固定条件分支流程。
 
-Research Attempt 是一个 Generation 内从失败分析到 Candidate 决策的研究方向。定向 `revise` 仍属于当前 Research Attempt，不会启动新方向；新 Research Attempt 会清除旧 Hypothesis、Trial、Mechanism、Candidate 与局部 revision 状态，只复用 incumbent report、rollout 和 metrics。同一已拒 Candidate digest 再次提交时，Stage 返回 `unchanged_rejected_candidate` 并放弃当前方向，不会伪装成 Candidate Validation 失败或消耗 Compiler validation revision。
+Research Attempt 是一个 Generation 内从失败分析到 Candidate 决策的研究过程。定向 `revise` 仍属于当前 Solution Attempt；终态拒绝会清除旧 Hypothesis、Trial 与局部 revision 状态，但保留 Candidate Outcome Digest、Evaluation、Compiler、Mechanism、Conformance 和 Reviewer 的只读引用，供 Analyst 复核诊断、Researcher 设计下一方案。累计多次方案失败只形成换向建议，不构成硬门禁。同一已拒 Candidate digest 再次提交时，Stage 返回 `unchanged_rejected_candidate`，不会伪装成 Candidate Validation 失败或消耗 Compiler validation revision。
 
-Intervention Trial 验证语义条件、干预动作与 Student 行为之间的因果关系。它不会实例化未来 Candidate 的 Hook model。Mechanism Distiller 对每个 phase 分离确定性 `guards` 与三值 `decision_contract`，明确 `positive/negative/uncertain` 的可操作边界、证据类别和各自 fallback；当 Hook-model 的提示、输出形态或 thinking mode 仍不确定时，Distiller 或 Compiler 可调用同一描述性 Student Model Experiment 工具。程序保留逐请求原始输出、usage 与 metadata，但不设置 expected label 或确定性 match 门禁，结论仍由角色负责。Packet Builder 再把受控 `runtime_inputs` Topic 展开为完整、源码派生的 Python-native API 文档；只有 Mechanism Compiler 负责把已冻结契约实现为 Candidate，不能重新发明语义边界。
+Intervention Trial 验证语义条件、干预动作与 Student 行为之间的因果关系。它不会实例化未来 Candidate 的 Hook model。Mechanism Distiller 对每个 phase 分离确定性 `guards` 与三值 `decision_contract`，明确 `positive/negative/uncertain` 的可操作边界、证据类别和各自 fallback；Distiller 或 Compiler 的 Student Model Experiment 仍是可选的合成探索。正式 Hook Feasibility 则把冻结 contract 投影到 Trial 已审阅的原始 prefix，以相同 Student profile、配置的 thinking modes 和重复次数独立调用模型，Hook 输出后立即结束，不恢复 Student 轨迹。程序保存 reference label、真实模型输入、逐请求原始输出、usage 与 metadata，但不以确定性程序判断语义通过；Reviewer 决定稳定性、thinking mode 与回流目标。Packet Builder 再把受控 `runtime_inputs` Topic 展开为完整、源码派生的 Python-native API 文档；只有 Mechanism Compiler 负责把已经通过 feasibility 的契约实现为 Candidate，不能重新发明语义边界。
 
 Selector 先使用 Failure Analyst 的有序 `evidence_refs`，不足时继续扫描冻结 Evaluation rollout。一个批次优先覆盖尚未选择的 `example_id`，其次把新 replicate 分散到不同的既有 example，最后才复用同一 replicate 的剩余 phase-compatible prefix。它不读取自然语言 obligation 的语义，也不能选择未来分支结果；Evidence Reviewer 得到这一能力边界，不得要求 Selector 持续采样直到出现某个随机行为。`selection_mode=fresh` 只表示该批至少扩展了一个 example；未扩展时为 `reuse`，精确组成始终以 `assignments` 为准。批次大小不超过 `trial_batch_size`、剩余 Trial 预算和剩余 Assignment 预算三者的最小值。
 
@@ -57,9 +59,9 @@ Evolution Controller 先检查已有 Effect Receipt，再决定执行。因此�
 
 ## 候选与晋升
 
-Candidate Attempt 以当前 Accepted Template Version 为 Parent Version，通过文件编辑事件形成 Candidate Workspace。它必须依次通过 Candidate Validation、Conformance Review、同口径 Evaluation、Candidate Review 与 Promotion Gate。Gate 至少检查 Candidate Validation、Candidate Reviewer Recommendation、准确率增量下限和可选 token 比率上限。
+Candidate Attempt 以当前 Accepted Template Version 为 Parent Version，通过文件编辑事件形成 Candidate Workspace。它必须依次通过 Candidate Validation、Conformance Review、同口径 Evaluation、Candidate Review 与 Promotion Gate。Mechanism 的 `effect_goal` 区分 `task_outcome` 与 `behavioral_intermediate`；Conformance、Candidate Reviewer 和 Gate 共享该目标，但分别检查局部效果、全量语义证据和确定性阈值。Gate 还检查 Candidate Validation、Reviewer Recommendation、目标专用准确率/归因阈值和可选 token 比率上限。
 
-Conformance Review 不直接把持久化完整 trace 输入模型。Controller 先生成只承担裁剪、不承担语义裁决的 Conformance trajectory view：重复对话快照、reasoning、usage 与无关事件被移除，工具证据、Student 解析动作、Hook 判定、Hook change、相关状态和最终结果保持可审查。相同少量 replay 另经正式 Evaluation/Judge 得到 score 与 assessment；Reviewer 分开提交实现保真和局部效果结论。明确的局部伤害可在完整 Candidate Evaluation 前拦截，但全为正确不触发或其他中性分支时只说明预检未观察到收益，不等价于证明无效。
+Conformance Review 不直接把持久化完整 trace 输入模型。Controller 先生成只承担裁剪、不承担语义裁决的 Conformance trajectory view：重复对话快照、reasoning、usage 与无关事件被移除，工具证据、Student 解析动作、Hook 判定、Hook change、相关状态和最终结果保持可审查。相同少量 replay 另经正式 Evaluation/Judge 得到 score 与 assessment；Reviewer 分开提交实现保真、目标行为是否出现和局部效果结论。明确局部伤害总会拦截；`task_outcome` 全中性时因未见局部收益而拦截，`behavioral_intermediate` 则允许结果中性但必须实际观察到声明的中间行为。
 
 当 Conformance 或 Candidate Validation 要求 implementation revision 时，下一次 Mechanism Compiler 从上一轮已提交 Candidate workspace 的精确文件 overlay 接续，并接收既有 changed paths、实现摘要、已查询 API 标识、模型实验以及紧凑 Conformance failures；Parent Version 仍是当前 Accepted Template Version。Compiler 修订是新的 Role Session，而不是无限续长旧 transcript；结构化接续避免重复读 Harness，同时隔离已膨胀上下文。若 workspace 与被拒 revision 相同，finalizer 要求实际修改或返回非提交结论。Conformance 若诊断为 `ambiguous_spec` 或 evaluator 契约问题则回到 Mechanism Distiller，若诊断为研究证据不足则回到 Trial selection。只有机制修订才重新建立新的实现方向，局部实现修订不从 Parent Template 重做接口探索。
 

@@ -14,7 +14,9 @@ from search_harness.evolution.research.roles.contracts import (
     FailureAnalystInput,
     FailureDirection,
     HypothesisResearcherInput,
+    HypothesisEvidenceObligation,
     InterventionHypothesis,
+    InterventionPhaseDirective,
     InterventionWorkerResult,
     MechanismSpec,
     MechanismDistillation,
@@ -82,6 +84,59 @@ class TeacherContractTest(unittest.TestCase):
                 applicability="Partial-evidence multi-hop cases.",
             )
 
+    def test_hypothesis_allows_earlier_fork_than_first_live_directive(self) -> None:
+        """验证恢复锚点可早于首个真正干预阶段而无需虚构 no-op 指令。"""
+
+        hypothesis = InterventionHypothesis.model_validate(
+            {
+                "fork_phase": "post_prompt",
+                "phase_plan": [
+                    {
+                        "phase": "pre_tool",
+                        "activation_condition": "The pending query is overly broad.",
+                        "instruction": "Replace only the pending query arguments.",
+                        "expected_effect": "The focused query is executed.",
+                    }
+                ],
+                "evaluation": {
+                    "primary_signal": "executed query",
+                    "success_condition": "The focused query is executed.",
+                    "falsifier": "The broad query is executed.",
+                    "secondary_metrics": [],
+                },
+                "applicability": "A broad pending retrieval action.",
+            }
+        )
+
+        self.assertEqual(hypothesis.fork_phase, "post_prompt")
+        self.assertEqual(hypothesis.phase_plan[0].phase, "pre_tool")
+
+    def test_hypothesis_contract_has_complex_plan_expression_margin(self) -> None:
+        """验证复杂 phase 边界可使用适度放宽后的字段空间。"""
+
+        directive_schema = InterventionPhaseDirective.model_json_schema()
+        obligation_schema = HypothesisEvidenceObligation.model_json_schema()
+        hypothesis_schema = InterventionHypothesis.model_json_schema()
+
+        self.assertEqual(
+            directive_schema["properties"]["activation_condition"][
+                "maxLength"
+            ],
+            400,
+        )
+        self.assertEqual(
+            obligation_schema["properties"]["obligation"]["maxLength"],
+            300,
+        )
+        self.assertEqual(
+            obligation_schema["properties"]["rationale"]["maxLength"],
+            300,
+        )
+        self.assertEqual(
+            hypothesis_schema["properties"]["applicability"]["maxLength"],
+            500,
+        )
+
     def test_role_registry_binds_output_contract(self) -> None:
         """验证角色 ID 同时约束输入类型和稳定输出协议版本。"""
 
@@ -95,7 +150,7 @@ class TeacherContractTest(unittest.TestCase):
                 "hypothesis_researcher",
                 1,
             ).output_contract_version,
-            4,
+            5,
         )
         self.assertEqual(
             get_teacher_role(

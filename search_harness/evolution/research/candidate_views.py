@@ -74,6 +74,8 @@ def render_candidate_review_input(
                     ),
                 ),
             ),
+            "## Candidate outcome digest\n"
+            + _jsonl([value.get("candidate_outcome_digest")]),
             "## Implementation summary\n"
             + _value(value.get("implementation_summary")),
             "## Unresolved risk\n" + _value(value.get("unresolved_risk")),

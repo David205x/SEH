@@ -33,6 +33,7 @@ class InterventionRoleRunner:
         env_file: Path = Path(".env"),
         max_steps_per_activation: int = 8,
         teacher_judge: bool = True,
+        extended_worker_tools: bool = False,
     ) -> None:
         if max_steps_per_activation < 1:
             raise ValueError(
@@ -41,6 +42,7 @@ class InterventionRoleRunner:
         self.env_file = env_file
         self.max_steps_per_activation = max_steps_per_activation
         self.teacher_judge = teacher_judge
+        self.extended_worker_tools = extended_worker_tools
 
     async def run(
         self,
@@ -110,6 +112,7 @@ class InterventionRoleRunner:
                 student_max_steps=config.student_max_steps,
                 worker_max_steps_per_activation=role_budget.max_turns,
                 teacher_judge=self.teacher_judge,
+                extended_worker_tools=self.extended_worker_tools,
             ),
             teacher_config=replace(
                 model_config,
@@ -244,6 +247,7 @@ def _trial_artifact(
         ),
         "context_changes": artifact["intervention_changes"],
         "phase_effects": artifact.get("phase_effects", []),
+        "trial_state": artifact.get("trial_state", {}),
         "branch_run": artifact["branch_run"],
         "comparison": artifact["comparison"],
         "worker_trace": artifact["worker_trace"],

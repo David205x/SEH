@@ -7,151 +7,48 @@
     <list default="true" id="0c1f24d9-7503-428e-9c1b-6f73cb750c0e" name="Changes" comment="v1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/runtime.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/runtime.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/architecture/evaluation.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture/evaluation.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/architecture/evolution.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture/evolution.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audits/teacher-query-tools-audit.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher-query-tools-audit.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audits/teacher-query-views-candidate-reviewer-ab-20260813.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher-query-views-candidate-reviewer-ab-20260813.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audits/teacher-query-views-compiler-ab-20260813.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher-query-views-compiler-ab-20260813.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audits/teacher-query-views-conformance-ab-20260813.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher-query-views-conformance-ab-20260813.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/audits/teacher-query-views-researcher-intervention-ab-20260812.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher-query-views-researcher-intervention-ab-20260812.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/audits/teacher_roles_current_code_audit.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/audits/teacher_roles_current_code_audit.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/design/failure-landscape-boundary-awareness-research-plan.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/failure-landscape-boundary-awareness-research-plan.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/design/researcher-boundary-preservation-prompt-experiment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/researcher-boundary-preservation-prompt-experiment.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/design/researcher-boundary-prompt-repair-experiment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/researcher-boundary-prompt-repair-experiment.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/design/teacher-query-tool-views.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/design/teacher-query-tool-views.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/guides/run-evolution.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/guides/run-evolution.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/reference/artifact-schemas.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/reference/artifact-schemas.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/reference/configuration.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/reference/configuration.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/reference/lifecycle-and-components.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/reference/lifecycle-and-components.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/reference/role-contracts.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/reference/role-contracts.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evolution_observer/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evolution_observer/artifacts.py" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/artifacts.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evolution_observer/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evolution_observer/static/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/static/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evolution_observer/static/event.html" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/static/event.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evolution_observer/static/event.js" beforeDir="false" afterPath="$PROJECT_DIR$/evolution_observer/static/event.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/clone_run_from_incumbent.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/clone_run_from_incumbent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_candidate_reviewer_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_compiler_authoring_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_compiler_conformance_probe.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/run_compiler_conformance_probe.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_conformance_batch_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_distiller_dossier_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_intervention_query_views_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_researcher_boundary_prompt_experiment.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_reviewer_query_views_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_shadow_judge_landscape.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_teacher_query_views_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/run_teacher_query_views_probe.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/candidate.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/compiler.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/conformance.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/intervention.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/judge.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/prompt.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/candidate_reviewer/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/candidate_reviewer/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/candidate_reviewer/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/candidate_reviewer/tools/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/compiler/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/compiler/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/compiler/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/compiler/tools/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/conformance_reviewer_batch/prompt/system.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/conformance_reviewer_batch/prompt/user.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/prompt/continuations/trial_reviews.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/prompt/system.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/evidence_reviewer/prompt/user.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/prompt/system.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/prompt/user.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/failure_analyst/tools/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/prompt/continuations/evidence_reviewer.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/prompt/system.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/prompt/user.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/hypothesis_researcher/tools/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/mechanism_distiller/harness.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/mechanism_distiller/output/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/mechanism_distiller/prompt/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/templates/mechanism_distiller/tools/component.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/tools.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/teacher_query_views/views.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/harness.json" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/harness.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/prompt/component.py" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/prompt/component.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/candidate_reviewer/prompt/system.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/compiler/harness.json" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/compiler/harness.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/compiler/prompt/component.py" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/compiler/prompt/component.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/compiler/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/compiler/prompt/system.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/component.py" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/component.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/system.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/user.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/conformance_reviewer/prompt/user.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/evidence_reviewer/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/evidence_reviewer/prompt/system.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/harness.json" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/harness.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/prompt/system.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/prompt/user.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/failure_analyst/prompt/user.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/harness.json" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/harness.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/prompt/system.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/prompt/user.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/hypothesis_researcher/prompt/user.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/harness.json" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/harness.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/component.py" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/component.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/intervention_worker/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/intervention_worker/prompt/system.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/system.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/system.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/user.md" beforeDir="false" afterPath="$PROJECT_DIR$/harness_templates/teacher/mechanism_distiller/prompt/user.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evaluation/judge.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evaluation/judge.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evaluation/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evaluation/types.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/_internal/runtime_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/_internal/runtime_config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/conformance_effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/conformance_effects.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/domain.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/domain.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/effects.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/evaluation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/evidence_review_effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/evidence_review_effects.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/intervention_effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/intervention_effects.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/policies.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/policies.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/research_role_effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/research_role_effects.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/control/transitions.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/control/transitions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/candidate_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/candidate_views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/conformance.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/conformance.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/hook_evaluator_probe.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/intervention/capabilities.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/intervention/capabilities.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/intervention/role_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/intervention/role_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/intervention/runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/intervention/runtime.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/intervention/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/intervention/worker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/mechanism/hook_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/mechanism/hook_api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/resources/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/resources/base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/resources/stores.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/resources/stores.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/roles/agents_sdk_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/roles/agents_sdk_runner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/roles/contracts.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/roles/contracts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/roles/native_chat_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/roles/native_chat_runner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/search_harness/evolution/research/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/evolution/research/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/framework/agent/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/framework/agent/types.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/framework/harness/lifecycle.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/framework/harness/lifecycle.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/hook_backend.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/hook_backend.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/tool_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/search_harness/integrations/openai_compatible/tool_runner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evaluation/test_judge.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evaluation/test_judge.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/research/intervention/test_branch_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/intervention/test_branch_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/research/resources/test_resources.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/resources/test_resources.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/research/resources/test_role_resources.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/resources/test_role_resources.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/evolution/research/intervention/test_capabilities.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/intervention/test_capabilities.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/research/roles/test_contracts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/roles/test_contracts.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/research/roles/test_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/roles/test_loader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/research/roles/test_native_chat_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/roles/test_native_chat_runner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/research/roles/test_prompting.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/research/roles/test_prompting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/test_clone_run_from_incumbent.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/test_clone_run_from_incumbent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/test_conformance.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/test_conformance.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/evolution/test_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/test_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/test_hook_evaluator_probe.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution/test_research_role_effects.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution/test_research_role_effects.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/evolution_observer/test_artifacts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/evolution_observer/test_artifacts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_candidate_reviewer_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_compiler_authoring_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_conformance_batch_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_distiller_dossier_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_researcher_boundary_prompt_experiment.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_reviewer_query_views.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_shadow_judge_landscape.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_teacher_query_views.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/experiments/test_teacher_query_views_ab.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/framework/test_hooks.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/framework/test_hooks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integrations/test_openai_compatible.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integrations/test_openai_compatible.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integrations/test_openai_tool_runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integrations/test_openai_tool_runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_runtime_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_runtime_config.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -399,7 +296,8 @@
       <workItem from="1785258658244" duration="89786000" />
       <workItem from="1786184741201" duration="9914000" />
       <workItem from="1786465794372" duration="3273000" />
-      <workItem from="1786530721114" duration="11326000" />
+      <workItem from="1786530721114" duration="15493000" />
+      <workItem from="1787106864366" duration="3660000" />
     </task>
     <task id="LOCAL-00001" summary="v1">
       <option name="closed" value="true" />
@@ -435,8 +333,8 @@
     <SUITE FILE_PATH="coverage/search_harness$demo_main.coverage" NAME="demo_main Coverage Results" MODIFIED="1783428210477" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/search_harness$0_init_from_existed.coverage" NAME="0_clone_from_existed Coverage Results" MODIFIED="1786182076084" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$0_clone_from_existed.coverage" NAME="0_clone_from_existed Coverage Results" MODIFIED="1786196481647" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
-    <SUITE FILE_PATH="coverage/search_harness$v2_0_failure_analyst.coverage" NAME="v2_0_failure_analyst Coverage Results" MODIFIED="1785057248986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$v2_1_hypothesis_researcher.coverage" NAME="v2_1_hypothesis_researcher Coverage Results" MODIFIED="1785063174971" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
+    <SUITE FILE_PATH="coverage/search_harness$v2_0_failure_analyst.coverage" NAME="v2_0_failure_analyst Coverage Results" MODIFIED="1785057248986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$inspect_dataset.coverage" NAME="inspect_dataset Coverage Results" MODIFIED="1783681188082" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/search_harness/runners" />
     <SUITE FILE_PATH="coverage/search_harness$v2_2_intervention_worker.coverage" NAME="v2_2_intervention_worker Coverage Results" MODIFIED="1785128557666" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$runners_run_dataset_stu.coverage" NAME="runners.run_dataset_stu Coverage Results" MODIFIED="1784528292337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
@@ -450,7 +348,7 @@
     <SUITE FILE_PATH="coverage/search_harness$1_evolution_start.coverage" NAME="1_evolution_start Coverage Results" MODIFIED="1786253730837" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$main.coverage" NAME="main Coverage Results" MODIFIED="1782986381766" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/search_harness$0_init_version_store.coverage" NAME="0_init_version_store Coverage Results" MODIFIED="1786253702688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
-    <SUITE FILE_PATH="coverage/search_harness$visualizer.coverage" NAME="visualizer Coverage Results" MODIFIED="1786763423535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
+    <SUITE FILE_PATH="coverage/search_harness$visualizer.coverage" NAME="visualizer Coverage Results" MODIFIED="1787112104509" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$main__1_.coverage" NAME="demo_main Coverage Results" MODIFIED="1783415905309" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/search_harness$eval_visualizer.coverage" NAME="visualizer Coverage Results" MODIFIED="1784047319162" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="D:\_Project\Agent\search_harness" />
     <SUITE FILE_PATH="coverage/search_harness$__main__.coverage" NAME="search_harness.visualizer Coverage Results" MODIFIED="1783913978814" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/search_harness/visualizer" />

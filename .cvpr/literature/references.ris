@@ -1,0 +1,313 @@
+TY  - PREPRINT
+ID  - lee2026metaharness
+TI  - Meta-Harness: End-to-End Optimization of Model Harnesses
+AU  - Lee, Yoonho
+AU  - Nair, Roshen
+AU  - Zhang, Qizheng
+AU  - Lee, Kangwook
+AU  - Khattab, Omar
+AU  - Finn, Chelsea
+PY  - 2026
+UR  - https://arxiv.org/abs/2603.28052
+ER  -
+
+TY  - PREPRINT
+ID  - zhang2026selfharness
+TI  - Self-Harness: Harnesses That Improve Themselves
+AU  - Zhang, Hangfan
+AU  - Zhang, Shao
+AU  - Li, Kangcong
+AU  - Zhang, Chen
+AU  - Chen, Yang
+AU  - Zhang, Yiqun
+AU  - Bai, Lei
+AU  - Hu, Shuyue
+PY  - 2026
+UR  - https://arxiv.org/abs/2606.09498
+ER  -
+
+TY  - PREPRINT
+ID  - shao2026harnessr1
+TI  - Harness-R1: Learning to Edit Executable Runtime Harnesses from Agent Failure Trajectories
+AU  - Shao, Shuai
+AU  - Zhang, Kangning
+AU  - Li, Qingyao
+AU  - Wang, Shijian
+AU  - Wang, Hao
+AU  - Jiao, Wenxiang
+AU  - Lu, Yuan
+AU  - Guo, Yi
+AU  - Liu, Weiwen
+AU  - Zhang, Weinan
+PY  - 2026
+UR  - https://arxiv.org/abs/2608.02276
+ER  -
+
+TY  - PREPRINT
+ID  - lin2026ahe
+TI  - Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses
+AU  - Lin, Jiahang
+AU  - Liu, Shichun
+AU  - Pan, Chengjun
+AU  - Lin, Lizhi
+AU  - Dou, Shihan
+AU  - Xi, Zhiheng
+AU  - Huang, Xuanjing
+AU  - Yan, Hang
+AU  - Han, Zhenhua
+AU  - Gui, Tao
+AU  - Jiang, Yu-Gang
+PY  - 2026
+UR  - https://arxiv.org/abs/2604.25850
+ER  -
+
+TY  - PREPRINT
+ID  - che2026demoevolve
+TI  - DemoEvolve: Overcoming Sparse Feedback in Agentic Harness Evolution with Demonstrations
+AU  - Che, Lirong
+AU  - Yang, Yuzhe
+AU  - Lin, Peiwen
+AU  - Wang, Chuang
+AU  - Wang, Xueqian
+AU  - Su, Jian
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.24539
+ER  -
+
+TY  - PREPRINT
+ID  - lin2026updatingnotbenefit
+TI  - Harness Updating Is Not Harness Benefit: Disentangling Evolution Capabilities in Self-Evolving LLM Agents
+AU  - Lin, Minhua
+AU  - Wu, Juncheng
+AU  - Wang, Zijun
+AU  - Shi, Zhan
+AU  - Sang, Yisi
+AU  - He, Bing
+AU  - Liu, Zewen
+AU  - Wei, Tianxin
+AU  - Wu, Zongyu
+AU  - Zhang, Zhiwei
+AU  - Wang, Dakuo
+AU  - Zhang, Xiang
+AU  - Dumoulin, Benoit
+AU  - Xie, Cihang
+AU  - Zhou, Yuyin
+AU  - Wang, Suhang
+AU  - Lu, Hanqing
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.30621
+ER  -
+
+TY  - PREPRINT
+ID  - nie2026tthe
+TI  - TTHE: Test-Time Harness Evolution
+AU  - Nie, Jun
+AU  - Zhang, Yonggang
+AU  - Song, Jun
+AU  - Cai, Qianshu
+AU  - Yu, Dahai
+AU  - Guo, Yike
+AU  - Tian, Xinmei
+AU  - Han, Bo
+PY  - 2026
+UR  - https://arxiv.org/abs/2607.08124
+ER  -
+
+TY  - PREPRINT
+ID  - yu2026shepherd
+TI  - Shepherd: Enabling Programmable Meta-Agents via Reversible Agentic Execution Traces
+AU  - Yu, Simon
+AU  - Chong, Derek
+AU  - Nandi, Ananjan
+AU  - Soylu, Dilara
+AU  - Sun, Jiuding
+AU  - Manning, Christopher D.
+AU  - Shi, Weiyan
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.10913
+ER  -
+
+TY  - PREPRINT
+ID  - nian2026tracegraph
+TI  - TraceGraph: Shared Decision Landscapes for Diagnosing and Improving Agent Trajectories
+AU  - Nian, Junjie
+AU  - Chen, Kang
+AU  - Zhang, Ge
+AU  - Cao, Yixin
+AU  - Jiang, Yugang
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.31308
+ER  -
+
+TY  - PREPRINT
+ID  - liu2026hasp
+TI  - Harnessing LLM Agents with Skill Programs
+AU  - Liu, Hongjun
+AU  - Ming, Yifei
+AU  - Joty, Shafiq
+AU  - Zhao, Chen
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.17734
+ER  -
+
+TY  - PREPRINT
+ID  - luo2026harnessbank
+TI  - HarnessBank: Semantic Gene-Bank Search with Gated Verification for Agent-Harness Self-Evolution
+AU  - Luo, Xiaotian
+AU  - Xue, Dizhan
+AU  - Wang, Fengxingyu
+AU  - Hu, Chuanrui
+AU  - Deng, Yafeng
+PY  - 2026
+UR  - https://arxiv.org/abs/2607.13683
+ER  -
+
+TY  - PREPRINT
+ID  - guo2026drevo
+TI  - DREvo: Distilling Recalibrated Historical Experience for Harness Self-Evolution
+AU  - Guo, Hanghui
+AU  - Shi, Weijie
+AU  - Chen, Zhangze
+AU  - Xu, Shengxiang
+AU  - Wang, Yishu
+AU  - Zhang, Yimei
+AU  - Ni, Wangze
+AU  - Zhu, Jia
+AU  - Di, Shimin
+PY  - 2026
+UR  - https://arxiv.org/abs/2607.26722
+ER  -
+
+TY  - PREPRINT
+ID  - zhou2026hsi
+TI  - Hierarchical Self-Improvement: A Framework for Task-Specific Evolvable Agent Harnesses
+AU  - Zhou, Tailin
+PY  - 2026
+UR  - https://arxiv.org/abs/2608.08466
+ER  -
+
+TY  - PREPRINT
+ID  - ursekar2026vero
+TI  - VeRO: A Harness for Agents to Optimize Agents
+AU  - Ursekar, Varun
+AU  - Shanker, Apaar
+AU  - Chatrath, Veronica
+AU  - Xue, Yuan
+AU  - Denton, Samuel Marc
+PY  - 2026
+UR  - https://arxiv.org/abs/2602.22480
+ER  -
+
+TY  - PREPRINT
+ID  - zhang2026harnesscompass
+TI  - HarnessCompass: Guiding Automatic Harness Evolution toward Generalizable and Effective Agent Harnesses
+AU  - Zhang, Luan
+AU  - Zhou, Ruochen
+AU  - Song, Dandan
+AU  - Chen, Zhengyu
+AU  - Tian, Yuhang
+AU  - Yang, Jun
+AU  - Ma, Huipeng
+AU  - Li, Chenhao
+AU  - Feng, Guangyuan
+AU  - Li, Xudong
+AU  - Jin, Yizhou
+AU  - Xu, Yan
+PY  - 2026
+UR  - https://arxiv.org/abs/2608.01918
+ER  -
+
+TY  - PREPRINT
+ID  - wang2026rethinking
+TI  - Rethinking the Evaluation of Harness Evolution for Agents
+AU  - Wang, Yike
+AU  - Zhu, Huaisheng
+AU  - Hu, Zhengyu
+AU  - Yuan, Yige
+AU  - Chen, Zhengyu
+AU  - Senthil, Shakti
+AU  - Hajishirzi, Hannaneh
+AU  - Tsvetkov, Yulia
+AU  - Dasigi, Pradeep
+AU  - Xiao, Teng
+PY  - 2026
+UR  - https://arxiv.org/abs/2607.12227
+ER  -
+
+TY  - PREPRINT
+ID  - zhang2025gmemory
+TI  - G-Memory: Tracing Hierarchical Memory for Multi-Agent Systems
+AU  - Zhang, Guibin
+AU  - Fu, Muxin
+AU  - Wan, Guancheng
+AU  - Yu, Miao
+AU  - Wang, Kun
+AU  - Yan, Shuicheng
+PY  - 2025
+UR  - https://arxiv.org/abs/2506.07398
+ER  -
+
+TY  - PREPRINT
+ID  - yuen2025intrinsic
+TI  - Intrinsic Memory Agents: Heterogeneous Multi-Agent LLM Systems through Structured Contextual Memory
+AU  - Yuen, Sizhe
+AU  - Gomez Medina, Francisco
+AU  - Su, Ting
+AU  - Du, Yali
+AU  - Sobey, Adam J.
+PY  - 2025
+UR  - https://arxiv.org/abs/2508.08997
+ER  -
+
+TY  - PREPRINT
+ID  - wu2026llmamem
+TI  - Scaling Teams or Scaling Time? Memory Enabled Lifelong Learning in LLM Multi-Agent Systems
+AU  - Wu, Shanglin
+AU  - Luo, Yuyang
+AU  - Liang, Yueqing
+AU  - Shi, Kaiwen
+AU  - Ye, Yanfang
+AU  - Payani, Ali
+AU  - Shu, Kai
+PY  - 2026
+UR  - https://arxiv.org/abs/2604.03295
+ER  -
+
+TY  - PREPRINT
+ID  - wang2026searchmemory
+TI  - When Search Becomes Memory: Turning Robot Design Trials into Transferable Skills
+AU  - Wang, Yunfei
+AU  - Xu, Xiaohao
+AU  - Li, Yang
+AU  - Huang, Xiaonan
+PY  - 2026
+UR  - https://arxiv.org/abs/2605.25832
+ER  -
+
+TY  - CONF
+ID  - zhao2024expel
+TI  - ExpeL: LLM Agents Are Experiential Learners
+AU  - Zhao, Andrew
+AU  - Huang, Daniel
+AU  - Xu, Quentin
+AU  - Lin, Matthieu
+AU  - Liu, Yong-Jin
+AU  - Huang, Gao
+PY  - 2024
+T2  - Proceedings of the AAAI Conference on Artificial Intelligence
+UR  - https://arxiv.org/abs/2308.10144
+ER  -
+
+TY  - CONF
+ID  - xu2025amem
+TI  - A-MEM: Agentic Memory for LLM Agents
+AU  - Xu, Wujiang
+AU  - Liang, Zujie
+AU  - Mei, Kai
+AU  - Gao, Hang
+AU  - Tan, Juntao
+AU  - Zhang, Yongfeng
+PY  - 2025
+T2  - Advances in Neural Information Processing Systems
+UR  - https://arxiv.org/abs/2502.12110
+ER  -

@@ -16,6 +16,21 @@ from .domain import (
 from .policies import evaluate_promotion
 
 
+_RESEARCH_REF_KEYS = (
+    "rollout_file",
+    "report_dir",
+    "failure_artifact",
+    "hypothesis_artifact",
+    "candidate_report_dir",
+    "candidate_rollout_file",
+    "candidate_outcome_digest",
+    "candidate_reviewer_artifact",
+    "compiler_artifact",
+    "mechanism_file",
+    "conformance_summary_artifact",
+)
+
+
 @dataclass(frozen=True)
 class TransitionPlan:
     """The durable control-plane actions caused by one terminal work item."""
@@ -104,6 +119,15 @@ class _CompletedTransition:
     def on_analyze_failure(self) -> TransitionPlan:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
+        prior_direction = payload.get("prior_problem_direction_id")
+        payload["problem_direction_id"] = (
+            prior_direction
+            if isinstance(prior_direction, str) and prior_direction
+            else _lineage_id(
+                "problem_direction",
+                refs.get("failure_artifact", self.item.work_id),
+            )
+        )
         return self._one(
             WorkKind.RESEARCH_HYPOTHESIS,
             "failure_analyzed",
@@ -118,12 +142,7 @@ class _CompletedTransition:
         )
         refs = {
             key: current_refs[key]
-            for key in (
-                "rollout_file",
-                "report_dir",
-                "failure_artifact",
-                "hypothesis_artifact",
-            )
+            for key in _RESEARCH_REF_KEYS
             if key in current_refs
         }
         payload = _context(self.item)
@@ -517,12 +536,72 @@ class _CompletedTransition:
             )
         if decision != "distilled":
             raise ValueError(f"unknown Mechanism Distiller decision: {decision}")
+        payload["effect_goal"] = str(
+            self.result.outcome.get("effect_goal", "task_outcome")
+        )
+        if self.result.outcome.get("requires_hook_feasibility") is True:
+            return self._one(
+                WorkKind.VERIFY_HOOK_FEASIBILITY,
+                "mechanism_requires_hook_feasibility",
+                refs=refs,
+                payload=payload,
+            )
         return self._one(
             WorkKind.COMPILE_CANDIDATE,
             "mechanism_distilled",
             refs=refs,
             payload=payload,
         )
+
+    def on_verify_hook_feasibility(self) -> TransitionPlan:
+        output = _required_object(self.result.outcome, "output")
+        decision = _required_string(output, "decision")
+        refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
+        payload = _context(self.item)
+        if decision == "feasible":
+            raw_guidance = output.get("compiler_guidance", [])
+            guidance = _string_list(raw_guidance, "compiler_guidance")
+            constraints = list(
+                payload.get("implementation_constraints", [])
+            )
+            constraints.extend(guidance)
+            payload["implementation_constraints"] = constraints
+            return self._one(
+                WorkKind.COMPILE_CANDIDATE,
+                "hook_feasibility_supported",
+                refs=refs,
+                payload=payload,
+            )
+        feedback = _required_string(output, "revision_feedback")
+        if decision == "needs_spec_revision":
+            revision = int(payload.get("mechanism_revision", 0)) + 1
+            if revision > self.config.max_mechanism_revisions:
+                return TransitionPlan(
+                    complete_reason=(
+                        "Hook feasibility requested a specification revision "
+                        "after the mechanism revision budget was exhausted."
+                    )
+                )
+            payload["mechanism_revision"] = revision
+            constraints = list(payload.get("capability_constraints", []))
+            constraints.append(feedback)
+            payload["capability_constraints"] = constraints
+            refs.pop("hook_feasibility_artifact", None)
+            refs.pop("hook_feasibility_probe", None)
+            return self._one(
+                WorkKind.DISTILL_MECHANISM,
+                f"hook_spec_revision:{revision}",
+                refs=refs,
+                payload=payload,
+            )
+        if decision == "needs_research_revision":
+            return self._research_revision(
+                feedback_source="hook_feasibility_reviewer",
+                feedback=output,
+                refs=refs,
+                payload=payload,
+            )
+        raise ValueError(f"unknown Hook feasibility decision: {decision}")
 
     def on_compile_candidate(self) -> TransitionPlan:
         output = _required_object(self.result.outcome, "output")
@@ -650,6 +729,7 @@ class _CompletedTransition:
                 ),
             }
         )
+        payload["solution_attempt_id"] = payload["candidate_attempt_id"]
         return self._one(
             WorkKind.VERIFY_CONFORMANCE,
             "candidate_valid",
@@ -662,6 +742,11 @@ class _CompletedTransition:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
         summary = _required_object(self.result.outcome, "summary")
+        decision, summary = _apply_effect_goal_to_conformance_summary(
+            decision=decision,
+            summary=summary,
+            effect_goal=_mechanism_effect_goal(payload),
+        )
         payload["conformance_summary"] = summary
         if decision == "pass":
             return self._one(
@@ -738,6 +823,13 @@ class _CompletedTransition:
         recommendation = _required_string(output, "recommendation")
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
+        raw_digest = self.result.outcome.get("candidate_outcome_digest")
+        outcome_digest = raw_digest if isinstance(raw_digest, dict) else None
+        hook_activity = (
+            outcome_digest.get("hook_activity")
+            if outcome_digest is not None
+            else None
+        )
         gate = evaluate_promotion(
             reviewer_recommendation=recommendation,
             validation_summary=_required_payload_object(
@@ -753,7 +845,18 @@ class _CompletedTransition:
                 "candidate_metrics",
             ),
             config=self.config,
+            effect_goal=_mechanism_effect_goal(payload),
+            effect_summary=(
+                hook_activity if isinstance(hook_activity, dict) else None
+            ),
         )
+        if outcome_digest is not None:
+            payload["candidate_outcome_digest"] = outcome_digest
+            mechanism_digest = outcome_digest.get("mechanism")
+            if isinstance(mechanism_digest, dict):
+                fingerprint = mechanism_digest.get("fingerprint")
+                if isinstance(fingerprint, str) and fingerprint:
+                    payload["solution_fingerprint"] = fingerprint
         payload["promotion_gate"] = gate.to_dict()
         payload["candidate_review"] = output
 
@@ -904,13 +1007,11 @@ class _CompletedTransition:
         rejection_reason: str,
         route: str,
     ) -> TransitionPlan:
-        """Abandon one rejected direction while reusing incumbent evidence."""
+        """Start another solution attempt while retaining nearby evidence."""
 
         attempt = int(payload.get("research_attempt", 1)) + 1
         next_refs = {
-            key: value
-            for key, value in refs.items()
-            if key in {"report_dir", "rollout_file"}
+            key: value for key, value in refs.items() if key in _RESEARCH_REF_KEYS
         }
         next_payload = {
             key: payload[key]
@@ -918,8 +1019,20 @@ class _CompletedTransition:
             if key in payload
         }
         next_payload["research_attempt"] = attempt
-        next_payload["analysis_focus"] = _alternate_failure_focus(
-            rejection_reason
+        failure_count = int(payload.get("solution_failure_count", 0)) + 1
+        next_payload["solution_failure_count"] = failure_count
+        next_payload["prior_problem_direction_id"] = payload.get(
+            "problem_direction_id"
+        )
+        next_payload["prior_solution_attempt_id"] = payload.get(
+            "solution_attempt_id",
+        )
+        next_payload["prior_solution_fingerprint"] = payload.get(
+            "solution_fingerprint"
+        )
+        next_payload["analysis_focus"] = _candidate_rejection_focus(
+            rejection_reason,
+            failure_count=failure_count,
         )
         return self._one(
             WorkKind.ANALYZE_FAILURE,
@@ -1042,13 +1155,78 @@ def _candidate_rejection_reason(payload: dict[str, Any]) -> str:
     return "the Candidate was rejected by review or the promotion gate"
 
 
-def _alternate_failure_focus(rejection_reason: str) -> str:
-    prefix = (
-        "Select a different bounded failure pattern supported directly by "
-        "the incumbent trajectories. Do not continue the rejected research "
-        "direction. The previous Candidate was rejected because: "
+def _mechanism_effect_goal(payload: dict[str, Any]) -> str:
+    value = payload.get("effect_goal", "task_outcome")
+    if value not in {"task_outcome", "behavioral_intermediate"}:
+        raise ValueError(f"unknown mechanism effect_goal: {value}")
+    return str(value)
+
+
+def _apply_effect_goal_to_conformance_summary(
+    *,
+    decision: str,
+    summary: dict[str, Any],
+    effect_goal: str,
+) -> tuple[str, dict[str, Any]]:
+    """Apply current effect semantics to resumable legacy summaries."""
+
+    if decision != "pass":
+        return decision, summary
+    efficacy = summary.get("local_efficacy_counts")
+    if not isinstance(efficacy, dict):
+        return decision, summary
+    harmful = int(efficacy.get("harmful", 0) or 0)
+    beneficial = int(efficacy.get("beneficial", 0) or 0)
+    target = int(summary.get("target_behavior_example_count", 0) or 0)
+    blocked = harmful > 0 or (
+        effect_goal == "task_outcome" and beneficial < 1
+    ) or (
+        effect_goal == "behavioral_intermediate" and target < 1
     )
+    if not blocked:
+        return decision, summary
+    updated = dict(summary)
+    updated["decision"] = "revise"
+    updated["effect_goal"] = effect_goal
+    updated["recommended_route"] = "evidence"
+    route_feedback = updated.get("route_feedback")
+    route_feedback = (
+        dict(route_feedback) if isinstance(route_feedback, dict) else {}
+    )
+    existing = route_feedback.get("evidence")
+    messages = list(existing) if isinstance(existing, list) else []
+    messages.append(
+        "The Conformance replay does not satisfy the declared effect_goal; "
+        "re-establish the required local benefit or target behavior before "
+        "full Candidate Evaluation."
+    )
+    route_feedback["evidence"] = messages
+    updated["route_feedback"] = route_feedback
+    return "revise", updated
+
+
+def _candidate_rejection_focus(
+    rejection_reason: str,
+    *,
+    failure_count: int,
+) -> str:
+    prefix = (
+        "Reassess the incumbent evidence for the bounded behavior pattern; "
+        "one rejected solution does not invalidate the problem direction. "
+        "Refine its scope only when the evidence requires it. "
+    )
+    if failure_count >= 3:
+        prefix += (
+            "Several distinct solution attempts have failed, so also consider "
+            "whether the problem direction itself should be replaced. "
+        )
+    prefix += "The latest Candidate was rejected because: "
     return (prefix + rejection_reason.strip())[:300]
+
+
+def _lineage_id(kind: str, value: str) -> str:
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+    return f"{kind}_{digest}"
 
 
 def _required_object(value: dict[str, Any], name: str) -> dict[str, Any]:

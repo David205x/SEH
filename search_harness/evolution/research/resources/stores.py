@@ -88,6 +88,8 @@ class CandidateReviewResourceConfig(BaseModel):
     candidate_rollout_file: Path | None = None
     incumbent_template_root: Path | None = None
     candidate_template_root: Path | None = None
+    outcome_digest_file: Path | None = None
+    compiler_artifact_file: Path | None = None
 
 
 @dataclass
@@ -761,6 +763,33 @@ class CandidateComparisonStore:
                 self.config.incumbent_template_root is not None
                 and self.config.candidate_template_root is not None
             ),
+            "outcome_digest_available": (
+                self.config.outcome_digest_file is not None
+            ),
+        }
+
+    def outcome_digest(self) -> dict[str, Any]:
+        """Read the compact deterministic Candidate outcome digest."""
+
+        path = self.config.outcome_digest_file
+        if path is None:
+            raise ValueError("Candidate outcome digest was not configured")
+        return _read_json(path)
+
+    def implementation_view(self) -> dict[str, Any]:
+        """Read the prior Compiler conclusion without its full transcript."""
+
+        path = self.config.compiler_artifact_file
+        if path is None:
+            raise ValueError("Compiler artifact was not configured")
+        artifact = _read_json(path)
+        output = artifact.get("output")
+        output = output if isinstance(output, dict) else {}
+        return {
+            "decision": output.get("decision"),
+            "implementation_summary": output.get("implementation_summary"),
+            "unresolved_risk": output.get("unresolved_risk"),
+            "candidate_ref": output.get("candidate_ref"),
         }
 
     def list_changes(

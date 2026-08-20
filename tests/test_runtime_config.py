@@ -50,6 +50,13 @@ class RuntimeConfigTest(unittest.TestCase):
         self.assertEqual(control["max_trial_assignments"], 14)
         self.assertEqual(effects["rollouts_per_example"], 3)
         self.assertEqual(effects["candidate_error_streak_limit"], 3)
+        self.assertTrue(effects["intervention_extended_tools"])
+        self.assertTrue(effects["hook_feasibility_enabled"])
+        self.assertEqual(effects["hook_feasibility_max_cases"], 6)
+        self.assertEqual(
+            effects["hook_feasibility_thinking_modes"],
+            ["enabled", "disabled"],
+        )
 
     def test_rejects_trial_assignment_budget_below_trial_budget(self) -> None:
         config = _evolution_config()
@@ -203,6 +210,12 @@ def _evolution_config() -> dict[str, Any]:
                 "max_work_items": 80,
                 "max_total_tokens": None,
                 "min_accuracy_delta": -0.02,
+                "task_outcome_min_accuracy_delta": 0.0,
+                "task_outcome_min_attributed_beneficial_examples": 1,
+                "task_outcome_max_attributed_harmful_examples": 0,
+                "behavioral_min_accuracy_delta": -0.02,
+                "behavioral_min_target_behavior_examples": 2,
+                "behavioral_max_attributed_harmful_examples": 0,
                 "max_total_token_ratio": 3.0,
             },
             "effects": {
@@ -212,6 +225,14 @@ def _evolution_config() -> dict[str, Any]:
                 "rollouts_per_example": 3,
                 "judge_workers": 8,
                 "candidate_error_streak_limit": 3,
+                "intervention_extended_tools": True,
+                "hook_feasibility_enabled": True,
+                "hook_feasibility_max_cases": 6,
+                "hook_feasibility_repetitions": 2,
+                "hook_feasibility_thinking_modes": [
+                    "enabled",
+                    "disabled",
+                ],
             },
         }
     }

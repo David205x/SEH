@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.1",
+  "phase": "goal-contract",
+  "phase_status": "running",
+  "last_reviewed_at": "2026-08-21T00:08:04+08:00",
+  "active_plan": null,
+  "current_stage_id": null,
+  "last_accepted_stage_id": null,
+  "stage_statuses": [],
+  "current_atomic_task_id": "TASK-002",
+  "last_accepted_task_id": "TASK-001",
+  "execution_workspace": {
+    "manifest_file": "cvpr_workspace/入口清单.yaml",
+    "status": "not_created"
+  },
+  "goal_assessment": null,
+  "confirmed_findings": [
+    {
+      "statement": "当前开发工作树中的 Evolution Controller 已按 Failure Analysis、Hypothesis、Intervention Trial、Evidence Review、Mechanism Distillation、条件式 Hook Feasibility、Compilation、Conformance、Candidate Evaluation 与 Review 编排主流程；这只用于理解当前实现接口，不代表最终开发基础已经冻结。",
+      "evidence_refs": [
+        "docs/architecture/evolution.md",
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/transitions.py"
+      ]
+    },
+    {
+      "statement": "20260815 Hook Feasibility Evolution Run 是开发期可行性验证；其中的样本、rollout、accuracy 和 Candidate 结果仅作为历史诊断材料，不得作为正式 baseline、目标值来源、Claim 证据或最终验收结果。",
+      "evidence_refs": [
+        "docs/design/hook-model-feasibility.md",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/run.json",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/events.jsonl"
+      ]
+    },
+    {
+      "statement": "Hook Feasibility 的历史轨迹曾展示编译前回流这一开发期行为，但该轨迹不构成 Student realizability、机制有效性或 Candidate Utility 的正式证据。",
+      "evidence_refs": [
+        "docs/design/hook-model-feasibility.md",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/"
+      ]
+    },
+    {
+      "statement": "Intervention Worker 复杂 Contract 实验及其全部数值属于开发期可行性诊断，不纳入正式实验、统计、目标设定或论文证据链。",
+      "evidence_refs": [
+        "docs/design/intervention-worker-complex-contract-experiment-report.md",
+        "runs/experiments/20260816_intervention_complex_contract/"
+      ]
+    },
+    {
+      "statement": "Candidate feedback、Mechanism effect_goal 与 Candidate Outcome Digest 存在于当前开发代码和定向检查中，但当前代码并非最终版本，相关检查不构成正式方法实现或实验完成证据。",
+      "evidence_refs": [
+        "docs/design/candidate-feedback-and-effect-goals.md",
+        "search_harness/evolution/research/candidate_digest.py",
+        "runs/experiments/20260815_candidate_feedback_roles_smoke/",
+        "runs/experiments/20260815_candidate_feedback_roles_repeat/"
+      ]
+    },
+    {
+      "statement": "用户明确规定：Goal 形成前的全部现有实验仅为开发期可行性验证，当前代码不是最终版本；这些材料不得作为正式 baseline、target source、Claim evidence 或 final acceptance。",
+      "evidence_refs": [
+        ".cvpr/decisions.jsonl#DEC-20260821-001"
+      ]
+    }
+  ],
+  "open_questions": [
+    "最终代码达到何种完成条件后，才能冻结为 development base 的 commit、tag 或不可变 snapshot？",
+    "最终版本应以哪些入口组成 H1、H2a/H2b 与 H3 的正式验证载体，哪些必须新增但不能改变 evaluator 口径？",
+    "最终冻结的 HotpotQA/Qwen3-8B 是否作为唯一主验证条件，还是还需要第二任务或第二 Student 作为必需边界验证？",
+    "最终代码冻结后，应通过何种独立的正式 baseline 或 power analysis 确定核心阈值、non-inferiority margin、false-pruning 上限与最低样本量？",
+    "目标投稿 venue、年份和最终论文 Claim 边界是什么？"
+  ],
+  "blockers": [
+    "当前代码不是最终版本，development base 的不可变 commit、tag 或 snapshot 尚未冻结。",
+    "最终 Student、Teacher、Evaluator、Retriever、数据、预算和统计规则尚未共同冻结。",
+    "最终代码冻结后尚未重新产生可用于阈值设定的正式 baseline 或 power-analysis 证据。",
+    "尚无经用户确认的 goal.yaml、plan.yaml 或冻结的论文级评测协议。"
+  ],
+  "active_deviations": [
+    "DEV-20260820-001",
+    "DEV-20260820-002"
+  ],
+  "next_task": null
+}

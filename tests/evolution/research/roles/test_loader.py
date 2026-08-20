@@ -48,7 +48,7 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
         self.assertNotIn("evolution_policy", json.dumps(manifest_payload))
         self.assertEqual(spec.role.role_id, "failure_analyst")
         self.assertEqual(spec.output.kind, "role_contract")
-        self.assertEqual(len(spec.tools.tools), 9)
+        self.assertEqual(len(spec.tools.tools), 14)
 
     def test_loads_all_initial_role_templates(self) -> None:
         """验证九个 Teacher 角色均从目录解析出正确协议和工具集合。"""

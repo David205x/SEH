@@ -61,6 +61,7 @@ class InterventionRuntimeConfig:
     student_max_steps: int = 20
     worker_max_steps_per_activation: int = 8
     teacher_judge: bool = False
+    extended_worker_tools: bool = False
 
     def __post_init__(self) -> None:
         if self.student_max_steps < 1:
@@ -69,6 +70,8 @@ class InterventionRuntimeConfig:
             raise ValueError(
                 "intervention worker_max_steps_per_activation must be positive"
             )
+        if not isinstance(self.extended_worker_tools, bool):
+            raise TypeError("intervention extended_worker_tools must be a boolean")
 
 
 class InterventionRunner:
@@ -138,6 +141,7 @@ class InterventionRunner:
             hook_guidance=guidance,
             max_steps_per_activation=self.config.worker_max_steps_per_activation,
             system_prompt_template=system_prompt_template,
+            extended_tools=self.config.extended_worker_tools,
         )
         intervention_context = InterventionContext(prefix)
         activation_counts = {phase: 0 for phase in guidance}
@@ -223,6 +227,7 @@ class InterventionRunner:
                 "student_max_steps": self.config.student_max_steps,
                 "worker_max_steps_per_activation": self.config.worker_max_steps_per_activation,
                 "worker_tool_protocol": "native",
+                "extended_worker_tools": self.config.extended_worker_tools,
                 "teacher_judge": self.config.teacher_judge,
             },
             "intent": intent,
@@ -250,6 +255,7 @@ class InterventionRunner:
                 for call in worker.tool_calls
             ],
             "worker_usage": worker.usage,
+            "trial_state": worker.trial_state,
         }
         worker.close()
         if persist:

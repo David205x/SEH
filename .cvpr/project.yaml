@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "project_id": "search-harness-evidence-gated-evolution",
+  "project_name": "Evidence-Gated and Experience-Guided Harness Evolution",
+  "project_root": ".",
+  "research_domain": "AI/ML/DL；LLM Agent Systems；Harness Evolution",
+  "research_type": "方法与系统研究",
+  "target_venue": null,
+  "working_scope": "固定 Student Model、任务 Evaluator 与基础 Agent Loop，只研究 Prompt、Tool、Parser、Lifecycle Hook 等模型外 Harness 机制的证据驱动进化。",
+  "working_problem": "现有 Harness 自进化较早把改进方向实例化为持久化 Candidate，使机制有效性、目标模型可执行性、实现保真度和全局效用在同一次昂贵评估中耦合，导致成本高且失败归因困难。",
+  "working_idea": "由外部 Teacher 驱动固定小模型 Student 的双时间尺度 Harness Evolution：单个研究 episode 内先以冻结 Prefix 上的不可部署局部干预验证假设，再验证 Student 逐职责 realizability 后才编译 Candidate；已结算 episode 之间将 typed verification verdict 与终态转为只投影给指定 Researcher/Teacher role 的有作用域研究经验，以指导后续 attempt/generation 搜索。",
+  "objectives": [
+    "验证 Candidate 编译前的局部干预证据门是否提高有效 Candidate 产出率并减少无效完整评估。",
+    "验证 implementation-independent Mechanism 表示能否分离研究有效性、Student 可实现性、实现保真度和最终 Candidate Utility。",
+    "验证 Hook Feasibility Gate 是否能在编译前识别固定小模型无法稳定承担的语义职责。",
+    "验证 role-scoped、verification-grounded experience 是否减少跨 attempt/generation 的能力越界、角色重复错误和方向重走，同时控制 false pruning。",
+    "建立可追溯、可恢复且能够按失败层定向回流的 Harness Evolution 控制流程。"
+  ],
+  "success_criteria": [
+    "相对 Direct Compile 基线，报告 Candidate Yield、Full-Eval Avoidance、每个有效 Candidate 成本和最终任务性能，并使用同口径预算与评测协议。",
+    "通过分层消融分别评估 Prefix Intervention、Evidence Gate、Mechanism Distillation、Hook Feasibility 与 Conformance 的增量作用。",
+    "在冻结 H1/H2 pipeline 上比较 no-memory、shared、generic role-local、DREvo-like、Auto-Robotist-like 与完整 H3，并报告总成本、误剪和 held-out non-inferiority。",
+    "Hook Feasibility 在多种机制复杂度或 Student 能力设置下表现出可复查的部署可实现性预测价值。",
+    "所有论文级 Claim 均能追溯到冻结 Run、结构化统计或已核验文献，且负面结果能够定位到对应失败层。"
+  ],
+  "out_of_scope": [
+    "训练、微调或更新 Student Model 参数。",
+    "为获得更高分而修改冻结任务 Evaluator、数据标签或基础 Agent Loop。",
+    "把 Teacher Role 名称、角色数量、Prefix-Fork primitive 或事件持久化本身作为核心新颖性。",
+    "在缺少文献核验和对照实验时声称已经证明成本、Candidate Yield 或最终性能收益。",
+    "将 Goal 形成前的现有开发实验、Run、报告或数值作为正式 baseline、目标值依据、Claim 证据或最终验收结果。"
+  ],
+  "resources": {
+    "papers": [
+      "0820_report.md",
+      "research/"
+    ],
+    "code": [
+      "search_harness/",
+      "harness_templates/",
+      "experiments/",
+      "tests/",
+      "evolution_observer/"
+    ],
+    "data": [
+      "config/runtime.yaml 中登记的 HotpotQA supported train/dev 数据",
+      "runs/evolution/20260815_qwen3-8b_hook_feasibility/experience_set.jsonl（仅开发期诊断材料，不属于正式证据）"
+    ],
+    "compute": [
+      "Student：当前开发配置为本地 qwen3:8b；最终正式版本与推理参数待冻结",
+      "Teacher：当前开发配置为 OpenAI-compatible deepseek-v4-flash；最终正式版本与角色参数待冻结",
+      "Retriever：当前开发配置中的外部检索服务；正式服务版本、语料和索引待冻结"
+    ],
+    "time_constraints": []
+  },
+  "history_reconstruction": {
+    "status": "historical-project-intake",
+    "verified_items": [
+      {
+        "statement": "当前开发工作树已经形成事件驱动的 Evidence-Gated Evolution 主流程及分层回流接口；最终实现版本尚未冻结。",
+        "evidence_refs": [
+          "docs/architecture/evolution.md",
+          "search_harness/evolution/control/domain.py",
+          "search_harness/evolution/control/transitions.py"
+        ]
+      },
+      {
+        "statement": "Hook Feasibility 已进入当前开发版 Controller、角色契约、配置和开发期 Evolution Run；该 Run 不构成正式证据。",
+        "evidence_refs": [
+          "docs/design/hook-model-feasibility.md",
+          "search_harness/evolution/control/hook_feasibility_effects.py",
+          "search_harness/evolution/research/hook_feasibility.py",
+          "runs/evolution/20260815_qwen3-8b_hook_feasibility/"
+        ]
+      },
+      {
+        "statement": "Intervention Worker 存在单阶段与复杂多阶段 Contract 的开发期定向检查；这些检查不构成正式实验结果。",
+        "evidence_refs": [
+          "docs/design/intervention-worker-complex-contract-experiment-report.md",
+          "runs/experiments/20260816_intervention_complex_contract/"
+        ]
+      }
+    ],
+    "reported_items": [
+      {
+        "statement": "0820_report.md 将核心 novelty 定位为 pre-compilation intervention testing、evidence-to-mechanism separation 与 target-model realizability gating。",
+        "evidence_refs": [
+          "0820_report.md"
+        ]
+      },
+      {
+        "statement": "报告认为该方向相对近期 Harness Evolution 工作具有明确差异，但其中的文献身份和支持关系尚未在项目状态中核验。",
+        "evidence_refs": [
+          "0820_report.md"
+        ]
+      }
+    ],
+    "unknowns": [
+      "目标投稿 venue、track、年份与 submission stage。",
+      "0820_report.md 所列近期论文的稳定身份、版本和逐项 claim 支持关系。",
+      "核心方法相对 Direct Compile 的前瞻性成本与 Candidate Yield 增益。",
+      "方法跨 Student 尺度、任务和机制复杂度的泛化边界。",
+      "当前未提交工作树在完整测试套件上的最新状态。",
+      "最终代码、Student、Teacher、Evaluator、Retriever、数据、预算与统计协议的冻结版本。"
+    ],
+    "conflicts": [
+      "AGENTS.md 与部分当前文档仍引用已迁移或不存在的 docs/manual_v1、docs/manual_v2、docs/adr、docs/design.md 路径；当前材料实际位于 docs/archive/ 或专题目录。",
+      "部分 docs/design 文件是历史实验计划，不能与当前代码、运行时 Schema 或已完成实验报告同等解释。",
+      "Goal 形成前的现有实验与数值曾被用于项目进展理解，但用户已明确排除其作为任何正式 baseline、目标或 Claim 证据的资格。"
+    ]
+  }
+}

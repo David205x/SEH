@@ -135,3 +135,26 @@ class TeacherPromptSpecTest(TestCase):
         self.assertIn("never copy case answers", combined)
         self.assertIn("When the decision is `revise`", combined)
         self.assertIn("without inventing missing labels", combined)
+
+    def test_intervention_worker_prompt_serializes_native_tool_calls(self) -> None:
+        """Worker 必须把 state 与 terminal action 分成先后响应。"""
+
+        prompt = (
+            PROJECT_ROOT
+            / "harness_templates"
+            / "teacher"
+            / "intervention_worker"
+            / "prompt"
+            / "system.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "Every assistant response may contain exactly one native tool call",
+            prompt,
+        )
+        self.assertIn("Never batch or parallelize", prompt)
+        state_position = prompt.index("call\n`update_trial_state` alone first")
+        terminal_position = prompt.index(
+            "call the terminal action in a later response"
+        )
+        self.assertLess(state_position, terminal_position)

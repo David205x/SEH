@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_hook_feasibility_reviewer_v1",
+  "tools": [],
+  "prompt": {
+    "instance_id": "hook_feasibility_reviewer",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

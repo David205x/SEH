@@ -49,7 +49,10 @@ class JudgeModel(SequenceModel):
 class NativeSequenceClient:
     """Expose tagged test fixtures as provider-native tool responses."""
 
-    def __init__(self, outputs: list[str]) -> None:
+    def __init__(
+        self,
+        outputs: list[str | list[dict[str, Any]]],
+    ) -> None:
         self.outputs = list(outputs)
         self.requests: list[dict[str, Any]] = []
         self.chat = SimpleNamespace(
@@ -61,6 +64,33 @@ class NativeSequenceClient:
         if not self.outputs:
             raise AssertionError("Teacher received more calls than expected")
         output = self.outputs.pop(0)
+        if isinstance(output, list):
+            message = {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": f"call_{len(self.requests)}_{index}",
+                        "type": "function",
+                        "function": {
+                            "name": item["name"],
+                            "arguments": json.dumps(
+                                item.get("arguments", {}),
+                                ensure_ascii=False,
+                            ),
+                        },
+                    }
+                    for index, item in enumerate(output, start=1)
+                ],
+            }
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=message)],
+                usage={
+                    "prompt_tokens": 5,
+                    "completion_tokens": 3,
+                    "total_tokens": 8,
+                },
+            )
         message: dict[str, Any] = {"role": "assistant", "content": output}
         opening = "<tool_call>"
         closing = "</tool_call>"
@@ -220,6 +250,228 @@ class InterventionRuntimeTest(TestCase):
         action = artifact["intervention_changes"][1]["action"]
         self.assertEqual(action["kind"], "apply_context_patch")
         self.assertNotIn("metadata", json.dumps(action))
+
+    def test_extended_pre_tool_patch_changes_only_pending_call(self) -> None:
+        """验证扩展 Stage Patch 可改写待执行调用而不要求模型重建内部对象。"""
+
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rollout_file = root / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            template_root = _make_template(root)
+            student = SequenceModel(
+                outputs=[
+                    '<tool_call>{"name":"search","arguments":{"query":"broad"}}</tool_call>',
+                    "<final_answer>J. R. R. Tolkien</final_answer>",
+                ]
+            )
+            teacher = NativeSequenceClient(
+                outputs=[
+                    '<tool_call>{"name":"continue_without_change","arguments":'
+                    '{"reason":"Wait for the pending call."}}</tool_call>',
+                    '<tool_call>{"name":"inspect_active_stage","arguments":{}}</tool_call>',
+                    '<tool_call>{"name":"apply_active_stage_patch","arguments":'
+                    '{"patch":{"arguments":{"query":"targeted"}},'
+                    '"reason":"Test a targeted retrieval policy."}}</tool_call>',
+                ]
+            )
+            runner = _extended_runner(root, template_root, student, teacher)
+
+            artifact = runner.run(
+                rollout_file=rollout_file,
+                example_id="example-1",
+                replicate_id="r000",
+                fork_step=1,
+                fork_phase=HookPhase.POST_TOOL,
+                intent="Rewrite one pending query without changing Tool metadata.",
+                hook_guidance={
+                    HookPhase.POST_TOOL: "Wait for the next Student action.",
+                    HookPhase.PRE_TOOL: "Replace a broad query with a targeted query.",
+                },
+                activation_budgets={
+                    HookPhase.POST_TOOL: 1,
+                    HookPhase.PRE_TOOL: 1,
+                },
+            )
+
+        interactions = artifact["branch_run"]["state"]["tool_interactions"]
+        self.assertEqual(
+            interactions[0]["tool_call"]["arguments"],
+            {"query": "targeted"},
+        )
+        self.assertEqual(
+            interactions[0]["tool_result"]["content"],
+            "search result for targeted",
+        )
+        stage_result = teacher.requests[2]["messages"][-1]["content"]
+        self.assertIn('"query": "broad"', stage_result)
+
+    def test_source_pre_tool_boundary_does_not_offer_stage_patch(self) -> None:
+        """验证不能恢复的源事务不会误宣称可直接改写待执行调用。"""
+
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rollout_file = root / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            template_root = _make_template(root)
+            student = SequenceModel(
+                outputs=["<final_answer>J. R. R. Tolkien</final_answer>"]
+            )
+            teacher = NativeSequenceClient(
+                outputs=[
+                    '<tool_call>{"name":"continue_without_change","arguments":'
+                    '{"reason":"The retained pending transaction cannot be edited '
+                    'faithfully at this boundary."}}</tool_call>'
+                ]
+            )
+            runner = _extended_runner(root, template_root, student, teacher)
+
+            runner.run(
+                rollout_file=rollout_file,
+                example_id="example-1",
+                replicate_id="r000",
+                fork_step=1,
+                fork_phase=HookPhase.PRE_TOOL,
+                intent="Check source-boundary tool availability.",
+                hook_guidance={
+                    HookPhase.PRE_TOOL: (
+                        "Patch a pending query when faithfully editable."
+                    )
+                },
+            )
+
+        offered = {
+            item["function"]["name"] for item in teacher.requests[0]["tools"]
+        }
+        self.assertNotIn("inspect_active_stage", offered)
+        self.assertNotIn("apply_active_stage_patch", offered)
+        self.assertIn("continue_without_change", offered)
+
+    def test_extended_trial_state_is_visible_at_later_phase(self) -> None:
+        """验证非终态状态写入可跨 Hook 传递且不进入 Student 上下文。"""
+
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rollout_file = root / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            template_root = _make_template(root)
+            student = SequenceModel(
+                outputs=[
+                    "<final_answer>Shakespeare</final_answer>",
+                    "<final_answer>J. R. R. Tolkien</final_answer>",
+                ]
+            )
+            teacher = NativeSequenceClient(
+                outputs=[
+                    '<tool_call>{"name":"update_trial_state","arguments":'
+                    '{"values":{"evidence_gap":true}}}</tool_call>',
+                    '<tool_call>{"name":"continue_without_change","arguments":'
+                    '{"reason":"Record the visible gap for final review."}}</tool_call>',
+                    '<tool_call>{"name":"defer_final_answer","arguments":'
+                    '{"feedback":"Resolve the recorded evidence gap.",'
+                    '"reason":"The branch-local gap remains active."}}</tool_call>',
+                ]
+            )
+            runner = _extended_runner(root, template_root, student, teacher)
+
+            artifact = runner.run(
+                rollout_file=rollout_file,
+                example_id="example-1",
+                replicate_id="r000",
+                fork_step=1,
+                fork_phase=HookPhase.POST_TOOL,
+                intent="Retain one explicit observation across phases.",
+                hook_guidance={
+                    HookPhase.POST_TOOL: "Record whether an evidence gap exists.",
+                    HookPhase.PRE_FINAL: "Defer while the recorded gap remains.",
+                },
+                activation_budgets={
+                    HookPhase.POST_TOOL: 1,
+                    HookPhase.PRE_FINAL: 1,
+                },
+            )
+
+        self.assertEqual(artifact["trial_state"], {"evidence_gap": True})
+        later_input = json.dumps(
+            teacher.requests[2]["messages"],
+            ensure_ascii=False,
+        )
+        self.assertIn('\\"trial_state\\": {\\"evidence_gap\\": true}', later_input)
+        student_text = "\n".join(
+            message.content
+            for model_input in student.inputs
+            for message in model_input.messages
+        )
+        self.assertNotIn("evidence_gap", student_text)
+
+    def test_multiple_native_tool_calls_are_all_rejected_before_execution(
+        self,
+    ) -> None:
+        """多工具响应不得部分执行 state 或 terminal action。"""
+
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rollout_file = root / "rollout.jsonl"
+            _write_rollout(rollout_file)
+            template_root = _make_template(root)
+            student = SequenceModel(
+                outputs=["<final_answer>J. R. R. Tolkien</final_answer>"]
+            )
+            teacher = NativeSequenceClient(
+                outputs=[
+                    [
+                        {
+                            "name": "update_trial_state",
+                            "arguments": {
+                                "values": {"must_not_persist": True}
+                            },
+                        },
+                        {
+                            "name": "continue_without_change",
+                            "arguments": {
+                                "reason": "Invalid batched terminal action."
+                            },
+                        },
+                    ],
+                    '<tool_call>{"name":"continue_without_change",'
+                    '"arguments":{"reason":"Retry with one tool only."}}'
+                    "</tool_call>",
+                ]
+            )
+            runner = _extended_runner(root, template_root, student, teacher)
+
+            artifact = runner.run(
+                rollout_file=rollout_file,
+                example_id="example-1",
+                replicate_id="r000",
+                fork_step=1,
+                fork_phase=HookPhase.POST_TOOL,
+                intent="Reject every call in a multi-tool response.",
+                hook_guidance={
+                    HookPhase.POST_TOOL: (
+                        "Record state, then continue without changing context."
+                    )
+                },
+                persist=False,
+            )
+
+        self.assertEqual(artifact["trial_state"], {})
+        self.assertEqual(
+            artifact["intervention_changes"][0]["action"]["kind"],
+            "continue_without_change",
+        )
+        rejected = [
+            item
+            for item in artifact["worker_tool_calls"]
+            if item.get("metadata", {}).get("error_type")
+            == "multiple_tool_calls"
+        ]
+        self.assertEqual(len(rejected), 2)
+        retry_messages = json.dumps(
+            teacher.requests[1]["messages"],
+            ensure_ascii=False,
+        )
+        self.assertIn("Call exactly one tool per response", retry_messages)
 
     def test_teacher_judge_resolves_inconclusive_branch_without_exposing_golden(self) -> None:
         """验证语义正确的非精确答案由独立 Judge 解析为 1。"""
@@ -623,6 +875,27 @@ def _runner(
             output_root=root / "intervention-runs",
             student_max_steps=4,
             worker_max_steps_per_activation=4,
+        ),
+        student_model=student,
+        teacher_config=_teacher_config(),
+        teacher_client=teacher,
+    )
+
+
+def _extended_runner(
+    root: Path,
+    template_root: Path,
+    student: SequenceModel,
+    teacher: NativeSequenceClient,
+) -> InterventionRunner:
+    return InterventionRunner(
+        InterventionRuntimeConfig(
+            env_file=root / ".env",
+            template_root=template_root,
+            output_root=root / "intervention-runs",
+            student_max_steps=4,
+            worker_max_steps_per_activation=5,
+            extended_worker_tools=True,
         ),
         student_model=student,
         teacher_config=_teacher_config(),

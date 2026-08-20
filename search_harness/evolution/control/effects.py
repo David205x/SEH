@@ -13,11 +13,17 @@ from search_harness.evolution.research.roles.contracts import (
     InterventionHypothesis,
     MechanismSpec,
 )
+from search_harness.evolution.research.hook_feasibility import (
+    HookFeasibilityProbeConfig,
+)
 from search_harness.evolution.research.roles.native_chat_runner import (
     NativeChatRoleRunner,
 )
 from search_harness.evolution.research.intervention.role_runner import (
     InterventionRoleRunner,
+)
+from search_harness.evolution.research.resources.stores import (
+    CandidateReviewResourceConfig,
 )
 from search_harness.evolution.versioning import (
     TemplateVersionStore,
@@ -36,6 +42,7 @@ from .conformance_effects import (
 from .evaluation_effects import EvaluationEffects
 from .evidence_review_effects import EvidenceReviewEffects
 from .intervention_effects import InterventionEffects
+from .hook_feasibility_effects import HookFeasibilityEffects
 from .research_role_effects import ResearchRoleEffects
 from .domain import ControlState, EffectResult, WorkItem, WorkKind
 
@@ -58,8 +65,20 @@ class LocalControlEffectsConfig:
     teacher_judge: bool = True
     show_progress: bool = True
     candidate_error_streak_limit: int = 3
+    intervention_extended_tools: bool = False
+    hook_feasibility_enabled: bool = False
+    hook_feasibility_max_cases: int = 6
+    hook_feasibility_repetitions: int = 2
+    hook_feasibility_thinking_modes: tuple[str, ...] | list[str] = (
+        "enabled",
+        "disabled",
+    )
 
     def __post_init__(self) -> None:
+        if not isinstance(self.hook_feasibility_enabled, bool):
+            raise TypeError("hook_feasibility_enabled must be a boolean")
+        if not isinstance(self.intervention_extended_tools, bool):
+            raise TypeError("intervention_extended_tools must be a boolean")
         positive = {
             "student_max_steps": self.student_max_steps,
             "teacher_max_turns": self.teacher_max_turns,
@@ -69,14 +88,25 @@ class LocalControlEffectsConfig:
             "candidate_error_streak_limit": (
                 self.candidate_error_streak_limit
             ),
+            "hook_feasibility_max_cases": (
+                self.hook_feasibility_max_cases
+            ),
+            "hook_feasibility_repetitions": (
+                self.hook_feasibility_repetitions
+            ),
         }
         for name, value in positive.items():
             if value < 1:
                 raise ValueError(f"{name} must be positive")
+        HookFeasibilityProbeConfig(
+            max_cases_per_phase=self.hook_feasibility_max_cases,
+            repetitions=self.hook_feasibility_repetitions,
+            thinking_modes=tuple(self.hook_feasibility_thinking_modes),
+        )
 
 
 class LocalControlEffects:
-    """Connect the nine v2 roles to rollouts and external effects."""
+    """Connect formal evolution roles to rollouts and external effects."""
 
     def __init__(
         self,
@@ -94,6 +124,7 @@ class LocalControlEffects:
             env_file=config.env_file,
             max_steps_per_activation=config.teacher_max_turns,
             teacher_judge=config.teacher_judge,
+            extended_worker_tools=config.intervention_extended_tools,
         )
         self.candidate_versions = CandidateVersionEffects(
             store=store,
@@ -156,6 +187,7 @@ class LocalControlEffects:
             analysis_focus=work.payload.get("analysis_focus"),
             report_dir=_ref_path(work, "report_dir"),
             rollout_file=_ref_path(work, "rollout_file"),
+            recent_candidate=_recent_candidate_resource(work),
             work_dir=work_dir,
         )
 
@@ -175,6 +207,7 @@ class LocalControlEffects:
                 problem_direction=failure,
                 report_dir=_ref_path(work, "report_dir"),
                 rollout_file=_ref_path(work, "rollout_file"),
+                recent_candidate=_recent_candidate_resource(work),
                 work_dir=work_dir,
             )
         if not isinstance(continuation, dict):
@@ -237,6 +270,7 @@ class LocalControlEffects:
             remaining_trial_budget=max_trials - trial_count,
             remaining_assignment_budget=max_assignments - assignment_count,
             prior_obligation=work.payload.get("prior_obligation"),
+            nearby_candidate_refs=_nearby_candidate_refs(work),
             work_dir=work_dir,
         )
 
@@ -393,6 +427,40 @@ class LocalControlEffects:
                         for item in raw_experiments
                         if isinstance(item, dict)
                     ]
+        feasibility_ref = work.input_refs.get(
+            "hook_feasibility_artifact"
+        )
+        if feasibility_ref is not None:
+            feasibility = _read_json(Path(feasibility_ref))
+            resources = feasibility.get("resource_artifacts")
+            probe = (
+                resources.get("hook_feasibility_probe")
+                if isinstance(resources, dict)
+                else None
+            )
+            phase_probes = (
+                probe.get("phase_probes")
+                if isinstance(probe, dict)
+                else None
+            )
+            if isinstance(phase_probes, list):
+                known_signatures = {
+                    item.get("experiment_signature")
+                    for item in student_model_experiments
+                }
+                for phase_probe in phase_probes:
+                    experiment = (
+                        phase_probe.get("experiment")
+                        if isinstance(phase_probe, dict)
+                        else None
+                    )
+                    if not isinstance(experiment, dict):
+                        continue
+                    signature = experiment.get("experiment_signature")
+                    if signature in known_signatures:
+                        continue
+                    student_model_experiments.append(experiment)
+                    known_signatures.add(signature)
         continuation_ref = work.input_refs.get("compiler_candidate_file")
         if continuation_ref is not None:
             continuation_candidate = _read_json(Path(continuation_ref))
@@ -427,6 +495,42 @@ class LocalControlEffects:
                 if "compiler_candidate_file" in work.input_refs
                 else None
             ),
+            work_dir=work_dir,
+        )
+
+    async def _execute_verify_hook_feasibility(
+        self,
+        *,
+        work: WorkItem,
+        state: ControlState,
+        work_dir: Path,
+    ) -> EffectResult:
+        del state
+        mechanism = MechanismSpec.model_validate(
+            _read_json(_ref_path(work, "mechanism_file"))
+        )
+        return await HookFeasibilityEffects(
+            role_runner=self.role_runner,
+            reviewer_template_root=_template(
+                "hook_feasibility_reviewer"
+            ),
+            env_file=self.config.env_file,
+            probe_config=HookFeasibilityProbeConfig(
+                max_cases_per_phase=(
+                    self.config.hook_feasibility_max_cases
+                ),
+                repetitions=self.config.hook_feasibility_repetitions,
+                thinking_modes=tuple(
+                    self.config.hook_feasibility_thinking_modes
+                ),
+            ),
+        ).verify(
+            mechanism=mechanism,
+            distiller_artifact=_read_json(
+                _ref_path(work, "distiller_artifact")
+            ),
+            trial_paths=_trial_paths(work),
+            rollout_file=_ref_path(work, "rollout_file"),
             work_dir=work_dir,
         )
 
@@ -556,7 +660,7 @@ class LocalControlEffects:
         compiler_output = CompilerResult.model_validate(
             compiler.get("output")
         )
-        return self.candidate_versions.promote(
+        result = self.candidate_versions.promote(
             candidate_attempt_id=candidate_attempt_id,
             implementation_summary=compiler_output.implementation_summary,
             candidate_metrics=_required_payload_object(
@@ -571,6 +675,11 @@ class LocalControlEffects:
                 work,
                 "promotion_gate",
             ),
+            work_dir=work_dir,
+        )
+        return _enrich_candidate_digest(
+            result=result,
+            work=work,
             work_dir=work_dir,
         )
 
@@ -601,7 +710,7 @@ class LocalControlEffects:
                 candidate_metrics=None,
                 work_dir=work_dir,
             )
-        return self.candidate_versions.reject(
+        result = self.candidate_versions.reject(
             candidate_attempt_id=candidate_attempt_id,
             conformance_summary=None,
             candidate_review=_required_payload_object(
@@ -616,6 +725,11 @@ class LocalControlEffects:
                 work,
                 "candidate_metrics",
             ),
+            work_dir=work_dir,
+        )
+        return _enrich_candidate_digest(
+            result=result,
+            work=work,
             work_dir=work_dir,
         )
 
@@ -658,6 +772,9 @@ class LocalControlEffects:
             store=self.store,
             env_file=self.config.env_file,
             teacher_template_root=TEACHER_TEMPLATE_ROOT,
+            hook_feasibility_enabled=(
+                self.config.hook_feasibility_enabled
+            ),
         )
 
 
@@ -806,6 +923,90 @@ def _compiler_conformance_failures(
             }
         )
     return failures
+
+
+def _recent_candidate_resource(
+    work: WorkItem,
+) -> CandidateReviewResourceConfig | None:
+    """Build an optional read-only prior-Candidate evidence resource."""
+
+    required = (
+        "report_dir",
+        "rollout_file",
+        "candidate_report_dir",
+        "candidate_rollout_file",
+        "candidate_outcome_digest",
+        "compiler_artifact",
+    )
+    if not all(name in work.input_refs for name in required):
+        return None
+    return CandidateReviewResourceConfig(
+        incumbent_report_dir=_ref_path(work, "report_dir"),
+        candidate_report_dir=_ref_path(work, "candidate_report_dir"),
+        incumbent_rollout_file=_ref_path(work, "rollout_file"),
+        candidate_rollout_file=_ref_path(work, "candidate_rollout_file"),
+        outcome_digest_file=_ref_path(work, "candidate_outcome_digest"),
+        compiler_artifact_file=_ref_path(work, "compiler_artifact"),
+    )
+
+
+def _nearby_candidate_refs(work: WorkItem) -> list[str]:
+    """Load prioritized example/replicate refs from a prior Candidate digest."""
+
+    raw_path = work.input_refs.get("candidate_outcome_digest")
+    if raw_path is None:
+        return []
+    digest = _read_json(Path(raw_path))
+    nearby = digest.get("nearby_cases")
+    nearby = nearby if isinstance(nearby, dict) else {}
+    refs = []
+    for category in (
+        "harmful_activation",
+        "neutral_activation",
+        "missed_target",
+        "false_positive",
+        "parse_failure",
+        "unattributed_regression",
+        "beneficial_activation",
+    ):
+        items = nearby.get(category)
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            example_id = item.get("example_id")
+            replicate_id = item.get("replicate_id")
+            if isinstance(example_id, str) and isinstance(replicate_id, str):
+                refs.append(f"{example_id}/{replicate_id}")
+    return list(dict.fromkeys(refs))
+
+
+def _enrich_candidate_digest(
+    *,
+    result: EffectResult,
+    work: WorkItem,
+    work_dir: Path,
+) -> EffectResult:
+    """Append review and gate conclusions to a new immutable digest artifact."""
+
+    raw_path = work.input_refs.get("candidate_outcome_digest")
+    if raw_path is None:
+        return result
+    digest = _read_json(Path(raw_path))
+    digest["candidate_review"] = work.payload.get("candidate_review")
+    digest["promotion_gate"] = work.payload.get("promotion_gate")
+    path = work_dir / "candidate_outcome_digest_final.json"
+    path.write_text(
+        json.dumps(digest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return EffectResult(
+        outcome=dict(result.outcome),
+        artifact_refs={
+            **result.artifact_refs,
+            "candidate_outcome_digest": str(path.resolve()),
+        },
+        usage=dict(result.usage),
+    )
 
 
 def _required_string(value: dict[str, Any], name: str) -> str:

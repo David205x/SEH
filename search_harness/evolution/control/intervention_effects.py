@@ -100,17 +100,12 @@ class InterventionEffects:
         remaining_trial_budget: int,
         remaining_assignment_budget: int,
         prior_obligation: object,
+        nearby_candidate_refs: list[str] | None = None,
         work_dir: Path,
     ) -> EffectResult:
         """Select one deterministic example-first batch for a frozen hypothesis."""
 
         used = set(used_assignments)
-        candidate_refs = tuple(dict.fromkeys(
-            [
-                *failure.evidence_refs,
-                *list_rollout_references(rollout_file),
-            ]
-        ))
         selection_limit = min(
             _positive_int(trial_batch_size, "trial_batch_size"),
             _non_negative_budget(
@@ -121,6 +116,18 @@ class InterventionEffects:
                 remaining_assignment_budget,
                 "remaining_assignment_budget",
             ),
+        )
+        nearby = list(dict.fromkeys(nearby_candidate_refs or []))
+        nearby_limit = (selection_limit + 1) // 2
+        candidate_refs = tuple(
+            dict.fromkeys(
+                [
+                    *nearby[:nearby_limit],
+                    *failure.evidence_refs,
+                    *nearby[nearby_limit:],
+                    *list_rollout_references(rollout_file),
+                ]
+            )
         )
         candidates: list[dict[str, Any]] = []
         for evidence_ref in candidate_refs:
@@ -296,6 +303,9 @@ class InterventionEffects:
             assignments=assignments,
             hypothesis=hypothesis,
             rollout_file=rollout_file,
+            extended_worker_tools=bool(
+                getattr(self.role_runner, "extended_worker_tools", False)
+            ),
         )
         checkpoint_dir = (
             work_dir.parent
@@ -498,9 +508,11 @@ def _batch_fingerprint(
     assignments: list[dict[str, Any]],
     hypothesis: dict[str, Any],
     rollout_file: Path,
+    extended_worker_tools: bool,
 ) -> str:
     payload = {
-        "intervention_batch_schema": 1,
+        "intervention_batch_schema": 2,
+        "extended_worker_tools": extended_worker_tools,
         "assignments": assignments,
         "hypothesis": hypothesis,
         "rollout_file": str(rollout_file.resolve()),

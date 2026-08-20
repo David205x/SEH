@@ -68,8 +68,8 @@ class HypothesisEvaluationSpec(TeacherPayload):
 class HypothesisEvidenceObligation(TeacherPayload):
     """Researcher 为当前假设补充的一项特有证据义务。"""
 
-    obligation: str = Field(min_length=1, max_length=240)
-    rationale: str = Field(min_length=1, max_length=240)
+    obligation: str = Field(min_length=1, max_length=300)
+    rationale: str = Field(min_length=1, max_length=300)
 
 
 HookPhaseName = Literal[
@@ -86,7 +86,7 @@ class InterventionPhaseDirective(TeacherPayload):
     """一次分支实验中某个 Hook phase 的有界干预指导。"""
 
     phase: HookPhaseName
-    activation_condition: str = Field(min_length=1, max_length=350)
+    activation_condition: str = Field(min_length=1, max_length=400)
     instruction: str = Field(min_length=1, max_length=600)
     expected_effect: str = Field(min_length=1, max_length=300)
     max_activations: int = Field(default=1, ge=1, le=4)
@@ -101,7 +101,7 @@ class InterventionHypothesis(TeacherPayload):
         max_length=4,
     )
     evaluation: HypothesisEvaluationSpec
-    applicability: str = Field(min_length=1, max_length=300)
+    applicability: str = Field(min_length=1, max_length=500)
     special_evidence_obligations: list[HypothesisEvidenceObligation] = Field(
         default_factory=list,
         max_length=2,
@@ -140,15 +140,11 @@ class InterventionHypothesis(TeacherPayload):
 
     @model_validator(mode="after")
     def validate_phase_plan(self) -> "InterventionHypothesis":
-        """保持计划可直接映射为一个 phase 到指导的运行时表。"""
+        """保持干预阶段唯一并可映射为运行时指导表。"""
 
         phases = [directive.phase for directive in self.phase_plan]
         if len(phases) != len(set(phases)):
             raise ValueError("intervention phase_plan phases must be unique")
-        if self.phase_plan[0].phase != self.fork_phase:
-            raise ValueError(
-                "intervention fork_phase must match the first phase_plan item"
-            )
         obligations = [
             item.obligation for item in self.special_evidence_obligations
         ]
@@ -339,10 +335,17 @@ class MechanismPhaseRule(TeacherPayload):
         return value
 
 
+MechanismEffectGoal = Literal[
+    "task_outcome",
+    "behavioral_intermediate",
+]
+
+
 class MechanismSpec(TeacherPayload):
     """不依赖 Teacher 的实现无关机制规格。"""
 
     goal: str = Field(min_length=1)
+    effect_goal: MechanismEffectGoal = "task_outcome"
     phase_rules: list[MechanismPhaseRule] = Field(
         min_length=1,
         max_length=4,
@@ -875,6 +878,76 @@ class MechanismDistillerInput(TeacherPayload):
         return self
 
 
+HookFeasibilityStatus = Literal[
+    "supported",
+    "unstable",
+    "unsupported",
+    "inconclusive",
+]
+HookFeasibilityDecision = Literal[
+    "feasible",
+    "needs_spec_revision",
+    "needs_research_revision",
+]
+
+
+class HookFeasibilityPhaseFinding(TeacherPayload):
+    """一个 Hook-model phase 在真实 prefix 上的能力判断。"""
+
+    phase: HookPhaseName
+    status: HookFeasibilityStatus
+    recommended_thinking_mode: Literal["enabled", "disabled"] | None = None
+    assessment: str = Field(min_length=1, max_length=700)
+
+
+class HookFeasibilityReviewerInput(TeacherPayload):
+    """Hook Feasibility Reviewer 的冻结机制与描述性 Probe 证据。"""
+
+    mechanism: MechanismSpec
+    probe_evidence: dict[str, Any]
+    prior_model_experiments: list[dict[str, Any]] = Field(
+        default_factory=list
+    )
+
+
+class HookFeasibilityReview(TeacherPayload):
+    """目标 Student 模型能否承担冻结 Hook 语义判断的结论。"""
+
+    decision: HookFeasibilityDecision
+    phase_findings: list[HookFeasibilityPhaseFinding] = Field(min_length=1)
+    assessment: str = Field(min_length=1, max_length=1200)
+    compiler_guidance: list[
+        Annotated[str, Field(min_length=1, max_length=400)]
+    ] = Field(default_factory=list, max_length=4)
+    revision_feedback: str | None = Field(default=None, max_length=800)
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "HookFeasibilityReview":
+        phases = [finding.phase for finding in self.phase_findings]
+        if len(phases) != len(set(phases)):
+            raise ValueError(
+                "hook feasibility phase_findings must not repeat phases"
+            )
+        if self.decision == "feasible":
+            if any(
+                finding.status != "supported"
+                for finding in self.phase_findings
+            ):
+                raise ValueError(
+                    "feasible hook review requires every phase to be supported"
+                )
+            if self.revision_feedback is not None:
+                raise ValueError(
+                    "feasible hook review must not include revision_feedback"
+                )
+            return self
+        if not self.revision_feedback:
+            raise ValueError(
+                f"{self.decision} requires revision_feedback"
+            )
+        return self
+
+
 class InterventionWorkerInput(TeacherPayload):
     """Intervention Worker 的单分支试验任务。"""
 
@@ -904,6 +977,7 @@ class CandidateReviewerInput(TeacherPayload):
     mechanism: MechanismSpec
     validation_summary: dict[str, Any]
     implementation_summary: str = Field(min_length=1)
+    candidate_outcome_digest: dict[str, Any] = Field(default_factory=dict)
     unresolved_risk: str | None = None
     historical_experience: list[str] = Field(default_factory=list)
 
@@ -969,6 +1043,7 @@ class ConformanceReview(TeacherPayload):
     recommended_route: ConformanceRevisionRoute | None = None
     local_efficacy: ConformanceLocalEfficacy
     local_efficacy_assessment: str = Field(min_length=1, max_length=400)
+    target_behavior_observed: bool = False
 
     @model_validator(mode="after")
     def validate_repair_obligation(self) -> "ConformanceReview":
@@ -1092,7 +1167,7 @@ _ROLE_DEFINITIONS = {
         version=1,
         input_type=HypothesisResearcherInput,
         output_contract_id="intervention_hypothesis",
-        output_contract_version=4,
+        output_contract_version=5,
         output_type=InterventionHypothesis,
     ),
     "evidence_reviewer": TeacherRoleDefinition(
@@ -1118,6 +1193,14 @@ _ROLE_DEFINITIONS = {
         output_contract_id="mechanism_distillation",
         output_contract_version=2,
         output_type=MechanismDistillation,
+    ),
+    "hook_feasibility_reviewer": TeacherRoleDefinition(
+        role_id="hook_feasibility_reviewer",
+        version=1,
+        input_type=HookFeasibilityReviewerInput,
+        output_contract_id="hook_feasibility_review",
+        output_contract_version=1,
+        output_type=HookFeasibilityReview,
     ),
     "intervention_worker": TeacherRoleDefinition(
         role_id="intervention_worker",

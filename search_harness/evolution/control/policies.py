@@ -71,6 +71,8 @@ def evaluate_promotion(
     incumbent_metrics: dict[str, Any],
     candidate_metrics: dict[str, Any],
     config: EvolutionControlConfig,
+    effect_goal: str = "task_outcome",
+    effect_summary: dict[str, Any] | None = None,
 ) -> PromotionDecision:
     """Combine a deterministic safety gate with the Reviewer effect gate."""
 
@@ -126,14 +128,66 @@ def evaluate_promotion(
         safety_reasons.append("incumbent accuracy is unavailable")
     if candidate_accuracy is None:
         safety_reasons.append("candidate accuracy is unavailable")
-    if (
-        accuracy_delta is not None
-        and accuracy_delta < config.min_accuracy_delta
-    ):
+    accuracy_floor = (
+        config.min_accuracy_delta
+        if effect_summary is None
+        else config.task_outcome_min_accuracy_delta
+        if effect_goal == "task_outcome"
+        else config.behavioral_min_accuracy_delta
+        if effect_goal == "behavioral_intermediate"
+        else None
+    )
+    if accuracy_floor is None:
+        safety_reasons.append(f"unknown mechanism effect_goal: {effect_goal}")
+    elif accuracy_delta is not None and accuracy_delta < accuracy_floor:
         safety_reasons.append(
             "accuracy regression exceeds the configured safety limit: "
-            f"{accuracy_delta:.6f} < {config.min_accuracy_delta:.6f}"
+            f"{accuracy_delta:.6f} < {accuracy_floor:.6f}"
         )
+    if effect_summary is not None:
+        beneficial = _non_negative_summary_count(
+            effect_summary,
+            "attributed_beneficial_example_count",
+        )
+        harmful = _non_negative_summary_count(
+            effect_summary,
+            "attributed_harmful_example_count",
+        )
+        target = _non_negative_summary_count(
+            effect_summary,
+            "target_behavior_example_count",
+        )
+        if effect_goal == "task_outcome":
+            if beneficial < (
+                config.task_outcome_min_attributed_beneficial_examples
+            ):
+                safety_reasons.append(
+                    "attributable beneficial example count is below the "
+                    "task-outcome minimum: "
+                    f"{beneficial} < "
+                    f"{config.task_outcome_min_attributed_beneficial_examples}"
+                )
+            if harmful > config.task_outcome_max_attributed_harmful_examples:
+                safety_reasons.append(
+                    "attributable harmful example count exceeds the "
+                    "task-outcome maximum: "
+                    f"{harmful} > "
+                    f"{config.task_outcome_max_attributed_harmful_examples}"
+                )
+        elif effect_goal == "behavioral_intermediate":
+            if target < config.behavioral_min_target_behavior_examples:
+                safety_reasons.append(
+                    "target behavior example count is below the behavioral "
+                    f"minimum: {target} < "
+                    f"{config.behavioral_min_target_behavior_examples}"
+                )
+            if harmful > config.behavioral_max_attributed_harmful_examples:
+                safety_reasons.append(
+                    "attributable harmful example count exceeds the "
+                    "behavioral maximum: "
+                    f"{harmful} > "
+                    f"{config.behavioral_max_attributed_harmful_examples}"
+                )
     if config.max_total_token_ratio is not None:
         if incumbent_tokens is None:
             safety_reasons.append(
@@ -170,6 +224,16 @@ def evaluate_promotion(
         accuracy_delta=accuracy_delta,
         total_token_ratio=token_ratio,
     )
+
+
+def _non_negative_summary_count(
+    summary: dict[str, Any],
+    name: str,
+) -> int:
+    value = summary.get(name, 0)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return value
 
 
 def _optional_metric(

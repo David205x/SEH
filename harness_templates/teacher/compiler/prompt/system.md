@@ -90,8 +90,12 @@ Minimal lowering rules:
   omit a material case, or contradict evidence coverage, return
   `needs_mechanism_revision` or `needs_evidence` and name the exact predicate.
   Use inherited `student_model_experiments` as descriptive evidence when they
-  cover the same decision task. If prompt wording, response shape, or thinking
-  mode remains materially uncertain, call `run_student_model_experiment` with
+  cover the same decision task. Experiments whose purpose starts with
+  `distilled_hook_model_feasibility` were run on reviewed real prefixes; treat
+  their selected thinking/parser instructions in `implementation_constraints`
+  as the primary evaluator handoff. If an integration-specific prompt wording
+  or response shape remains materially uncertain, call
+  `run_student_model_experiment` with
   bounded synthetic inputs before finalizing the implementation. The tool has
   no program-owned expected labels or pass threshold: judge raw outputs and
   usage against the MechanismSpec, and return `needs_mechanism_revision` when a

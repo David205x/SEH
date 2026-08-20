@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from typing import Annotated, Any
 
@@ -28,6 +29,11 @@ from search_harness.integrations.openai_compatible import (
 from .types import InterventionAction
 
 
+_TRIAL_STATE_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,63}$")
+_MAX_TRIAL_STATE_KEYS = 16
+_MAX_TRIAL_STATE_CHARACTERS = 4096
+
+
 class InterventionWorker:
     """Persist teacher context across Hook activations in one Student branch."""
 
@@ -43,6 +49,7 @@ class InterventionWorker:
         activation_tool_set_factory: (
             Callable[[object], ToolSet] | None
         ) = None,
+        extended_tools: bool = False,
     ) -> None:
         if not intent.strip():
             raise ValueError("intervention intent must not be empty")
@@ -55,6 +62,8 @@ class InterventionWorker:
         self.max_steps_per_activation = max_steps_per_activation
         self.trace: list[dict[str, Any]] = []
         self._activation_count = 0
+        self._trial_state: dict[str, Any] = {}
+        self._extended_tools = extended_tools
         self._system_prompt = _render_system_prompt(
             template=system_prompt_template,
         )
@@ -90,17 +99,23 @@ class InterventionWorker:
         if phase_activation < 1 or max_activations < phase_activation:
             raise ValueError("invalid phase activation budget")
         self._activation_count += 1
-        activation = _ActivationState(snapshot)
+        activation = _ActivationState(snapshot, self._trial_state)
         tool_set = (
             self._activation_tool_set_factory(activation)
             if self._activation_tool_set_factory is not None
-            else _ActivationTools(activation).tool_set
+            else _ActivationTools(
+                activation,
+                extended_tools=self._extended_tools,
+            ).tool_set
         )
         if not isinstance(tool_set, ToolSet):
             raise TypeError("activation tool-set factory must return ToolSet")
         runtime = ToolExecutor(tool_set.tools)
         step = snapshot.get("current_step")
-        active_observation = _active_observation(snapshot)
+        active_observation = _active_observation(
+            snapshot,
+            trial_state=self._trial_state if self._extended_tools else None,
+        )
         self._session.append_user_message(
             (
                 f"Hook activation {self._activation_count}: phase={phase}, "
@@ -120,6 +135,11 @@ class InterventionWorker:
                 "not decided that semantic condition for you.\n"
                 "Inspect the bound Student context as needed, then call exactly one "
                 "terminal action tool. The terminal tool ends this Hook activation."
+                " Every assistant response may contain exactly one native tool "
+                "call in total. Never batch or parallelize inspection, state, and "
+                "terminal calls. If state and a terminal action are both required, "
+                "call update_trial_state alone, wait for its Tool Result, and call "
+                "the terminal action in a later response."
             )
         )
         self.trace.append(
@@ -131,6 +151,7 @@ class InterventionWorker:
                 "phase_activation": phase_activation,
                 "max_activations": max_activations,
                 "guidance": guidance,
+                "trial_state_before": dict(self._trial_state),
             }
         )
 
@@ -236,6 +257,7 @@ class InterventionWorker:
                         "event_type": "worker_action",
                         "activation": self._activation_count,
                         "action": activation.action.to_dict(),
+                        "trial_state_after": dict(self._trial_state),
                     }
                 )
                 return activation.action
@@ -300,6 +322,12 @@ class InterventionWorker:
 
         return self._session.usage
 
+    @property
+    def trial_state(self) -> dict[str, Any]:
+        """Return the explicit branch-local state retained across activations."""
+
+        return dict(self._trial_state)
+
     def close(self) -> None:
         """Close transport resources owned by this Worker."""
 
@@ -307,8 +335,13 @@ class InterventionWorker:
 
 
 class _ActivationState:
-    def __init__(self, snapshot: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        snapshot: dict[str, Any],
+        trial_state: dict[str, Any] | None = None,
+    ) -> None:
         self.snapshot = snapshot
+        self.trial_state = trial_state if trial_state is not None else {}
         self.action: InterventionAction | None = None
 
     def finish(self, action: InterventionAction) -> ToolResult:
@@ -323,12 +356,26 @@ class _ActivationState:
 
 
 class _ActivationTools:
-    def __init__(self, activation: _ActivationState) -> None:
+    def __init__(
+        self,
+        activation: _ActivationState,
+        *,
+        extended_tools: bool = False,
+    ) -> None:
         self._activation = activation
         tools = [
             CallableTool.from_callable(self.inspect_editable_context),
             CallableTool.from_callable(self.inspect_context_block),
         ]
+        if extended_tools:
+            tools.append(CallableTool.from_callable(self.update_trial_state))
+            if _editable_stage_target(activation.snapshot) is not None:
+                tools.extend(
+                    [
+                        CallableTool.from_callable(self.inspect_active_stage),
+                        CallableTool.from_callable(self.apply_active_stage_patch),
+                    ]
+                )
         if _context_patch_is_available(activation.snapshot):
             tools.append(CallableTool.from_callable(self.apply_context_patch))
         if _stage_is_active(activation.snapshot, "final_decision"):
@@ -340,6 +387,98 @@ class _ActivationTools:
             )
         tools.append(CallableTool.from_callable(self.continue_without_change))
         self.tool_set = ToolSet(tools)
+
+    @tool(name="update_trial_state")
+    def update_trial_state(
+        self,
+        values: Annotated[
+            dict[str, object],
+            ToolArg(
+                "Branch-local JSON values to create or replace. State is visible "
+                "at later Hook activations in this Trial only."
+            ),
+        ],
+    ) -> ToolResult:
+        """Update bounded Trial state without ending the current activation."""
+
+        error = _trial_state_update_error(
+            current=self._activation.trial_state,
+            values=values,
+        )
+        if error is not None:
+            return ToolResult(
+                name="update_trial_state",
+                content=f"TOOL_INPUT_ERROR: {error}",
+                metadata={"error": error},
+            )
+        self._activation.trial_state.update(values)
+        return ToolResult(
+            name="update_trial_state",
+            content=(
+                "TRIAL_STATE_UPDATED: "
+                + ", ".join(sorted(values))
+            ),
+            metadata={"updated_keys": sorted(values)},
+        )
+
+    @tool(name="inspect_active_stage")
+    def inspect_active_stage(self) -> ToolResult:
+        """Read the current phase's editable semantic stage projection."""
+
+        target = _editable_stage_target(self._activation.snapshot)
+        if target is None:
+            return ToolResult(
+                name="inspect_active_stage",
+                content="TOOL_INPUT_ERROR: no editable stage target is active",
+                metadata={"error": "no editable stage target is active"},
+            )
+        key, projection = target
+        return ToolResult(
+            name="inspect_active_stage",
+            content=(
+                f"Editable stage: stage.{key}\n"
+                + json.dumps(projection, ensure_ascii=False)
+            ),
+        )
+
+    @tool(name="apply_active_stage_patch")
+    def apply_active_stage_patch(
+        self,
+        patch: Annotated[
+            dict[str, object],
+            ToolArg(
+                "Semantic patch for the active stage. post_model: {content}; "
+                "post_parse: {kind, tool_call|final_answer|error}; pre_tool: "
+                "{name?, arguments?}; post_tool: {content}. Program metadata "
+                "is preserved."
+            ),
+        ],
+        reason: Annotated[
+            str,
+            ToolArg("Why this stage transformation tests the hypothesis."),
+        ] = "",
+    ) -> ToolResult:
+        """Patch one active semantic stage value and finish the activation."""
+
+        replacement, error = _active_stage_replacement(
+            snapshot=self._activation.snapshot,
+            patch=patch,
+        )
+        if error is not None or replacement is None:
+            message = error or "active stage patch could not be constructed"
+            return ToolResult(
+                name="apply_active_stage_patch",
+                content=f"TOOL_INPUT_ERROR: {message}",
+                metadata={"error": message},
+            )
+        key, value = replacement
+        return self._activation.finish(
+            InterventionAction(
+                kind="replace_stage_value",
+                payload={"key": key, "value": value},
+                reason=reason.strip(),
+            )
+        )
 
     @tool(name="inspect_editable_context")
     def inspect_editable_context(self) -> ToolResult:
@@ -545,8 +684,10 @@ def _render_system_prompt(
     return (
         "You are an Intervention Worker supervising one forked Student trajectory. "
         "You may inspect all bound trace evidence and modify only through the supplied "
-        "tools. At each Hook activation, inspect what you need and call exactly one "
-        "terminal action tool. A terminal action immediately returns control to the "
+        "tools. Every assistant response may contain exactly one native tool call. "
+        "Never batch or parallelize tool calls. At each Hook activation, inspect what "
+        "you need and call exactly one terminal action tool. A terminal action "
+        "immediately returns control to the "
         "Student. Never use a golden "
         "answer or invent evidence. Tool-phase recommendations are advisory; any active "
         "stage may be replaced when the experiment intent requires it.\n\n"
@@ -570,7 +711,11 @@ def _table_cell(value: object) -> str:
     ).replace("\n", " ")
 
 
-def _active_observation(snapshot: dict[str, Any]) -> dict[str, Any]:
+def _active_observation(
+    snapshot: dict[str, Any],
+    *,
+    trial_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Project only phase-local state needed to interpret the current activation."""
 
     active_stage = snapshot.get("active_stage")
@@ -585,7 +730,7 @@ def _active_observation(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
     prior_changes = snapshot.get("prior_intervention_changes")
     prior_changes = prior_changes if isinstance(prior_changes, list) else []
-    return {
+    observation = {
         "phase": snapshot.get("current_phase"),
         "student_step": snapshot.get("current_step"),
         "active_stage": projected_stage,
@@ -594,6 +739,147 @@ def _active_observation(snapshot: dict[str, Any]) -> dict[str, Any]:
             "prior_intervention_count": len(prior_changes),
         },
     }
+    if trial_state is not None:
+        observation["trial_state"] = dict(trial_state)
+    return observation
+
+
+def _editable_stage_target(
+    snapshot: dict[str, Any],
+) -> tuple[str, Any] | None:
+    """Return the one semantic stage surface editable at the current phase."""
+
+    # A retained prefix reconstructs Student-visible context, not the suspended
+    # parser/tool transaction that originally produced every stage value.  A
+    # source post_tool value can still be represented faithfully in the
+    # continuation context; raw output, parsed output, and a pending Tool Call
+    # require a live branch Hook transaction instead.
+    if snapshot.get("source_boundary") and snapshot.get("current_phase") in {
+        "post_model",
+        "post_parse",
+        "pre_tool",
+    }:
+        return None
+
+    phase_targets = {
+        "post_model": "raw_model_output",
+        "post_parse": "parsed_output",
+        "pre_tool": "tool_call",
+        "post_tool": "tool_result",
+    }
+    key = phase_targets.get(str(snapshot.get("current_phase")))
+    active_stage = snapshot.get("active_stage")
+    if key is None or not isinstance(active_stage, dict) or key not in active_stage:
+        return None
+    value = active_stage[key]
+    if key == "raw_model_output":
+        return key, {"content": value}
+    if not isinstance(value, dict):
+        return None
+    if key == "tool_result":
+        return key, {
+            "name": value.get("name"),
+            "content": value.get("content"),
+        }
+    if key == "parsed_output":
+        return key, {
+            name: value.get(name)
+            for name in ("kind", "tool_call", "final_answer", "error")
+            if value.get(name) is not None
+        }
+    return key, {
+        "name": value.get("name"),
+        "arguments": value.get("arguments"),
+    }
+
+
+def _active_stage_replacement(
+    *,
+    snapshot: dict[str, Any],
+    patch: dict[str, object],
+) -> tuple[tuple[str, Any] | None, str | None]:
+    target = _editable_stage_target(snapshot)
+    if target is None:
+        return None, "no editable stage target is active"
+    if not patch:
+        return None, "patch must contain at least one field"
+    key, projection = target
+    if key == "raw_model_output":
+        if set(patch) != {"content"} or not isinstance(patch.get("content"), str):
+            return None, "post_model patch requires only string content"
+        return (key, patch["content"]), None
+    if key == "tool_result":
+        if set(patch) != {"content"} or not isinstance(patch.get("content"), str):
+            return None, "post_tool patch requires only string content"
+        active = snapshot["active_stage"][key]
+        value = dict(active)
+        value["content"] = patch["content"]
+        return (key, value), None
+    if key == "tool_call":
+        if not set(patch) <= {"name", "arguments"}:
+            return None, "pre_tool patch supports only name and arguments"
+        value = dict(projection)
+        value.update(patch)
+        if not isinstance(value.get("name"), str) or not value["name"].strip():
+            return None, "tool_call patch requires a non-empty name"
+        if not isinstance(value.get("arguments"), dict):
+            return None, "tool_call patch arguments must be an object"
+        return (key, value), None
+
+    if not set(patch) <= {"kind", "tool_call", "final_answer", "error"}:
+        return None, "post_parse patch contains unsupported fields"
+    kind = patch.get("kind", projection.get("kind"))
+    active = snapshot["active_stage"][key]
+    value: dict[str, Any] = {"kind": kind}
+    if isinstance(active, dict) and active.get("inband_thinking") is not None:
+        value["inband_thinking"] = active["inband_thinking"]
+    if kind == "tool_call":
+        tool_call = patch.get("tool_call", projection.get("tool_call"))
+        if (
+            not isinstance(tool_call, dict)
+            or not isinstance(tool_call.get("name"), str)
+            or not isinstance(tool_call.get("arguments", {}), dict)
+        ):
+            return None, "tool_call parsed output requires name and object arguments"
+        value["tool_call"] = tool_call
+    elif kind == "final_answer":
+        answer = patch.get("final_answer", projection.get("final_answer"))
+        if not isinstance(answer, str):
+            return None, "final_answer parsed output requires string final_answer"
+        value["final_answer"] = answer
+    elif kind == "invalid":
+        error = patch.get("error", projection.get("error"))
+        if not isinstance(error, str) or not error.strip():
+            return None, "invalid parsed output requires non-empty error"
+        value["error"] = error
+    else:
+        return None, "post_parse kind must be tool_call, final_answer, or invalid"
+    return (key, value), None
+
+
+def _trial_state_update_error(
+    *,
+    current: dict[str, Any],
+    values: dict[str, object],
+) -> str | None:
+    if not values:
+        return "values must contain at least one state entry"
+    invalid_keys = [key for key in values if _TRIAL_STATE_KEY.fullmatch(key) is None]
+    if invalid_keys:
+        return f"invalid state key: {invalid_keys[0]}"
+    candidate = {**current, **values}
+    if len(candidate) > _MAX_TRIAL_STATE_KEYS:
+        return f"Trial state may contain at most {_MAX_TRIAL_STATE_KEYS} keys"
+    try:
+        encoded = json.dumps(candidate, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        return f"Trial state values must be JSON-compatible: {exc}"
+    if len(encoded) > _MAX_TRIAL_STATE_CHARACTERS:
+        return (
+            "Trial state exceeds "
+            f"{_MAX_TRIAL_STATE_CHARACTERS} serialized characters"
+        )
+    return None
 
 
 def _stage_is_active(snapshot: dict[str, Any], key: str) -> bool:

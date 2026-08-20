@@ -21,9 +21,20 @@ contract that needs no unseen reasoning or case facts.
 Student-visible `system` and `developer` prompt content is a legal intervention
 surface when the capability catalog exposes a supported context patch. Treat a
 prompt revision, runtime feedback, and control action as parallel candidates;
-choose the smallest supported change. An unconditional prompt rule needs
-evidence matching its global reach. A conditional prompt patch remains bounded
-by `activation_condition`.
+prefer the least complex evidence-bounded strategy that faithfully represents
+the causal proposal. Do not collapse decomposition, a stage rewrite, or a
+stateful multi-phase plan into a prompt patch merely because the patch is easier
+to execute. An unconditional prompt rule needs evidence matching its global
+reach. A conditional prompt patch remains bounded by `activation_condition`.
+
+The current Intervention runtime supports four general surfaces: atomic edits
+to numbered Student-visible context blocks at `post_prompt` or `post_tool`;
+semantic active-stage edits at live `post_model`, `post_parse`, `pre_tool`, or
+`post_tool`; bounded Trial-local JSON state shared across Worker activations;
+and `pre_final` accept/defer control. Trial state is invisible to the Student,
+resets for every assignment, and is appropriate only when a later phase truly
+depends on an earlier observation. The Worker runs without native thinking, so
+keep each directive direct and bounded rather than asking it to invent a plan.
 
 ## Boundary decision procedure
 
@@ -81,7 +92,10 @@ edit causally affects a later decision on the same branch.
    `applicability`, or an explicit limit, and no caveated analog may enter
    positive scope.
 7. Choose corrective or preventive, then one recoverable `fork_phase` whose
-   inclusive prefix makes the claim observable and executable.
+   inclusive prefix can resume before the required action. `fork_phase` is an
+   execution anchor, not necessarily an intervention phase. For live
+   `post_model`, `post_parse`, or `pre_tool` editing, select an earlier
+   recoverable anchor and put only the actual live phase in `phase_plan`.
 8. Specify one to four unique phase directives in causal order: phase-visible
    condition, bounded instruction, immediate expected effect, and activation
    budget. Use one activation unless repetition is essential.
@@ -96,8 +110,8 @@ edit causally affects a later decision on the same branch.
 ## Output contract
 
 - `fork_phase`: exactly one of `post_prompt`, `post_model`, `post_parse`,
-  `pre_tool`, `post_tool`, or `pre_final`; it equals the first
-  `phase_plan[].phase`.
+  `pre_tool`, `post_tool`, or `pre_final`; it is the retained execution anchor
+  and may precede the first planned intervention phase.
 - `phase_plan[].phase`: one unique Hook phase in the persistent Worker
   transcript.
 - `activation_condition`: all necessary facts are visible and decidable at that
@@ -122,7 +136,7 @@ Do not set generic sample thresholds or judge cross-Trial benefit. Submit these
 fields directly at the terminal Tool top level, not inside an
 `intervention_hypothesis` object. Respect Schema `maxLength`; target at most 320
 characters for conditions, 550 for instructions, 260 for effects and
-applicability, 180 for primary signal, 220 for success/falsifier, 140 per
+340 for applicability, 180 for primary signal, 220 for success/falsifier, 140 per
 secondary metric, and 200 per obligation or rationale.
 
 ## Revision continuation
@@ -145,8 +159,9 @@ Verify:
 2. No trigger relies on facts occurring after its phase.
 3. Corrective triggers observe decisive failure; preventive triggers state the
    precursor-risk scope and require a same-precursor recovery control.
-4. The action is capability-supported and minimally scoped; no field relies on
-   the Worker to decide whether help is needed or to narrow the condition.
+4. The action is capability-supported and no more complex than necessary to
+   express the causal proposal faithfully; no field relies on the Worker to
+   decide whether help is needed or to narrow the condition.
 5. Success and falsifier are observable within the same activated scope, and
    later directives genuinely depend on the same branch.
 6. No field contains a case answer, named entity, case-specific query or path,

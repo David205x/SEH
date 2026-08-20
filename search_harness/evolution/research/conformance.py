@@ -59,6 +59,8 @@ class ConformanceSummary:
     finding_refs: tuple[str, ...]
     local_efficacy_counts: dict[str, int]
     local_efficacy_gate: str
+    effect_goal: str
+    target_behavior_example_count: int
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,6 +80,10 @@ class ConformanceSummary:
             "finding_refs": list(self.finding_refs),
             "local_efficacy_counts": dict(self.local_efficacy_counts),
             "local_efficacy_gate": self.local_efficacy_gate,
+            "effect_goal": self.effect_goal,
+            "target_behavior_example_count": (
+                self.target_behavior_example_count
+            ),
         }
 
 
@@ -225,6 +231,7 @@ def aggregate_conformance(
     cases: Iterable[ConformanceCase],
     findings: Iterable[ConformanceFinding],
     finding_refs: Iterable[str],
+    effect_goal: str = "task_outcome",
 ) -> ConformanceSummary:
     """Apply the per-example faithful and global failure rules."""
 
@@ -311,11 +318,23 @@ def aggregate_conformance(
         efficacy_gate = "pass"
     else:
         efficacy_gate = "inconclusive"
+    target_behavior_examples = {
+        item.candidate_run_ref.rsplit("/", maxsplit=1)[0]
+        for item in finding_items
+        if item.target_behavior_observed
+    }
+    if effect_goal == "task_outcome":
+        effect_goal_passed = efficacy_gate == "pass"
+    elif effect_goal == "behavioral_intermediate":
+        effect_goal_passed = bool(target_behavior_examples)
+    else:
+        raise ValueError(f"unknown mechanism effect_goal: {effect_goal}")
     decision = (
         "pass"
         if not (set(counts) & hard_failures)
         and not missing_faithful
         and efficacy_gate != "fail"
+        and effect_goal_passed
         else "revise"
     )
     route_feedback = {
@@ -345,6 +364,27 @@ def aggregate_conformance(
                     ),
                 ]
             )
+        )
+    if (
+        not effect_goal_passed
+        and efficacy_gate != "fail"
+        and not (set(counts) & hard_failures)
+        and not missing_faithful
+    ):
+        obligation = (
+            "The locally faithful Candidate replay showed no attributable "
+            "task benefit. Re-establish a supported local task improvement "
+            "before full Candidate Evaluation."
+            if effect_goal == "task_outcome"
+            else (
+                "The locally faithful Candidate replay did not observe the "
+                "declared target intermediate behavior. Re-establish that "
+                "behavior on a supported local case before full Candidate "
+                "Evaluation."
+            )
+        )
+        route_feedback["evidence"] = tuple(
+            _unique([*route_feedback["evidence"], obligation])
         )
     recommended_route = next(
         (
@@ -378,6 +418,8 @@ def aggregate_conformance(
         finding_refs=refs,
         local_efficacy_counts=dict(efficacy_counts),
         local_efficacy_gate=efficacy_gate,
+        effect_goal=effect_goal,
+        target_behavior_example_count=len(target_behavior_examples),
     )
 
 

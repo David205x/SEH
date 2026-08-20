@@ -526,6 +526,7 @@ class ConformanceEffects:
                 cases=cases,
                 findings=findings,
                 finding_refs=[str(path) for path in finding_paths],
+                effect_goal=mechanism.effect_goal,
             )
             summary_path = _write_json_atomic(
                 checkpoint_dir / "summary.json",
@@ -581,6 +582,10 @@ def summarize_conformance_review(
         "passed_example_count": passed,
         "local_efficacy_counts": summary.get("local_efficacy_counts"),
         "local_efficacy_gate": summary.get("local_efficacy_gate"),
+        "effect_goal": summary.get("effect_goal"),
+        "target_behavior_example_count": summary.get(
+            "target_behavior_example_count"
+        ),
     }
 
 

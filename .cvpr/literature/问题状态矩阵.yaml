@@ -1,0 +1,35 @@
+schema_version: "1.0"
+cutoff_date: "2026-08-20"
+questions:
+  - id: Q1
+    question: "近期 Harness Evolution 是否已经在生成持久化 Candidate 前，用未编译的局部干预验证行为假设？"
+    status: "partially_open"
+    supporting_papers: [P001, P002, P003, P004, P007, P011]
+    closest_counterexample: P008
+    judgment: "主流工作仍较早物化 Candidate；Shepherd 已能从分叉点验证 proposed fix，故只能主张特定的 hypothesis-first、evidence-gated compilation protocol，而不能主张 fork/replay 首创。"
+  - id: Q2
+    question: "是否已有工作把目标 Student 对单个语义 guard/decision contract 的可实现性作为编译前门禁？"
+    status: "open_with_strong_motivation"
+    supporting_papers: [P006, P013, P010]
+    judgment: "P006 测量 activation/adherence failure，P013 陈述 backbone capability bound，P010 让 PF 可执行；未见逐机制、真实 prefix、编译前的 Student feasibility gate。"
+  - id: Q3
+    question: "实现无关 Mechanism IR 是否仍有空间？"
+    status: "partially_open"
+    supporting_papers: [P010, P004, P015, P003]
+    judgment: "HASP 的 Program Function 与 AHE/HarnessCompass 的组件拆分已覆盖部分表示需求；可争取的差异是同一机制的 attachment/ownership/observability/state/fallback contract 与多 realization 编译，而非 guard/action 二元组。"
+  - id: Q4
+    question: "证据门是否能提高有效 Candidate 产出率并降低完整评估成本？"
+    status: "unresolved_empirically"
+    supporting_papers: [P005, P011, P016]
+    local_evidence: "当前项目能在 Compiler 前拒绝 3/4 boundary 的 hook 机制，但后续两个 Candidate 均退化，且 run 超过 soft token budget。"
+    judgment: "只能作为待检验假设；必须报告总成本、每个 accepted/useful candidate 成本、false promotion/false rejection，并做预算匹配基线。"
+  - id: Q5
+    question: "分层 rerouting、event receipt 和 conformance 是否可作为主要算法贡献？"
+    status: "mostly_closed_as_primary_novelty"
+    supporting_papers: [P004, P008, P012, P014]
+    judgment: "适合作为正确性与可追溯性的 enabling systems contribution，不宜单独承担主 novelty。"
+  - id: Q6
+    question: "角色定向、验证证据驱动的跨 generation 经验能否作为 Harness optimizer 的搜索控制层？"
+    status: "open_as_integrated_empirical_hypothesis"
+    supporting_papers: [P012, P017, P018, P019, P020, P021, P022]
+    judgment: "角色专属记忆、episodic/procedural/transactive 分类、经验提炼和 search-trace skill library 均已有先例，因此不主张三类经验或定向消费首创。可检验空间在于：经验只由 typed gate/reviewer verdict 及其证据写入；Student 能力边界与方向地图只投影给 Researcher，对应 Teacher 工作经验只投影给同一 role/model/contract；它作为可失效、可复查、有探索旁路的 optimizer search prior，而不作为 Gate 证据或永久黑名单。收益与 false pruning 均尚未验证。"
