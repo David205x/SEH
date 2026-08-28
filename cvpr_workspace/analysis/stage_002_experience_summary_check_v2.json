@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "check_id": "CHECK-STAGE-002-EXPERIENCE-SUMMARY",
+  "status": "passed",
+  "scope": "development_check_only",
+  "input_fields": [
+    "trigger",
+    "route_target_role",
+    "direction",
+    "attempt",
+    "evidence"
+  ],
+  "output_fields": [
+    "experience_type",
+    "lesson",
+    "applicability",
+    "evidence_refs"
+  ],
+  "tools": [
+    "inspect_experience_evidence"
+  ],
+  "inspected_view": "decision_trace",
+  "assertions": {
+    "compact_input_only": true,
+    "program_evidence_hidden_until_tool_call": true,
+    "evidence_directory_is_content_free": true,
+    "single_allowlisted_tool": true,
+    "bounded_tool_result": true,
+    "tool_invocations_have_no_hard_count_limit": true,
+    "authorized_output_evidence": true,
+    "empty_summary_allowed": true,
+    "external_api_called": false
+  }
+}

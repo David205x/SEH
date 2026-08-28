@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_shadow_prompt_researcher_v1",
+  "tools": [
+    {
+      "instance_id": "run_hook_prompt_probe",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "run_hook_prompt_probe"
+      }
+    }
+  ],
+  "prompt": {
+    "instance_id": "shadow_prompt_researcher",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

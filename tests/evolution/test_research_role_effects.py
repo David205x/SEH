@@ -11,7 +11,15 @@ from unittest import IsolatedAsyncioTestCase
 from search_harness.evolution.control.research_role_effects import (
     ResearchRoleEffects,
 )
-from search_harness.evolution.research.roles.contracts import CompilerResult
+from search_harness.evolution.research.experience_summary import (
+    CapabilityEvidenceRecord,
+    make_capability_request,
+)
+from search_harness.evolution.research.roles.contracts import (
+    CapabilityObservation,
+    CompilerResult,
+    ExperienceValidity,
+)
 
 from tests.evolution.research.intervention.test_role_runner import _hypothesis
 from tests.evolution.research.mechanism.test_compiler_capabilities import (
@@ -35,7 +43,10 @@ class _RecordingRoleRunner:
                 "caveats": ["Prevalence is unknown."],
                 "evidence_refs": ["example-1/r000", "example-2/r000"],
             },
-            "hypothesis_researcher": _hypothesis(),
+            "hypothesis_researcher": {
+                "scheme_action": "start_new",
+                "hypothesis": _hypothesis(),
+            },
             "mechanism_distiller": {
                 "decision": "distilled",
                 "mechanism_ref": "mechanism:test",
@@ -54,6 +65,16 @@ class _RecordingRoleRunner:
                 "reason": "Validation and evaluation support acceptance.",
                 "next_obligation": None,
                 "revision_target": None,
+            },
+            "capability_summarizer": {
+                "items": [
+                    {
+                        "observed_limitation": (
+                            "Cannot reliably exclude a reviewed negative."
+                        ),
+                        "evidence_refs": [1],
+                    }
+                ]
             },
         }
         artifact: dict[str, Any] = {
@@ -85,7 +106,10 @@ class _RecordingRoleRunner:
     ) -> dict[str, Any]:
         self.continuations.append(values)
         return {
-            "output": _hypothesis(),
+            "output": {
+                "scheme_action": "revise_current",
+                "hypothesis": _hypothesis(),
+            },
             "usage": {"total_tokens": 2},
         }
 
@@ -106,6 +130,76 @@ class _Store:
 
 
 class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
+    async def test_capability_effect_writes_program_product(self) -> None:
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            runner = _RecordingRoleRunner(
+                _mechanism(
+                    trigger_phase="pre_final",
+                    decision_inputs=["final_answer_candidate"],
+                    required_capabilities=[],
+                ).model_dump(mode="json")
+            )
+            effects = ResearchRoleEffects(
+                role_runner=runner,  # type: ignore[arg-type]
+                store=_Store(root),  # type: ignore[arg-type]
+                env_file=root / ".env",
+                teacher_template_root=root / "teacher",
+            )
+            request = make_capability_request(
+                observations=[
+                    CapabilityObservation(
+                        observation_id=1,
+                        decision_scope="Determine whether evidence is missing.",
+                        subject="One direct Hook decision.",
+                        expected="negative",
+                        observed="positive twice",
+                        comparison="Same input repeated.",
+                        conditions="thinking disabled",
+                        validity=ExperienceValidity(
+                            reference="confirmed",
+                            model_input="confirmed",
+                            implementation_fidelity="confirmed",
+                            data_environment="not_applicable",
+                        ),
+                        evidence_structure="Two repeated direct decisions.",
+                        open_checks=[],
+                    )
+                ],
+                details=[],
+                source_processing_context="A direct probe completed.",
+                observation_sources={1: ["probe#case_1"]},
+                capability_evidence={
+                    1: CapabilityEvidenceRecord(
+                        expected_decision="negative",
+                        observed_by_condition={
+                            "disabled": ["positive", "positive"]
+                        },
+                    )
+                },
+            )
+
+            result = await effects.summarize_capability(
+                request=request,
+                work_dir=root / "capability",
+            )
+
+            self.assertIn(
+                "capability_summarizer_artifact",
+                result.artifact_refs,
+            )
+            self.assertIn(
+                "capability_experience_artifact",
+                result.artifact_refs,
+            )
+            self.assertEqual(
+                result.outcome["output"]["items"][0]["decision_scope"],
+                "Determine whether evidence is missing.",
+            )
+            self.assertTrue(
+                (root / "capability" / "capability_experience.json").is_file()
+            )
+
     async def test_routes_all_non_intervention_research_roles(self) -> None:
         """Each Role receives its own Template, resources, and artifact key."""
 
@@ -145,7 +239,7 @@ class ResearchRoleEffectsTest(IsolatedAsyncioTestCase):
                 work_dir=root / "continued",
             )
             distilled = await effects.distill_mechanism(
-                hypothesis=continued.outcome["output"],
+                hypothesis=continued.outcome["output"]["hypothesis"],
                 review={"decision": "ready_to_distill"},
                 trial_reviews=[
                     {

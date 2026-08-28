@@ -9,7 +9,6 @@ import shutil
 from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from search_harness._internal import (
     evolution_control_values,
@@ -19,6 +18,7 @@ from search_harness._internal import (
 from search_harness.evolution.control.controller import EvolutionController
 from search_harness.evolution.control.domain import (
     EvolutionControlConfig,
+    TrajectoryLineage,
     WorkItem,
     WorkKind,
     project_events,
@@ -28,6 +28,13 @@ from search_harness.evolution.control.effects import (
     LocalControlEffectsConfig,
 )
 from search_harness.evolution.control.journal import ControlJournal
+from search_harness.evolution.identifiers import (
+    make_generation_id,
+    make_logical_work_id,
+    make_research_attempt_id,
+    make_work_id,
+    new_run_id,
+)
 from search_harness.evolution.versioning import TemplateVersionStore
 
 
@@ -137,7 +144,7 @@ async def _run(args: argparse.Namespace) -> None:
         )
         versions = store.list_versions()
         if not versions:
-            raise RuntimeError("Checkpoint store has no accepted version")
+            raise RuntimeError("Version Store has no accepted version")
         initial_version = versions[-1].version_id
 
         summary = _read_object(copied["report_dir"] / "summary.json")
@@ -156,12 +163,12 @@ async def _run(args: argparse.Namespace) -> None:
             teacher_judge=True,
             show_progress=True,
         )
-        run_id = uuid4().hex
+        run_id = new_run_id()
         start_from_failure = "failure_artifact" in copied
         _write_object(
             run_dir / "run.json",
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "run_id": run_id,
                 "start_mode": (
                     "researcher_from_existing_failure"
@@ -196,18 +203,37 @@ async def _run(args: argparse.Namespace) -> None:
             },
         )
 
+        generation = 1
+        generation_id = make_generation_id(run_id, generation)
+        research_attempt = 1
+        research_attempt_id = make_research_attempt_id(
+            generation_id,
+            research_attempt,
+        )
+        lineage = TrajectoryLineage(
+            run_id=run_id,
+            generation=generation,
+            generation_id=generation_id,
+            research_attempt=research_attempt,
+            research_attempt_id=research_attempt_id,
+        )
+        first_kind = (
+            WorkKind.RESEARCH_HYPOTHESIS
+            if start_from_failure
+            else WorkKind.ANALYZE_FAILURE
+        )
+        logical_work_id = make_logical_work_id(
+            research_attempt_id,
+            1,
+            first_kind.value,
+        )
         first = WorkItem(
-            work_id=(
-                f"research_hypothesis-{uuid4().hex[:16]}"
-                if start_from_failure
-                else f"analyze_failure-{uuid4().hex[:16]}"
-            ),
-            kind=(
-                WorkKind.RESEARCH_HYPOTHESIS
-                if start_from_failure
-                else WorkKind.ANALYZE_FAILURE
-            ),
-            subject_ref=f"generation:1:{initial_version}",
+            work_id=make_work_id(logical_work_id, 1),
+            logical_work_id=logical_work_id,
+            work_index=1,
+            kind=first_kind,
+            subject_ref=generation_id,
+            lineage=lineage,
             input_refs={
                 "rollout_file": str(copied["rollout_file"].resolve()),
                 "report_dir": str(copied["report_dir"].resolve()),
@@ -222,7 +248,6 @@ async def _run(args: argparse.Namespace) -> None:
                 ),
             },
             payload={
-                "generation": 1,
                 "version_id": initial_version,
                 "incumbent_metrics": metrics,
             },
@@ -231,7 +256,12 @@ async def _run(args: argparse.Namespace) -> None:
             [
                 (
                     "run_started",
-                    {"run_id": run_id, "initial_version": initial_version},
+                    {
+                        "run_id": run_id,
+                        "initial_version": initial_version,
+                        "generation": generation,
+                        "generation_id": generation_id,
+                    },
                 ),
                 ("work_scheduled", {"work": first.to_dict()}),
             ]
@@ -272,8 +302,8 @@ async def _run(args: argparse.Namespace) -> None:
                     run_dir / "ready.json",
                     {
                         "status": "ready_for_evaluation",
-                        "candidate_attempt_id": next_work.payload.get(
-                            "candidate_attempt_id"
+                        "candidate_attempt_id": (
+                            next_work.lineage.candidate_attempt_id
                         ),
                         "candidate_digest": next_work.payload.get(
                             "candidate_digest"
@@ -287,7 +317,7 @@ async def _run(args: argparse.Namespace) -> None:
                 print(
                     "[driver] READY_FOR_EVALUATION "
                     "candidate_attempt_id="
-                    f"{next_work.payload.get('candidate_attempt_id')}",
+                    f"{next_work.lineage.candidate_attempt_id}",
                     flush=True,
                 )
                 return

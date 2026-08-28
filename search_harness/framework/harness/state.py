@@ -20,6 +20,11 @@ from ..agent.types import (
     ToolCall,
     ToolResult,
 )
+from .prompt_products import (
+    HookPromptOutput,
+    HookPromptProduct,
+    call_prompt_product,
+)
 
 
 class StateAccessError(RuntimeError):
@@ -124,6 +129,14 @@ class HookContext:
         if self._model_backend is None:
             raise RuntimeError(f"hook {self.hook_id} has no model runtime")
         return self._model_backend.generate(request)
+
+    def call_prompt_product(
+        self,
+        product: HookPromptProduct,
+    ) -> HookPromptOutput:
+        """Call one exact managed Prompt Product on the current Hook state."""
+
+        return call_prompt_product(self, product)
 
 
 class HookStateStore:

@@ -15,6 +15,10 @@ from search_harness.evolution.research.intervention.role_runner import (
 from search_harness.evolution.research.roles.contracts import (
     InterventionHypothesis,
 )
+from search_harness.evolution.research.roles.provenance import (
+    input_view_digest,
+    teacher_role_scope_from_artifact,
+)
 from search_harness.evolution.research.resources.base import TeacherResourceConfig
 from search_harness.evolution.research.resources.stores import (
     InterventionResourceConfig,
@@ -57,7 +61,10 @@ class _FakeRunner:
                 "fork_phase": kwargs["fork_phase"],
             },
             "runtime": {
-                "teacher_model": {"role": "teacher", "model_id": "test"},
+                "teacher_model": {
+                    "provider": "test",
+                    "model_id": "teacher-test",
+                },
             },
             "activation_budgets": {
                 "post_tool": 1,
@@ -102,6 +109,13 @@ class _FakeRunner:
             "worker_trace": [
                 {
                     "event_type": "worker_model_output",
+                    "model_input": {
+                        "messages": [
+                            {"role": "system", "content": "worker"},
+                            {"role": "user", "content": "compact view"},
+                        ],
+                        "tools": [],
+                    },
                     "metadata": {"usage": {"total_tokens": 10}},
                 }
             ],
@@ -186,6 +200,26 @@ class InterventionRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                 ],
             },
         )
+        self.assertEqual(artifact["schema_version"], 2)
+        self.assertEqual(
+            teacher_role_scope_from_artifact(artifact).role_id,
+            "intervention_worker",
+        )
+        self.assertEqual(
+            artifact["input_view_digest"],
+            input_view_digest(
+                [
+                    {
+                        "messages": [
+                            {"role": "system", "content": "worker"},
+                            {"role": "user", "content": "compact view"},
+                        ],
+                        "tools": [],
+                    }
+                ]
+            ),
+        )
+        self.assertEqual(len(artifact["base_prompt_digest"]), 64)
         self.assertEqual(artifact["output"]["result_kind"], "executed")
         self.assertEqual(
             artifact["output"]["activated_phases"],

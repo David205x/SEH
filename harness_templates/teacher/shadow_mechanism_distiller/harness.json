@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_shadow_mechanism_distiller_v1",
+  "tools": [
+    {
+      "instance_id": "get_distillation_trial_detail",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "get_distillation_trial_detail"
+      }
+    },
+    {
+      "instance_id": "create_shadow_mechanism_draft",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "create_shadow_mechanism_draft"
+      }
+    },
+    {
+      "instance_id": "add_shadow_decision_phase",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "add_shadow_decision_phase"
+      }
+    },
+    {
+      "instance_id": "add_shadow_generation_phase",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "add_shadow_generation_phase"
+      }
+    },
+    {
+      "instance_id": "validate_shadow_mechanism_draft",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {
+        "kind": "validate_shadow_mechanism_draft"
+      }
+    }
+  ],
+  "prompt": {
+    "instance_id": "shadow_mechanism_distiller",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

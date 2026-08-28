@@ -16,7 +16,7 @@ from .test_version_store import _make_template_root
 
 
 class VersionStoreCliTest(unittest.TestCase):
-    def test_initializes_schema_v2_store_from_root_command(self) -> None:
+    def test_initializes_current_schema_store_from_root_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             template_root = _make_template_root(root)
@@ -45,7 +45,7 @@ class VersionStoreCliTest(unittest.TestCase):
             store_id = store.version_store_id
 
         self.assertEqual(store_id, "root_command_store")
-        self.assertEqual(metadata["schema_version"], 2)
+        self.assertEqual(metadata["schema_version"], 3)
         self.assertNotIn("checkpoint_store_id", metadata)
         self.assertEqual(versions[-1].version_id, "harness_v0001")
         self.assertIn("accepted version: harness_v0001", output.getvalue())

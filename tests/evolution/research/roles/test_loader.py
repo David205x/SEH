@@ -7,6 +7,10 @@ import unittest
 from pathlib import Path
 
 from search_harness.evolution.research.roles.loader import load_teacher_agent_spec
+from search_harness.evolution.research.experience_summary import (
+    ExperienceDetailStore,
+    ExperienceSummaryResourceConfig,
+)
 from search_harness.evolution.research.resources.base import (
     EvaluationEvidenceStore,
     TeacherResources,
@@ -51,7 +55,7 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
         self.assertEqual(len(spec.tools.tools), 14)
 
     def test_loads_all_initial_role_templates(self) -> None:
-        """验证九个 Teacher 角色均从目录解析出正确协议和工具集合。"""
+        """验证十个 Teacher 角色均从目录解析出正确协议和工具集合。"""
 
         evaluation = EvaluationEvidenceStore(
             report_dir=Path("report"),
@@ -69,18 +73,35 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
             intervention=object(),  # type: ignore[arg-type]
             compiler=object(),  # type: ignore[arg-type]
             candidate_review=object(),  # type: ignore[arg-type]
+            experience_summary=ExperienceDetailStore(
+                ExperienceSummaryResourceConfig.model_validate(
+                    {
+                        "source_processing_context": (
+                            "A typed review completed."
+                        ),
+                        "details": [],
+                        "observation_sources": {},
+                    }
+                )
+            ),
         )
 
         expected = {
             "failure_analyst": "FailureDirection",
-            "hypothesis_researcher": "InterventionHypothesis",
+            "hypothesis_researcher": "HypothesisResearcherResult",
             "trial_reviewer": "TrialReview",
             "evidence_reviewer": "EvidenceReview",
             "mechanism_distiller": "MechanismDistillation",
+            "shadow_mechanism_distiller": "ShadowDistillationResult",
+            "shadow_prompt_researcher": "ShadowPromptResearchResult",
             "intervention_worker": "InterventionWorkerResult",
             "compiler": "CompilerResult",
+            "shadow_compiler": "CompilerResult",
             "candidate_reviewer": "CandidateReview",
             "conformance_reviewer": "ConformanceReviewBatch",
+            "shadow_conformance_reviewer": "ConformanceReviewBatch",
+            "capability_summarizer": "CapabilityExperienceSummary",
+            "direction_summarizer": "DirectionSummary",
         }
         for role_id, output_name in expected.items():
             with self.subTest(role_id=role_id):
@@ -88,6 +109,12 @@ class TeacherTemplateLoaderTest(unittest.TestCase):
                     TEMPLATE_ROOT / role_id,
                     runtime_context=resources,
                     role_id=role_id,
+                    role_version=(
+                        2
+                        if role_id
+                        in {"hypothesis_researcher", "capability_summarizer"}
+                        else 1
+                    ),
                 )
                 self.assertEqual(spec.role.role_id, role_id)
                 self.assertEqual(spec.role.output_type.__name__, output_name)

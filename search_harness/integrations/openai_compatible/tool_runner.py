@@ -543,9 +543,14 @@ def _parse_tool_arguments(
     try:
         arguments = json.loads(raw_arguments)
     except json.JSONDecodeError as exc:
+        start = max(0, exc.pos - 100)
+        end = min(len(raw_arguments), exc.pos + 100)
+        context = raw_arguments[start:end]
         return {}, (
             "Tool arguments are invalid JSON. Correct them and call the tool "
-            f"again: {exc.msg}"
+            f"again: {exc.msg} at line {exc.lineno}, column {exc.colno}, "
+            f"character {exc.pos}. The invalid position is inside this exact "
+            f"excerpt: {context!r}"
         )
     if not isinstance(arguments, dict):
         return {}, "Tool arguments must be a JSON object."

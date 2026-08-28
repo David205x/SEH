@@ -31,7 +31,11 @@ ROLE_IDS = {
     "compile_candidate": "compiler",
     "verify_conformance": "conformance_reviewer",
     "review_candidate": "candidate_reviewer",
+    "summarize_capability": "capability_summarizer",
+    "summarize_direction": "direction_summarizer",
 }
+
+
 @dataclass(frozen=True)
 class TimelineEntry:
     """一条由持久化事实投影出的用户可读行为。"""
@@ -734,8 +738,8 @@ def _atomic_write(path: Path, content: str) -> None:
 
 def _read_new_run_id(path: Path) -> str:
     run = _read_object(path)
-    if run.get("schema_version") != 2:
-        raise ValueError("timeline generator only supports Evolution Run schema_version 2")
+    if run.get("schema_version") != 3:
+        raise ValueError("timeline generator only supports Evolution Run schema_version 3")
     return _required_string(run, "run_id")
 
 

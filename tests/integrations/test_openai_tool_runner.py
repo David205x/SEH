@@ -115,6 +115,51 @@ def _tool_call(name: str, call_id: str, arguments: str) -> dict[str, Any]:
 
 
 class OpenAICompatibleToolRunnerTest(unittest.IsolatedAsyncioTestCase):
+    async def test_invalid_json_feedback_includes_position_and_excerpt(self) -> None:
+        client = _ReplayClient(
+            [
+                _tool_call(
+                    "finish",
+                    "finish_bad",
+                    '{"answer":{"text":"draft"}},"extra":true}',
+                ),
+                _tool_call("finish", "finish_good", '{"answer":"done"}'),
+            ]
+        )
+        config = OpenAICompatibleConfig(
+            base_url="https://provider.invalid/v1/chat/completions",
+            model_id="provider-test",
+            max_tokens=64,
+        )
+
+        result = await OpenAICompatibleToolRunner(
+            config=config,
+            client=client,
+        ).run(
+            messages=[{"role": "user", "content": "begin"}],
+            tools=(),
+            terminal_tool_name="finish",
+            terminal_tool_description="Finish.",
+            terminal_output_schema={"type": "object"},
+            missing_terminal_message="Submit now.",
+            submit_terminal=lambda arguments: (
+                arguments,
+                "accepted",
+                {"terminal": True},
+            ),
+            max_turns=2,
+            run_label="test operation",
+        )
+
+        feedback = next(
+            item["content"]
+            for item in result.transcript
+            if item.get("role") == "tool"
+        )
+        self.assertIn("column", feedback)
+        self.assertIn("character", feedback)
+        self.assertIn("extra", feedback)
+
     async def test_sends_ollama_reasoning_effort_when_disabled(self) -> None:
         client = _ReplayClient(
             [_tool_call("finish", "finish_1", '{"answer":"done"}')]

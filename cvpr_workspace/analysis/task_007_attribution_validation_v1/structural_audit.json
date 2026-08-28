@@ -1,0 +1,1836 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "TASK-007-ATTRIBUTION-V1",
+  "run_count": 30,
+  "completed_count": 30,
+  "failed_count": 0,
+  "type_contract_pass_count": 19,
+  "tool_expectation_pass_count": 25,
+  "tool_view_pass_count": 27,
+  "tool_protocol_pass_count": 15,
+  "stability": {
+    "evidence_revise_corpus_confound": {
+      "type_sets": [
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ]
+      ],
+      "type_stable": true
+    },
+    "hook_feasibility_student_instability": {
+      "type_sets": [
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ]
+      ],
+      "type_stable": true
+    },
+    "conformance_activation_budget_implementation": {
+      "type_sets": [
+        [
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "teacher_work"
+        ],
+        [
+          "student_capability",
+          "teacher_work"
+        ]
+      ],
+      "type_stable": false
+    },
+    "conformance_semantic_evaluator_boundary": {
+      "type_sets": [
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ],
+        [
+          "experiment_direction",
+          "student_capability",
+          "teacher_work"
+        ]
+      ],
+      "type_stable": true
+    },
+    "candidate_reject_intrinsic_grounding_predicate": {
+      "type_sets": [
+        [
+          "experiment_direction",
+          "student_capability"
+        ],
+        [
+          "experiment_direction",
+          "student_capability"
+        ],
+        [
+          "experiment_direction",
+          "student_capability"
+        ]
+      ],
+      "type_stable": true
+    },
+    "candidate_reject_hook_false_positive_scope": {
+      "type_sets": [
+        [
+          "experiment_direction",
+          "student_capability"
+        ],
+        [
+          "experiment_direction",
+          "student_capability"
+        ],
+        [
+          "experiment_direction",
+          "student_capability"
+        ]
+      ],
+      "type_stable": true
+    }
+  },
+  "records": [
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\evidence_revise_corpus_confound\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace",
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "After the deferral faithfully triggered a follow-up query for Cia Berg, the five returned passages contained no title-count or induction evidence, and the revised final still concluded from absence. The model treats 'retrieval returned no evidence about the entity' as equivalent to 'the entity is absent', so absence-based comparison errors persist even when a search is actually performed.",
+            "applicability": "Applies whenever a pre-final deferral inserts entity-specific retrieval and the retrieved passages lack evidence about the queried entity; a future obligation is to require the model to explicitly hedge or report insufficient evidence instead of concluding absence.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Revise the hypothesis so the retrieval intervention verifies evidence sufficiency for the second entity rather than treating the search action itself as the fix: the contract already flagged that corpus sufficiency for the unqueried entity was unverified, and trial_004 confirmed the search returned no title-count evidence yet absence reasoning recurred.",
+            "applicability": "Applies to hypothesis_researcher when designing retrieval-strategy hypotheses for absence-based comparison errors; the hypothesis must include an evidence-sufficiency precondition for both compared entities before claiming one-sided retrieval as the cause.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Evaluation should pre-verify that the corpus contains evidence for both named entities and should separately score 'no search performed' versus 'searched but corpus lacked evidence', otherwise absence-based errors cannot be attributed to retrieval strategy and the intervention is untestable in trials where the second entity has no retrievable evidence.",
+            "applicability": "Applies to any research design that uses retrieval deferrals to test absence-based comparison errors; future evaluations must gate such trials on corpus-sufficiency checks for every entity involved.",
+            "evidence_refs": [
+              "review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design",
+        "data_environment"
+      ],
+      "required_concepts": [
+        "condition success on retrievable evidence",
+        "corpus sufficiency confound"
+      ],
+      "forbidden_attributions": [
+        "Evidence Reviewer caused the failure",
+        "Student capability failure is established"
+      ]
+    },
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\evidence_revise_corpus_confound\\run_02.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace",
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "When a one-shot deferral faithfully triggers a follow-up query but the returned passages contain no title-count evidence for the target entity, the student's revised final still concludes from absence rather than reporting insufficient evidence, so absence-based reasoning is a stable boundary when corpus evidence is missing, not a sign that the retrieval prompt failed.",
+            "applicability": "Applies to evidence-comparison tasks where the target entity's evidence may be absent from the retrieved corpus and a revised answer must cite retrieved evidence.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Refine the hypothesis so one-sided retrieval is not tested as the cause of absence-based errors until corpus sufficiency for both named entities is verified: trial_004's deferral triggered the query correctly, yet the persistent absence reasoning was confounded by the unverified, evidence-free condition the hypothesis explicitly left open.",
+            "applicability": "Applies when designing trials that attribute absence-based comparison errors to one-sided retrieval rather than to corpus coverage of the second entity.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Add a corpus-coverage pre-check to the evaluation design that confirms retrieved passages for each named entity actually contain the evidence needed to answer the comparison; trial_004's five returned passages lacked title-count evidence, so its absence-based outcome cannot discriminate retrieval behavior from data insufficiency.",
+            "applicability": "Applies to any experiment measuring retrieval-driven answering behavior where a conclusion from absence must be distinguishable from missing corpus evidence.",
+            "evidence_refs": [
+              "review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design",
+        "data_environment"
+      ],
+      "required_concepts": [
+        "condition success on retrievable evidence",
+        "corpus sufficiency confound"
+      ],
+      "forbidden_attributions": [
+        "Evidence Reviewer caused the failure",
+        "Student capability failure is established"
+      ]
+    },
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\evidence_revise_corpus_confound\\run_03.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "successful_tool_views": [],
+      "tool_expectation": "required",
+      "tool_expectation_passed": false,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The student obeys a pre-final prompt to search for the second named entity, but when that search returns no evidence it still finalizes an absence-based comparison verdict: trial_004 searched for Cia Berg, retrieved no title-count evidence, and concluded from absence anyway. Ensuring search coverage alone does not change this behavior when the retrieval result is empty.",
+            "applicability": "Applies to comparison tasks where a deferral instructs a search for the second entity's evidence and the retrieval outcome is empty; does not cover cases where retrieval returns counter-evidence.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Revise the one-sided-retrieval hypothesis: it is overstrong because trial_004 achieved two-sided retrieval (the student did search for Cia Berg) yet still concluded from absence after retrieving no title-count evidence. Future hypotheses must condition on whether the target entity's evidence exists and is retrievable in the environment, not only on whether the student searched for it.",
+            "applicability": "When hypothesizing retrieval-side causes for absence-based comparison errors; verify evidence retrievability before treating the deferral intervention as a valid test of the hypothesis.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "In absence-error experiments, log the retrieval outcome (empty result vs evidence found) separately from the final comparison verdict and confirm the target evidence exists in the environment; otherwise 'concluded from absence because nothing was retrieved' is confounded with the mechanism under test, and a one-shot deferral can neither validate nor refute it.",
+            "applicability": "For evaluation designs testing retrieval-driven comparison errors where one side of the comparison may lack retrievable evidence.",
+            "evidence_refs": [
+              "review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design",
+        "data_environment"
+      ],
+      "required_concepts": [
+        "condition success on retrievable evidence",
+        "corpus sufficiency confound"
+      ],
+      "forbidden_attributions": [
+        "Evidence Reviewer caused the failure",
+        "Student capability failure is established"
+      ]
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\evidence_reject_no_differential_effect\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "optional",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "The hypothesis that inserting a generic verification block causes a follow-up search before finalization was overstrong: three of four treated positive activations finalized without a search, and the only search success also occurred in the untreated source control, so the treatment produced no effect beyond baseline. When proposing that inserted context changes agent behavior, specify the mechanism and predict a difference from an untreated control instead of assuming generic context suffices.",
+            "applicability": "Applies when the research goal is to make inserted verification context induce a follow-up search before finalization; not applicable when the inserted context contains explicit actionable search instructions or when baseline search behavior is already measured.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "Inserting generic verification context on faithful positive activations did not induce a follow-up search before finalization: three of four activations finalized without searching, and the single search occurrence also appeared in the untreated source control, showing finalization behavior is stable under this context. Future work must not expect generic verification text to elicit search and must attribute any search to baseline behavior unless it exceeds control.",
+            "applicability": "Applies when evaluating whether added verification or instruction context can change a model's pre-finalization search behavior; not applicable when the context explicitly instructs searching or alters the task itself.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Counting follow-up search occurrences to evaluate context insertion is confounded by baseline behavior: the only treated search success also occurred in its untreated source control, so occurrence alone could not support a treatment effect. Compare treated and untreated conditions on matched activations and require a search-rate difference beyond control before concluding that inserted context changed finalization.",
+            "applicability": "Applies to experiments testing whether context insertion changes agent behavior before finalization; not applicable when an untreated control comparison is already part of the design.",
+            "evidence_refs": [
+              "review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "require a differential effect against control",
+        "reject contradicted causal direction"
+      ],
+      "forbidden_attributions": [
+        "Evidence Reviewer error",
+        "missing negative coverage caused rejection"
+      ]
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\evidence_reject_harmful_overtrigger\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "optional",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "The hypothesized generic evidence-gap patch is over-triggering: on complete evidence it fired anyway and changed a correct answer into a wrong one, so the 'evidence gap -> follow-up search' condition is under-constrained. hypothesis_researcher should redefine the trigger to require a verified, concrete gap (missing or contradicted coverage) and explicitly forbid firing when coverage is complete, otherwise the patch regresses already-correct answers.",
+            "applicability": "When designing search-inducing mechanisms conditioned on evidence completeness, and when an over-eager trigger can regress already-correct outcomes.",
+            "evidence_refs": [
+              "review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "The claim that faithful activation induces the expected search behavior rests on one success out of two faithful activations (the other immediately finalized wrong), so the causal claim is not yet supported. Future evaluations should run a fixed number of repeated faithful activations, report the consistency rate and failure modes, and treat a one-of-two result as inconclusive rather than confirming the behavior.",
+            "applicability": "When a behavior claim is evaluated from only a handful of trials and the outcome is not deterministic.",
+            "evidence_refs": [
+              "review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "falsifier and harmful over-trigger",
+        "do not continue this direction unchanged"
+      ],
+      "forbidden_attributions": [
+        "Evidence Reviewer error"
+      ]
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\hook_feasibility_student_instability\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 3,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 1,
+      "tool_views": [
+        "upstream_contract",
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The frozen three-label evaluator's boundary between single-entity negatives and two-entity positives is unstable and hook-dependent: the identical single-entity trial flips between negative and positive across repetitions, and disabling the feasibility hook collapses both negative trials to positive while positive trials stay correct. Future runs must treat flip-prone single-entity cases as uncertain and confirm two-entity evidence before committing a positive label.",
+            "applicability": "When evaluating one-sided two-entity evidence-gap tasks whose positive class requires a two-entity feasibility check and whose negative class is single-entity factoids.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Make the two-entity feasibility check a mandatory, deterministic gate for the positive label: disabling it turns both single-entity negatives positive, so positives are only decidable through that gate, and identical inputs must not flip. Add an explicit single-entity rejection path that yields negative/uncertain regardless of hook state.",
+            "applicability": "When realizing or revising the three-label evaluator for one-sided two-entity evidence gaps, i.e., positives defined as two-entity comparisons finalized on first-entity-only evidence.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Evaluations of hook-gated three-label schemes should run and report hook-enabled and hook-disabled conditions separately and repeat identical cases to measure label agreement, because the systematic negative-to-positive collapse and the single flapping case were only observable across both modes and repetitions.",
+            "applicability": "For feasibility research probing labelers whose positive label depends on an enable/disable hook and whose negative class sits near that boundary.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability"
+      ],
+      "required_concepts": [
+        "single-entity negative boundary is unstable",
+        "revalidate or restrict supported scope"
+      ],
+      "forbidden_attributions": [
+        "Hook Feasibility Reviewer error",
+        "parser failure"
+      ]
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\hook_feasibility_student_instability\\run_02.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 1,
+      "failed_tool_call_count": 1,
+      "tool_views": [
+        "upstream_contract",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The frozen evaluator lacks label stability on the negative side of the evidence-gap boundary: an identical single-entity negative case flipped labels across repetitions, so a single run's verdict is not a reliable signal and must not be treated as deterministic.",
+            "applicability": "When the same frozen model is reused with identical prompts (across thinking modes) to label one-sided two-entity evidence-gap cases.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Make the negative class mechanically decisive in the label matrix: since both single-entity-factoid negatives were labeled positive whenever the hook was disabled, specify a deterministic rule (no explicitly finalized two-entity comparison ⇒ negative; single-entity factoids and both-entity queries can never be positive) instead of relying on the Uncertain no-op to suppress false positives.",
+            "applicability": "When defining a three-label evaluator for one-sided two-entity evidence gaps whose positive/negative boundary depends on 'finalized comparison' semantics.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Measure hook feasibility with repeated-trial consistency metrics rather than a single pass: report per-case agreement across N identical runs and across both hook-enabled and hook-disabled states, because identical inputs produced different labels across repetitions and the disabled state mislabeled both negative cases as positive.",
+            "applicability": "When a feasibility study evaluates a gating hook/evaluator for evidence-gap labeling and label stability is a required property.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability"
+      ],
+      "required_concepts": [
+        "single-entity negative boundary is unstable",
+        "revalidate or restrict supported scope"
+      ],
+      "forbidden_attributions": [
+        "Hook Feasibility Reviewer error",
+        "parser failure"
+      ]
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\hook_feasibility_student_instability\\run_03.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "successful_tool_views": [],
+      "tool_expectation": "required",
+      "tool_expectation_passed": false,
+      "tool_views_passed": false,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "With the feasibility hook enabled, the evaluator catches both negative cases, but one single-entity negative verdict flips across identical repetitions while disabled mode labels both negatives positive; negative detection is hook-dependent and the single-entity negative verdict sits at a non-reproducible stability boundary.",
+            "applicability": "Applies when probing a three-label evaluator on one-sided two-entity evidence gaps where a feasibility hook can be toggled; a single 7/8 pass must not be read as stable capability.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Revise the three-label evaluator hypothesis to explicitly define label-matrix semantics for single-entity negatives and to require a deterministic or repeated-sample verdict procedure, because observed negatives are only labeled correctly when the hook is enabled and one negative is still unstable across identical runs.",
+            "applicability": "Applies while hypothesis_researcher specifies the three-label evaluator for one-sided two-entity evidence gaps; targets the negative-label row of the label matrix and the verdict rule.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Feasibility evaluation should run the hook in both enabled and disabled states over repeated identical real-prefix cases and report per-case flips, since the aggregate 7/8 hid one unstable negative and disabled mode missed both negatives; require per-case stability before declaring feasibility.",
+            "applicability": "Applies to any evaluator feasibility probe with threshold-proximate verdicts and a toggleable hook; use repeated identical runs and per-case reporting instead of a single aggregate score.",
+            "evidence_refs": [
+              "hook_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability"
+      ],
+      "required_concepts": [
+        "single-entity negative boundary is unstable",
+        "revalidate or restrict supported scope"
+      ],
+      "forbidden_attributions": [
+        "Hook Feasibility Reviewer error",
+        "parser failure"
+      ]
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\distiller_not_distillable_model_boundary\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 3,
+      "successful_tool_call_count": 1,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "candidate_comparison",
+        "decision_trace",
+        "decision_trace"
+      ],
+      "successful_tool_views": [
+        "decision_trace"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": false,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The permitted hook-model evaluator cannot realize the one-sided-search boundary: across two contract wordings it asserted a query naming both entities named only the first and returned positive in 4/4 generations, and one wording also mislabeled the single-entity negative in 2/2. The model keys on the surface presence of an entity query rather than the search-asymmetry distinction, so the intervention's semantic boundary is not deployable with this evaluator class.",
+            "applicability": "When distilling a one-sided-search intervention into a hook-model evaluator whose positives are defined by single-entity queries and whose negative set includes both-entities-queried cases.",
+            "evidence_refs": [
+              "distillation"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Passing 2 positive and 2 negative intervention-level controls did not predict distillability: the boundary failed only under production-model probes with negatives that share surface features with the intervention (both entities queried). Make boundary-realizability probing—negatives overlapping the intervention's surface triggers, run on the target evaluator—a mandatory validation gate before declaring a mechanism distillable.",
+            "applicability": "When validating a mechanism intervention for downstream distillation: the control set must include negatives sharing surface features with positives, and the permitted evaluator must be probed on those before distillation is attempted.",
+            "evidence_refs": [
+              "distillation"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability"
+      ],
+      "required_concepts": [
+        "intervention evidence does not imply deployable evaluator",
+        "required negative boundary is unrealizable"
+      ],
+      "forbidden_attributions": [
+        "Mechanism Distiller error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "conformance_activation_budget_implementation",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_activation_budget_implementation\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "student_capability"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "When compiling a one-shot pre-final deferral with a declared strict activation budget, bind the deferral's activation to the declared rollout-local limit at compile time; delegating to the runtime phase activation budget lets deferrals continue after the declared pre_final budget is exhausted, exactly as finding_002 observed.",
+            "applicability": "Applies to compiler repairs of one-shot pre-final deferrals where a declared rollout-local activation budget must be strictly enforced and a separate, looser runtime phase budget also exists.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The candidate demonstrates a stability boundary: when a declared rollout-local pre_final activation budget coexists with a looser runtime phase activation budget, the generated deferral follows the runtime budget and keeps deferring past the declared cap, so the declared limit is not binding.",
+            "applicability": "Applies when evaluating one-shot deferral generation that must strictly enforce a declared activation budget differing from the runtime phase budget.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "enforce rollout-local activation budget",
+        "Compiler implementation assumption failed"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "Student capability failure"
+      ]
+    },
+    {
+      "case_id": "conformance_activation_budget_implementation",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_activation_budget_implementation\\run_02.json",
+      "actual_types": [
+        "teacher_work"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "The compiler must enforce the declared pre_final activation budget as a strict rollout-local, one-shot limit at compile time; the candidate instead enforced a runtime phase activation budget, so deferrals continued after the declared budget was exhausted, producing conformance finding_002.",
+            "applicability": "Applies whenever the direction requires a one-shot pre-final deferral with a strict activation budget and the contract declares a rollout-local pre_final limit; the compiled candidate must cap deferrals against that declared budget rather than re-budgeting per runtime phase.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "enforce rollout-local activation budget",
+        "Compiler implementation assumption failed"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "Student capability failure"
+      ]
+    },
+    {
+      "case_id": "conformance_activation_budget_implementation",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_activation_budget_implementation\\run_03.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The candidate can produce a one-shot pre-final deferral but does not enforce a declared rollout-local activation budget: when a runtime phase activation budget is available, the compiled artifact applies that instead, so deferrals continue after the declared pre_final budget is exhausted. Future obligation: whenever a strict rollout-local activation limit is declared, verify the artifact halts deferrals at exactly that declared limit before treating behavior as conformant.",
+            "applicability": "Applies when evaluating a compiled one-shot pre-final deferral that declares a rollout-local activation budget distinct from any runtime phase budget.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "When compiling a one-shot pre-final deferral with a strict activation budget (compiler route), generate code that tracks deferrals against the declared rollout-local limit and stops deferring once it is exhausted, rather than delegating to a separate runtime phase activation budget; the declared rollout-local limit is the conformance contract to enforce.",
+            "applicability": "Applies to the compiler route whenever the direction requires a declared strict (rollout-local) activation budget for pre-final deferrals.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "enforce rollout-local activation budget",
+        "Compiler implementation assumption failed"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "Student capability failure"
+      ]
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_empty_passage_projection\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "experiment_direction",
+        "student_capability"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "When invoking the semantic classifier, the compiler must project the actual retrieved passages into the call: four implementation mismatches showed the classifier received an empty passage list, so its grounding decision ignored the contract's declared retrieved-passage input. Before each invocation, assert the passage list is non-empty and matches the retrieved set, then fix the projection so the classifier sees the passages.",
+            "applicability": "Applies when the compiler assembles classifier invocations whose contract declares a retrieved-passage input; not when retrieval quality or the contract itself is the failure source.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Conformance evaluation for grounding classifiers should inspect the runtime inputs actually delivered (e.g., that the retrieved passage list reaches the classifier non-empty) instead of judging the verdict alone, since an empty-passage invocation makes any grounding decision vacuous and the mismatches were detected at the input-assembly step.",
+            "applicability": "Applies to conformance.revise_implementation checks for classifiers whose inputs are assembled by an intermediary; not when the classifier itself received the declared inputs.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The semantic classifier cannot establish that retrieved passages explicitly ground a relation when invoked with an empty passage list; its output under that condition is a demonstrated stability boundary and must not be treated as evidence of grounding capability.",
+            "applicability": "Applies to explicit-grounding classification from retrieved passages; not when non-empty passages were actually delivered to the classifier.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "project actual retrieved passages into classifier",
+        "do not classify on empty evidence"
+      ],
+      "forbidden_attributions": [
+        "Student semantic capability is established as the cause"
+      ]
+    },
+    {
+      "case_id": "conformance_positive_action_not_applied",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_positive_action_not_applied\\run_01.json",
+      "actual_types": [
+        "teacher_work"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "When a candidate reaches the positive pre-final condition, the compiler must not pass it through unchanged: it must apply the defer action for the unsupported final candidate, append the feedback, and set the consumed flag. The conformance mismatch shows all three required Hook changes were skipped, so the compile branch must be corrected to execute the full defer/feedback/consumed sequence in that condition.",
+            "applicability": "Applies to compiling candidates that reach the positive pre-final condition after the verification note is inserted for an unsupported final candidate; the defer/feedback/consumed Hook sequence is mandatory in that branch rather than an optional pass-through.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "wire positive decision to required defer action",
+        "update feedback and consumed state"
+      ],
+      "forbidden_attributions": [
+        "upstream evidence design failure"
+      ]
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_semantic_evaluator_boundary\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace",
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Make the Hook-model evaluator gate deferral on 'specific committed value present AND no explicit passage link' instead of on value mention: across four mismatches it deferred passages that explicitly link the committed value to the requested relation (the contract's negative pass-through case) and refusals/evidence-gap statements or bare mentions (the contract's uncertain no-op case), while the deterministic action wiring was intact. Require an explicit commitment check and an explicit-link check as separate preconditions before emitting any deferral.",
+            "applicability": "Whenever mechanism_distiller wires a Hook-model evaluator whose decision contract defines explicit-link passages as negative and refusals/bare mentions as uncertain, so only committed-without-link values may be deferred.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The Hook-model evaluator's passage classifier cannot reliably separate commitment from bare mention, grounding, or refusal: it treated passages explicitly grounding the committed value as deferrable positives and likewise treated evidence-gap refusals and bare mentions as committed unsupported values, so its 'committed unsupported value' signal is not trustworthy on its own.",
+            "applicability": "When an LLM-based evaluator must classify passages into explicit-link (negative), refusal/no-commitment (uncertain), and committed-without-link (positive) classes inside a conformance-revise loop.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Conformance evaluation of Hook-model deferral should include explicit negative controls (passages that explicitly ground the committed value to the requested relation) and uncertain controls (refusals, evidence-gap statements, bare mentions) in the test set, since these are the two boundaries the evaluator crossed in all four mismatches and they make over-deferral directly measurable rather than inferred from false positives alone.",
+            "applicability": "When designing conformance or repair evaluations that rely on an evaluator's commitment classification instead of deterministically checkable rules, especially where over-deferral is the dominant failure mode.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic evaluator crosses negative and uncertain boundaries",
+        "simplify or revalidate evaluator contract"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "deterministic action wiring is the demonstrated cause"
+      ]
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_semantic_evaluator_boundary\\run_02.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace",
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The Hook-model evaluator's three-class discrimination is unstable: passages that explicitly ground the committed value were flagged as deferrable positives, and evidence-gap refusals/bare mentions as committed unsupported values, yielding inappropriate deferral even though the negative/uncertain rules were explicit and the action wiring was present. Obligation: before relying on such an evaluator for a deferral gate, validate it on explicit-link negatives and no-committed-value uncertains, and treat observed over-deferral as a measured capability boundary rather than a wiring defect.",
+            "applicability": "When a Hook-model evaluator decides which committed values to defer under explicit negative/uncertain/positive rules, e.g., conformance.revise repair flows.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "mechanism_distiller: make deferral a conjunctive decision — a specific committed value must be present AND no passage explicitly links it to the requested relation — and make refusal/evidence-gap/no-committed-value passages no-op preconditions that short-circuit before the positive path. Obligation: encode the negative and uncertain guards as explicit preconditions in the evaluator flow so neither boundary can be crossed.",
+            "applicability": "For mechanism_distiller flows that gate deferral of committed values using a Hook-model evaluator with explicit negative and uncertain rules.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Conformance evaluation should seed explicit-link negative and evidence-gap/bare-mention uncertain passages as control items alongside true positives, because the observed failure mode is asymmetric over-deferral that a positive-only sample will not surface. Obligation: include boundary probes and measure deferral on them whenever an evaluator gates committed-value deferral.",
+            "applicability": "When designing conformance/revise experiments whose evaluator must separate supported, uncertain, and unsupported-committed passages.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic evaluator crosses negative and uncertain boundaries",
+        "simplify or revalidate evaluator contract"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "deterministic action wiring is the demonstrated cause"
+      ]
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_semantic_evaluator_boundary\\run_03.json",
+      "actual_types": [
+        "student_capability",
+        "teacher_work",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 0,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "decision_trace"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "A Hook-model evaluator does not reliably hold the contract's negative (explicit link -> pass through) and uncertain (evidence-gap refusal / bare mention -> no-op) boundaries: with a structurally faithful Hook and correct deterministic wiring it still over-deferred on all four mismatches. Future obligation: do not let a single free-form evaluator classification gate deferral without a bounded two-part justification.",
+            "applicability": "When a language-model evaluator gates deferral under an explicit three-way negative/uncertain/positive contract and the observed failure mode is systematic over-deferral.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "teacher_work",
+            "lesson": "Gate deferral on the conjunction of two independently verified conditions - the value is committed (not a bare mention or evidence-gap refusal) AND no passage explicitly links it to the requested relation - and encode those checks into the deterministic action wiring so grounded and uncommitted passages can never reach the defer action even when the evaluator misclassifies.",
+            "applicability": "When mechanism_distiller wires a Hook-model evaluator for conformance.revise deferral and the evaluator has drifted toward treating explicit grounding or bare mentions as committed unsupported values.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Conformance evaluations should seed explicit-link, evidence-gap/refusal, and bare-mention control passages and report per-category pass/no-op/defer confusion, because a structurally faithful Hook with present action wiring can still over-defer and only category-level rates expose the false-deferral drift.",
+            "applicability": "For evaluations of deferral mechanisms that must distinguish committed-and-unsupported values from grounded or uncommitted passages.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic evaluator crosses negative and uncertain boundaries",
+        "simplify or revalidate evaluator contract"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error",
+        "deterministic action wiring is the demonstrated cause"
+      ]
+    },
+    {
+      "case_id": "conformance_query_coverage_projection",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_query_coverage_projection\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The Candidate's query-coverage projection labeled a single search covering only the first entity as covering both entities, which suppressed the required one-shot defer. Coverage must be resolved per entity: a query matching only entity 1 is not 'both', and when exactly one search covers entity 1 and none covers entity 2, the pending final must be replaced by the defer.",
+            "applicability": "Whenever coverage labels feed a defer decision that depends on per-entity search coverage (one entity covered, the other not).",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Conformance checks should decompose query coverage into per-entity booleans (entity-1 covered / entity-2 covered) before applying the defer rule, and score the required defer action independently of the coverage label, so a first-entity-only query can never be counted as 'both' and silently suppress the expected action.",
+            "applicability": "For conformance evaluations where the required action depends on exactly-one-of-two entity coverage and single queries are permitted.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "correct query-coverage projection",
+        "positive condition must trigger defer"
+      ],
+      "forbidden_attributions": [
+        "Student model instability"
+      ]
+    },
+    {
+      "case_id": "conformance_missing_fact_model_misclassification",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\conformance_missing_fact_model_misclassification\\run_01.json",
+      "actual_types": [
+        "teacher_work",
+        "student_capability"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 0,
+      "tool_views": [
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "decision_trace",
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "When distilling the definitiveness rule for comparison answers, encode the explicit positive case: an answer is definitive-positive when its decisive referent-to-answer fact is absent from all retrieved passages, including when only one of the two required entity records is present. Partial relevance (only the featured entity's profile retrieved) must not suppress the positive label or defer.",
+            "applicability": "Applies to mechanism distillation for cross-entity comparison answers whose definitiveness depends on per-entity records in retrieved passages.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The Hook-model evaluator's stability boundary is that it emits positive definitiveness only when both required entity records are present; when passages establish just one entity's profile, it treats that partial relevance as sufficient to withhold the positive decision, failing the contract rule that absence of the decisive cross-entity fact from all passages should yield a positive label.",
+            "applicability": "Applies when evaluating definitiveness of comparison answers against retrieval passages that cover only one of the two entities.",
+            "evidence_refs": [
+              "conformance"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "partial relevance is not the decisive fact",
+        "revalidate or simplify the semantic boundary"
+      ],
+      "forbidden_attributions": [
+        "Conformance Reviewer error"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "required",
+      "tool_expectation_passed": false,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The model demonstrates a capability boundary: it produces correct retrieval-supported answers even when no single passage explicitly states the target relation, i.e., it synthesizes across passages. A deferral rule keyed to single-passage explicitness therefore rejects stable-correct outputs, decreasing stable-correct and increasing instability; do not assume correct answers require a single explicit passage.",
+            "applicability": "Applies when designing or tuning withhold/defer criteria for retrieval-grounded QA where answers may require synthesis across multiple passages rather than one explicit statement.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Deferral-mechanism evaluation must require preservation of stable-correct answers and bounded cost/instability in addition to accuracy: the mechanism gained only +0.6pp accuracy while stable-correct decreased and instability and cost rose, so accuracy delta alone is a misleading acceptance criterion for abstention designs.",
+            "applicability": "Applies to evaluations of two-phase withhold/defer or abstention mechanisms where trade-offs among accuracy, stability, and cost are material and where deferred correct answers carry hidden cost.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "single-passage predicate is intrinsically over-restrictive",
+        "evaluate broader grounding without repeated over-withhold"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_02.json",
+      "actual_types": [
+        "experiment_direction",
+        "student_capability"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "required",
+      "tool_expectation_passed": false,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Replace the single-passage explicit-statement commit condition with evidence-sufficiency scoring across all retrieved passages: the evaluated two-phase defer mechanism deferred correct retrieval-supported answers, yielding only +0.6pp accuracy while reducing stable-correct and increasing instability and cost. Future withhold/defer evaluations must include deferred-but-correct rate and stability alongside accuracy, and threshold the gate on graded evidence rather than a hard single-passage explicitness requirement.",
+            "applicability": "Applies when designing or evaluating two-phase withhold/defer or commit-only-if-evidenced mechanisms for retrieval-augmented answering.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The model produces correct retrieval-supported answers even when no single passage explicitly states the target relation; imposing single-passage explicit support as a commit condition removed stable-correct answers and increased instability. Future gates should treat distributed or implicit passage evidence as legitimate support rather than assuming correctness requires a single explicit statement.",
+            "applicability": "Applies to answer-commit gates in retrieval-augmented settings where correctness may rest on evidence distributed across passages or stated implicitly.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "single-passage predicate is intrinsically over-restrictive",
+        "evaluate broader grounding without repeated over-withhold"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_03.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": false,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "candidate_comparison",
+        "upstream_contract",
+        "candidate_comparison",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "candidate_comparison",
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The student answers correctly from implicit and cross-passage support (passage stating 'House ran on Fox' supports answer Fox), so a grounding rule requiring one passage to literally state the relation pushes it past its stability boundary: correct retrieval-supported answers were deferred, stable-correct fell 45 to 42 and consistency 0.653 to 0.613. Future grounding gates must accept implicit entailment and prior knowledge as sufficient support or they will over-defer this model.",
+            "applicability": "When the student must commit an answer whose supporting relation is stated only implicitly or across passages rather than literally in a single sentence.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Judging a two-phase withhold/defer mechanism on final accuracy alone hides its cost: literal-only grounding deferred correct retrieval-supported answers, gaining only +0.6pp while tokens rose about 5.6x and unstable answers increased 16 to 20. Deferral quality (false-deferral rate over retrieval-supported corrects) must be an explicit metric, and grounding criteria should be calibrated to include cross-passage entailment before adoption.",
+            "applicability": "Evaluations of defer/withhold or cannot-determine mechanisms in which a grounding rule gates answer commitment, especially when passages support answers implicitly.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "single-passage predicate is intrinsically over-restrictive",
+        "evaluate broader grounding without repeated over-withhold"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_hook_false_positive_scope\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "candidate_comparison",
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "Semantic-Hook triggering is not stable enough to gate answers: the Hook fired only on contract-negative joint A-and-B and single-entity questions, never on a genuine positive, and one firing flipped a correct 1.0 answer to 0.0. Any Hook candidate must be probed against the explicit contract-negative set and must be gated so a firing cannot override an already-correct answer.",
+            "applicability": "Applies whenever a semantic Hook or deferral mechanism is added to a candidate to catch genuine one-sided two-candidate gaps, particularly when firing influences final answers.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Mechanism attribution was confounded: accuracy/pass@N declined while tokens rose ~48% (~430k Hook tokens), and the only improvements occurred on Hook-negative no-op runs, so gains are not attributable to the Hook. Evaluate any deferral/Hook mechanism by per-activation correctness delta and cost stratified by contract polarity (genuine-positive vs. explicit-negative probes), and exclude no-op runs from credit.",
+            "applicability": "Applies whenever a candidate-level mechanism's value is judged from aggregate accuracy or cost deltas instead of per-activation contribution.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic classifier fires on explicit negatives",
+        "no activation-attributed benefit"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_hook_false_positive_scope\\run_02.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "successful_tool_views": [],
+      "tool_expectation": "required",
+      "tool_expectation_passed": false,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "The semantic Hook demonstrated a stability boundary: every positive activation occurred only on contract-negative joint and single-entity questions (one causing a direct regression), while genuine one-sided two-candidate gaps never produced the intended positive signal; Hook-positive therefore does not reliably indicate a genuine evidence gap.",
+            "applicability": "Applies when a semantic Hook gates deferral in two-candidate evaluation; treat Hook-positive as correlated with contract-violating content rather than as evidence of a one-sided gap.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Before using a semantic Hook as a deferral gate, validate it against a negative control of contract-negative questions and require observed intended positives on genuine one-sided gaps; without such validation the Hook adds sharply rising cost and can regress outputs while contributing zero true detections.",
+            "applicability": "Applies to experiment design for evidence-gap detection Hooks in candidate evaluation pipelines; require precision validation against contract-negative distractors before deployment.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic classifier fires on explicit negatives",
+        "no activation-attributed benefit"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_hook_false_positive_scope\\run_03.json",
+      "actual_types": [
+        "experiment_direction",
+        "student_capability"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 4,
+      "successful_tool_call_count": 2,
+      "failed_tool_call_count": 2,
+      "tool_views": [
+        "upstream_contract",
+        "candidate_comparison",
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "successful_tool_views": [
+        "upstream_contract",
+        "candidate_comparison"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "The semantic Hook's activation semantics were not aligned with the contract's positive definition: it fired on explicit-negative joint and single-entity questions (one firing flipped a correct 1.0 answer to 0.0; another added no-score work), never on a genuine one-sided two-candidate comparison prefix, and added ~48% tokens with no attributable improvement. Future obligation: define the Hook's positive trigger as the contract's two-candidate comparison prefix and unit-validate firing on the positive set while requiring silence on explicit negatives before any candidate run.",
+            "applicability": "Applies to semantic-Hook experiments whose activation set must match a contract's positive/negative question classification before measuring candidate value.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "The Hook-driven candidate demonstrated a stability boundary: positive activation occurred only on contract-negative joint and single-entity questions and never on the intended positive case, so Hook-positive behavior could not be trusted and one firing caused a direct regression. Future obligation: treat any Hook-triggered answer as unvalidated until the Hook demonstrably fires on a contract-positive two-candidate comparison prefix and stays silent on explicit negatives.",
+            "applicability": "Applies to semantic-discrimination mechanisms whose firing must separate genuine one-sided two-candidate evidence gaps from joint/single-entity negative questions.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "semantic classifier fires on explicit negatives",
+        "no activation-attributed benefit"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer error",
+        "Compiler implementation defect"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_no_attributed_utility",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_no_attributed_utility\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "optional",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "When a one-shot Hook gated deferral on the model's own evidence-gap judgment, all four activated cases regressed or stayed equal and one definitively answerable query was falsely deferred, so self-assessed answerability/evidence-gap detection is not a reliable gate for triggering follow-up search in this setting.",
+            "applicability": "Applies whenever a model's self-reported uncertainty or evidence-gap judgment is used as the sole trigger for deferral, tool invocation, or extra search.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "The deferral strategy showed zero measured benefit under its own activation path (all gains came from no-op cases) while adding ~271k input tokens and a false deferral on a definitive answer, so evaluations of deferral/search-inducing strategies must validate activation precision and report cost-adjusted benefit, not only end-task accuracy.",
+            "applicability": "Applies to evaluations of deferral or search-inducing strategies where activation is sparse (4 of 75 cases) and gated by model judgment; require activation-level metrics before deployment.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "separate activation-attributed utility from no-op variance",
+        "classifier false positive and cost"
+      ],
+      "forbidden_attributions": [
+        "aggregate improvements prove mechanism benefit"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_low_precision_retrieval",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_low_precision_retrieval\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 3,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 3,
+      "tool_views": [
+        "upstream_contract",
+        "decision_trace",
+        "candidate_comparison"
+      ],
+      "successful_tool_views": [],
+      "tool_expectation": "optional",
+      "tool_expectation_passed": true,
+      "tool_views_passed": false,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "Defer-and-retarget is not a reliable remedy for first-retrieval gaps: across 7 contract-conformant activations in a 75-example evaluation, only 1 was appropriate and beneficial while 4 still ended wrong and total tokens nearly doubled; treat the capability as unstable and verify that the omitted link actually changes the final answer before relying on deferral to fix outcomes.",
+            "applicability": "When a retrieval hook defers and retargets because the first retrieval may lack a decisive fact, and success is judged by final-answer correctness under token cost.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "The deferral trigger fired per its contract yet delivered only 1/7 beneficial activations, with 3/7 violating the negative rule and most aggregate changes on no-op runs, so the firing condition is under-specified; redesign the evaluation to gate deferral on verifiable absence of the decisive fact, enforce the negative rule as a hard guard, and report per-activation token cost against final-answer benefit.",
+            "applicability": "When designing or evaluating retrieval-deferral hooks whose firing can roughly double token usage, especially when firing depends on judging that the first retrieval lacks a decisive fact.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "low activation precision and low post-deferral efficacy",
+        "separate no-op variance from mechanism effect"
+      ],
+      "forbidden_attributions": [
+        "Compiler fidelity failure"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_two_false_positive_activations",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_two_false_positive_activations\\run_01.json",
+      "actual_types": [
+        "experiment_direction",
+        "student_capability"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 2,
+      "successful_tool_call_count": 1,
+      "failed_tool_call_count": 1,
+      "tool_views": [
+        "upstream_contract",
+        "upstream_contract"
+      ],
+      "successful_tool_views": [
+        "upstream_contract"
+      ],
+      "tool_expectation": "required",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": false,
+      "output": {
+        "items": [
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "The absence gate's activation condition was overstrong relative to the contract: under a first-entity-only search it deferred a both-entity question and a grounded single-entity answer — the two explicitly non-deferrable cases. Future gate designs must suppress activation on contract-negative cases and only let absence justify a final answer when the search has covered every entity named in the query.",
+            "applicability": "When evaluating answer gates that justify final answers by absence of retrieved evidence, especially with partial (first-entity-only) search over multi-entity questions.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "student_capability",
+            "lesson": "Absence-justification gating demonstrated no reliable activation behavior: in a 75-case landscape its only two activations were both contract-negative cases, one flipped a correct answer to wrong, and no activation improved any outcome — so absence-based gating is not a demonstrated capability and should be treated as unvalidated rather than accuracy-improving.",
+            "applicability": "When a conformant absence gate is proposed to improve answer accuracy but activates only a handful of times in the evaluation landscape and never on legitimate deferral cases.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "all observed positive activations violate negative rules",
+        "no activation-attributed improvement"
+      ],
+      "forbidden_attributions": [
+        "Candidate Reviewer caused rejection"
+      ]
+    },
+    {
+      "case_id": "candidate_reject_selectivity_and_cost",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_reject_selectivity_and_cost\\run_01.json",
+      "actual_types": [
+        "student_capability",
+        "experiment_direction"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "optional",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "student_capability",
+            "lesson": "Under the directive to trigger a second-entity search only for count/possession comparisons with one-sided evidence, the Hook over-applied the gate, classifying essentially every search event and firing on an out-of-scope shared-membership question; that false positive regressed a stable-correct case while aggregate accuracy stayed flat and tokens rose about 93%. Future obligation: treat natural-language trigger restrictions as insufficiently specific for this model and validate any gating directive against an explicit out-of-scope negative set before deployment.",
+            "applicability": "Applies when a retrieval/gating hook is steered by a natural-language scope condition and must run on mixed inputs that include near-miss negatives such as shared-membership questions.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          },
+          {
+            "experience_type": "experiment_direction",
+            "lesson": "Because the evaluation accepted the Hook on target-case improvement alone, an over-triggering variant (essentially every search event) could be attempted with no specificity gate; the resulting out-of-scope false positive regressed a stable-correct answer while adding about 93% more tokens with flat aggregate accuracy. Future obligation: evaluation of conditional triggers must include a precision floor on out-of-scope negatives and a token budget so broad over-triggering is rejected regardless of isolated single-case gains.",
+            "applicability": "Applies to evaluations of conditional search/trigger hooks where false positives can regress previously correct behavior and cost is measured in added tokens.",
+            "evidence_refs": [
+              "candidate_review"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "student_capability",
+        "upstream_design"
+      ],
+      "required_concepts": [
+        "selectivity harm offsets target benefit",
+        "avoid per-event semantic classification cost"
+      ],
+      "forbidden_attributions": [
+        "one successful case justifies adoption"
+      ]
+    },
+    {
+      "case_id": "candidate_validation_query_coverage_defect",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v1\\runs\\candidate_validation_query_coverage_defect\\run_01.json",
+      "actual_types": [
+        "teacher_work"
+      ],
+      "type_contract_passed": true,
+      "tool_call_count": 0,
+      "successful_tool_call_count": 0,
+      "failed_tool_call_count": 0,
+      "tool_views": [],
+      "successful_tool_views": [],
+      "tool_expectation": "none",
+      "tool_expectation_passed": true,
+      "tool_views_passed": true,
+      "tool_protocol_passed": true,
+      "output": {
+        "items": [
+          {
+            "experience_type": "teacher_work",
+            "lesson": "The compiler's implementation labeled a first-entity-only query as covering both entities and its positive condition did not emit exactly one defer with the required second-entity-search feedback, then resubmitted unchanged and repeated the same obligations. Before resubmitting, the compiler must recompute coverage from the query's actual structure (never attributing coverage to absent entities) and execute the positive branch to assert exactly one defer whose feedback names the second-entity search, verifying the diff against every outstanding repair obligation.",
+            "applicability": "Applies whenever a repair obligation requires multi-entity query coverage or a one-shot deferral with specific feedback, and the compiler resubmits a candidate for candidate_validation.",
+            "evidence_refs": [
+              "validation"
+            ]
+          }
+        ]
+      },
+      "primary_layers": [
+        "implementation"
+      ],
+      "required_concepts": [
+        "change the implementation before resubmission",
+        "fix coverage and defer action together"
+      ],
+      "forbidden_attributions": [
+        "Candidate Validator error",
+        "Student capability failure"
+      ]
+    }
+  ]
+}

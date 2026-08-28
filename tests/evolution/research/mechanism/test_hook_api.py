@@ -51,6 +51,18 @@ class HookApiCatalogTest(unittest.TestCase):
         self.assertEqual(result["stability"], "stable")
         self.assertEqual(result["shape"], "closed")
 
+    def test_terminal_final_answer_is_not_exposed_to_hooks(self) -> None:
+        with self.assertRaisesRegex(ValueError, "not public or does not exist"):
+            query_hook_api("core.final_answer")
+
+        result = list_hook_api_symbols(
+            category="core",
+            page=1,
+            page_size=50,
+        )
+        symbols = {item["symbol"] for item in result["items"]}
+        self.assertNotIn("core.final_answer", symbols)
+
     def test_public_constant_and_enum_value_are_directly_queryable(self) -> None:
         """验证 Compiler 可精确查询 phase 常量与枚举值。"""
 

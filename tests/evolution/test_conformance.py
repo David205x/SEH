@@ -159,6 +159,62 @@ class ConformanceAggregationTest(unittest.TestCase):
         self.assertEqual(summary.local_efficacy_gate, "fail")
         self.assertEqual(summary.recommended_route, "evidence")
 
+    def test_evidence_failure_is_not_reported_as_compiler_feedback(self) -> None:
+        findings = [
+            _finding("example-1", 0, "faithful"),
+            _finding(
+                "example-1",
+                1,
+                "implementation_mismatch",
+                recommended_route="evidence",
+            ),
+            _finding("example-1", 2, "faithful"),
+        ]
+
+        summary = aggregate_conformance(
+            cases=(_case("example-1"),),
+            findings=findings,
+            finding_refs=["finding-0", "finding-1", "finding-2"],
+        )
+
+        self.assertEqual(summary.recommended_route, "evidence")
+        self.assertEqual(summary.compiler_feedback, ())
+        self.assertEqual(
+            summary.route_feedback["evidence"],
+            ("Repair implementation_mismatch.",),
+        )
+
+    def test_harm_remains_visible_with_an_independent_hard_failure(self) -> None:
+        findings = [
+            _finding(
+                "example-1",
+                0,
+                "faithful",
+                local_efficacy="harmful",
+            ),
+            _finding(
+                "example-1",
+                1,
+                "implementation_mismatch",
+                recommended_route="evidence",
+            ),
+            _finding("example-1", 2, "faithful"),
+        ]
+
+        summary = aggregate_conformance(
+            cases=(_case("example-1"),),
+            findings=findings,
+            finding_refs=["finding-0", "finding-1", "finding-2"],
+        )
+
+        self.assertEqual(summary.local_efficacy_gate, "fail")
+        self.assertTrue(
+            any(
+                "harmful task outcome" in obligation
+                for obligation in summary.route_feedback["evidence"]
+            )
+        )
+
     def test_revises_when_one_example_has_no_faithful_replicate(
         self,
     ) -> None:
@@ -357,6 +413,7 @@ def _finding(
     *,
     local_efficacy: str | None = None,
     target_behavior_observed: bool = False,
+    recommended_route: str = "implementation",
 ) -> ConformanceFinding:
     return ConformanceFinding(
         trial_refs=[f"trial-{example_id}"],
@@ -376,7 +433,7 @@ def _finding(
             else "The declared behavior was not established in this rollout."
         ),
         recommended_route=(
-            None if verdict == "faithful" else "implementation"
+            None if verdict == "faithful" else recommended_route
         ),
         local_efficacy=local_efficacy or (
             "neutral" if verdict == "faithful" else "inconclusive"

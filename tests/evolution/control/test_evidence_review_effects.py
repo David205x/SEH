@@ -78,6 +78,50 @@ class _FailingAggregateRunner(_RoleRunner):
 
 
 class EvidenceReviewEffectsTest(unittest.IsolatedAsyncioTestCase):
+    async def test_can_stop_after_independent_trial_reviews(self) -> None:
+        runner = _RoleRunner()
+        effect = EvidenceReviewEffects(
+            role_runner=runner,  # type: ignore[arg-type]
+            trial_reviewer_template_root=Path("trial_reviewer"),
+            evidence_reviewer_template_root=Path("evidence_reviewer"),
+            judge_workers=3,
+        )
+        with tempfile.TemporaryDirectory(
+            dir=Path(__file__).resolve().parent
+        ) as directory:
+            root = Path(directory)
+            trial_path = root / "trial_001" / "trial.json"
+            trial_path.parent.mkdir()
+            trial_path.write_text(
+                json.dumps(_trial_artifact()),
+                encoding="utf-8",
+            )
+
+            result = await effect.review(
+                hypothesis=_hypothesis(),
+                trial_paths=[trial_path],
+                persisted_trial_reviews={},
+                budget={},
+                prior_obligation=None,
+                work_dir=root / "review",
+                trial_reviews_only=True,
+            )
+
+            self.assertEqual(
+                [call["role_id"] for call in runner.calls],
+                ["trial_reviewer"],
+            )
+            self.assertEqual(result.usage["total_tokens"], 10)
+            self.assertEqual(len(result.outcome["trial_reviews"]), 1)
+            self.assertNotIn("coverage_summary", result.outcome)
+            self.assertTrue(
+                Path(
+                    result.artifact_refs[
+                        "trial_review_001_artifact"
+                    ]
+                ).is_file()
+            )
+
     async def test_failure_counts_completed_reviews_and_allows_reuse(self) -> None:
         runner = _FailingAggregateRunner()
         effect = EvidenceReviewEffects(

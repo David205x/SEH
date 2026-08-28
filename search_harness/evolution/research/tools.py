@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any, Callable
+from typing import Annotated, Any, Callable, Literal
 
 from search_harness.framework import ToolResult
 from search_harness.framework.tools import CallableTool, ToolArg, tool
 from search_harness.framework.harness import ComponentFactoryContext
 
 from .compiler_views import render_hook_api_result
+from .experience_summary import (
+    ExperienceDetailStore,
+)
 from .candidate_views import (
     render_candidate_case,
     render_candidate_changes,
@@ -76,6 +79,13 @@ def build_builtin_tool(
         "complete_mechanism_draft": _complete_mechanism_draft,
         "set_mechanism_constraints": _set_mechanism_constraints,
         "validate_mechanism_draft": _validate_mechanism_draft,
+        "create_shadow_mechanism_draft": _create_shadow_mechanism_draft,
+        "add_shadow_decision_phase": _add_shadow_decision_phase,
+        "add_shadow_generation_phase": _add_shadow_generation_phase,
+        "validate_shadow_mechanism_draft": (
+            _validate_shadow_mechanism_draft
+        ),
+        "run_hook_prompt_probe": _run_hook_prompt_probe,
         "run_student_model_experiment": _run_student_model_experiment,
         "list_intervention_timeline": _list_intervention_timeline,
         "inspect_intervention_prefix": _inspect_intervention_prefix,
@@ -87,6 +97,7 @@ def build_builtin_tool(
         "query_hook_api": _query_hook_api,
         "write_candidate_file": _write_candidate_file,
         "delete_candidate_file": _delete_candidate_file,
+        "bind_hook_prompt_products": _bind_hook_prompt_products,
         "show_candidate_diff": _show_candidate_diff,
         "validate_candidate": _validate_candidate,
         "submit_candidate": _submit_candidate,
@@ -103,6 +114,7 @@ def build_builtin_tool(
         "get_recent_candidate_implementation": (
             _get_recent_candidate_implementation
         ),
+        "inspect_experience_detail": _inspect_experience_detail,
     }
     try:
         factory = factories[kind]
@@ -572,6 +584,315 @@ def _get_trial_event(resources: TeacherResources) -> CallableTool:
                 stream=stream,
                 event_index=event_index,
             ),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _create_shadow_mechanism_draft(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="create_shadow_mechanism_draft")
+    def invoke(
+        effect_kind: Annotated[
+            Literal["task_outcome", "behavioral_intermediate"],
+            ToolArg("Observable effect category supported by the Trials."),
+        ],
+        effect_success: Annotated[
+            str,
+            ToolArg(
+                "Smallest observable Candidate success condition, without "
+                "historical Trial narration."
+            ),
+        ],
+    ) -> ToolResult:
+        """Start one minimal Shadow Mechanism draft."""
+
+        draft_id = resources.shadow_mechanisms.create(
+            effect_kind=effect_kind,
+            effect_success=effect_success,
+        )
+        return _json_result(
+            "create_shadow_mechanism_draft",
+            {"draft_id": draft_id},
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _run_hook_prompt_probe(resources: TeacherResources) -> CallableTool:
+    @tool(name="run_hook_prompt_probe")
+    def invoke(
+        prompt: Annotated[
+            str,
+            ToolArg(
+                "Complete candidate system Prompt for the frozen Hook-model "
+                "Task; maximum 6000 characters."
+            ),
+        ],
+    ) -> ToolResult:
+        """Probe one candidate Prompt on fixed reviewed real-prefix inputs."""
+
+        store = resources.shadow_prompt_research
+        if store is None:
+            raise ValueError("Shadow Prompt Research resources are unavailable")
+        return _json_result(
+            "run_hook_prompt_probe",
+            store.run_probe(prompt=prompt),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _add_shadow_decision_phase(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="add_shadow_decision_phase")
+    def invoke(
+        draft_id: Annotated[
+            str,
+            ToolArg("Draft ID returned by create_shadow_mechanism_draft."),
+        ],
+        phase: Annotated[
+            str,
+            ToolArg(
+                "Harness phase for this task.",
+                choices=(
+                    "post_prompt",
+                    "post_model",
+                    "post_parse",
+                    "pre_tool",
+                    "post_tool",
+                    "pre_final",
+                ),
+            ),
+        ],
+        guards: Annotated[
+            list[str],
+            ToolArg("Deterministic conditions checked before the task."),
+        ],
+        evaluator: Annotated[
+            Literal["deterministic", "hook_model"],
+            ToolArg("Executor for the three-label decision."),
+        ],
+        inputs: Annotated[
+            list[dict[str, object]],
+            ToolArg(
+                "Ordered Task Inputs. Each object has name and a non-empty "
+                "sources array from the controlled Source Catalog."
+            ),
+        ],
+        positive: Annotated[
+            str,
+            ToolArg("Semantic boundary that executes on_success."),
+        ],
+        negative: Annotated[
+            str,
+            ToolArg("Semantic boundary that uses fallback.default."),
+        ],
+        uncertain: Annotated[
+            str,
+            ToolArg("Boundary where the declared inputs cannot decide."),
+        ],
+        on_success: Annotated[
+            str,
+            ToolArg("Complete phase-local positive action."),
+        ],
+        fallback_default: Annotated[
+            str,
+            ToolArg(
+                "Default fallback; use exactly continue_without_change for "
+                "a no-op."
+            ),
+        ],
+        activation_limit: Annotated[
+            int,
+            ToolArg(
+                "Maximum successful activations per Student rollout.",
+                minimum=1,
+                maximum=20,
+            ),
+        ] = 1,
+        fallback_uncertain: Annotated[
+            str,
+            ToolArg(
+                "Override for uncertain; empty string inherits default."
+            ),
+        ] = "",
+        fallback_exhausted: Annotated[
+            str,
+            ToolArg(
+                "Override after budget exhaustion; empty string inherits "
+                "default."
+            ),
+        ] = "",
+    ) -> ToolResult:
+        """Validate and append one Shadow Decision phase."""
+
+        resources.shadow_mechanisms.add_phase(
+            draft_id=draft_id,
+            phase_payload={
+                "phase": phase,
+                "guards": guards,
+                "task": {
+                    "kind": "decision",
+                    "evaluator": evaluator,
+                    "inputs": inputs,
+                    "positive": positive,
+                    "negative": negative,
+                    "uncertain": uncertain,
+                },
+                "on_success": on_success,
+                "fallback": {
+                    "default": fallback_default,
+                    "uncertain": fallback_uncertain or None,
+                    "exhausted": fallback_exhausted or None,
+                },
+                "activation_limit": activation_limit,
+            },
+        )
+        return _json_result(
+            "add_shadow_decision_phase",
+            {"draft_id": draft_id, "phase": phase, "added": True},
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _add_shadow_generation_phase(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="add_shadow_generation_phase")
+    def invoke(
+        draft_id: Annotated[
+            str,
+            ToolArg("Draft ID returned by create_shadow_mechanism_draft."),
+        ],
+        phase: Annotated[
+            str,
+            ToolArg(
+                "Harness phase for this task.",
+                choices=(
+                    "post_prompt",
+                    "post_model",
+                    "post_parse",
+                    "pre_tool",
+                    "post_tool",
+                    "pre_final",
+                ),
+            ),
+        ],
+        guards: Annotated[
+            list[str],
+            ToolArg("Deterministic conditions checked before the task."),
+        ],
+        inputs: Annotated[
+            list[dict[str, object]],
+            ToolArg(
+                "Ordered Task Inputs. Each object has name and a non-empty "
+                "sources array from the controlled Source Catalog."
+            ),
+        ],
+        output_name: Annotated[
+            str,
+            ToolArg("Identifier used by on_success for generated text."),
+        ],
+        requirement: Annotated[
+            str,
+            ToolArg("Semantic content and preservation requirements."),
+        ],
+        on_success: Annotated[
+            str,
+            ToolArg("Complete action consuming output_name."),
+        ],
+        fallback_default: Annotated[
+            str,
+            ToolArg(
+                "Fallback for empty or unusable text; use exactly "
+                "continue_without_change for a no-op."
+            ),
+        ],
+        activation_limit: Annotated[
+            int,
+            ToolArg(
+                "Maximum successful activations per Student rollout.",
+                minimum=1,
+                maximum=20,
+            ),
+        ] = 1,
+        fallback_exhausted: Annotated[
+            str,
+            ToolArg(
+                "Override after budget exhaustion; empty string inherits "
+                "default."
+            ),
+        ] = "",
+    ) -> ToolResult:
+        """Validate and append one Shadow Generation phase."""
+
+        resources.shadow_mechanisms.add_phase(
+            draft_id=draft_id,
+            phase_payload={
+                "phase": phase,
+                "guards": guards,
+                "task": {
+                    "kind": "generation",
+                    "evaluator": "hook_model",
+                    "inputs": inputs,
+                    "output_name": output_name,
+                    "requirement": requirement,
+                },
+                "on_success": on_success,
+                "fallback": {
+                    "default": fallback_default,
+                    "uncertain": None,
+                    "exhausted": fallback_exhausted or None,
+                },
+                "activation_limit": activation_limit,
+            },
+        )
+        return _json_result(
+            "add_shadow_generation_phase",
+            {"draft_id": draft_id, "phase": phase, "added": True},
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
+def _validate_shadow_mechanism_draft(
+    resources: TeacherResources,
+) -> CallableTool:
+    @tool(name="validate_shadow_mechanism_draft")
+    def invoke(
+        draft_id: Annotated[
+            str,
+            ToolArg("Draft ID returned by create_shadow_mechanism_draft."),
+        ],
+        state: Annotated[
+            list[dict[str, object]],
+            ToolArg(
+                "Rollout-local state declarations with name, value_type and "
+                "initial; use an empty list for a stateless mechanism."
+            ),
+        ],
+        constraints: Annotated[
+            list[str],
+            ToolArg(
+                "Only non-derivable implementation invariants; use an empty "
+                "list when none exist."
+            ),
+        ],
+    ) -> ToolResult:
+        """Validate and freeze one assembled Shadow Mechanism."""
+
+        mechanism_ref = resources.shadow_mechanisms.validate(
+            draft_id=draft_id,
+            state=state,
+            constraints=constraints,
+        )
+        return _json_result(
+            "validate_shadow_mechanism_draft",
+            {"mechanism_ref": mechanism_ref, "validated": True},
         )
 
     return CallableTool.from_callable(invoke)
@@ -1172,6 +1493,29 @@ def _delete_candidate_file(resources: TeacherResources) -> CallableTool:
     return CallableTool.from_callable(invoke)
 
 
+def _bind_hook_prompt_products(resources: TeacherResources) -> CallableTool:
+    store = _require_compiler(resources)
+
+    @tool(name="bind_hook_prompt_products")
+    def invoke(
+        instance_id: Annotated[
+            str,
+            ToolArg(
+                "Mutable extension instance_id that consumes every managed "
+                "Prompt Product in this Shadow Mechanism."
+            ),
+        ],
+    ) -> ToolResult:
+        """Materialize immutable Prompt Product bindings beside one extension."""
+
+        return _json_result(
+            "bind_hook_prompt_products",
+            store.materialize_managed_prompt_products(instance_id=instance_id),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
 def _show_candidate_diff(resources: TeacherResources) -> CallableTool:
     store = _require_compiler(resources)
 
@@ -1515,6 +1859,32 @@ def _get_recent_candidate_implementation(
     return CallableTool.from_callable(invoke)
 
 
+def _inspect_experience_detail(
+    resources: TeacherResources,
+) -> CallableTool:
+    store = _require_experience_summary(resources)
+
+    @tool(name="inspect_experience_detail")
+    def invoke(
+        detail_id: Annotated[
+            int,
+            ToolArg(
+                "One numeric Detail ID from detail_directory. Each ID can be "
+                "read once; every call counts toward the role's safety fuse.",
+                minimum=1,
+            ),
+        ],
+    ) -> ToolResult:
+        """Read one authorized Detail projection that resolves a named gap."""
+
+        return _text_result(
+            "inspect_experience_detail",
+            store.inspect(detail_id),
+        )
+
+    return CallableTool.from_callable(invoke)
+
+
 def _require_evaluation(
     resources: TeacherResources,
 ) -> EvaluationEvidenceStore:
@@ -1575,6 +1945,14 @@ def _require_candidate_review(
     if resources.candidate_review is None:
         raise ValueError("Teacher template requires candidate_review resources")
     return resources.candidate_review
+
+
+def _require_experience_summary(
+    resources: TeacherResources,
+) -> ExperienceDetailStore:
+    if resources.experience_summary is None:
+        raise ValueError("Teacher template requires experience resources")
+    return resources.experience_summary
 
 
 def _json_result(name: str, payload: Any) -> ToolResult:

@@ -18,7 +18,10 @@ from search_harness.framework import (
     HookContext,
     HookModelRequest,
     HookModelResponse,
+    HookEditOperation,
     HookPhase,
+    HookPromptOutput,
+    HookPromptProduct,
     HookStateView,
     ModelInput,
     ParsedOutput,
@@ -38,7 +41,7 @@ from .runtime_inputs import (
 )
 
 
-HOOK_API_CATALOG_VERSION = 2
+HOOK_API_CATALOG_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -139,7 +142,15 @@ _OBJECTS: dict[str, _ObjectPolicy] = {
                     "Run one bounded, traced model request without entering "
                     "another AgentLoop."
                 ),
-            )
+            ),
+            "call_prompt_product": _MemberPolicy(
+                stability="experimental",
+                note=(
+                    "Call one program-managed Prompt Product on its frozen "
+                    "current-phase state projection. The Compiler applies the "
+                    "returned value to the Mechanism target."
+                ),
+            ),
         },
     ),
     "HookStateView": _ObjectPolicy(
@@ -246,6 +257,68 @@ _OBJECTS: dict[str, _ObjectPolicy] = {
                 note="Parse raw_output as one JSON object or raise ValueError."
             )
         },
+    ),
+    "HookPromptProduct": _ObjectPolicy(
+        target=HookPromptProduct,
+        category="model",
+        stability="experimental",
+        shape="closed",
+        import_path="search_harness.framework",
+        fields={
+            "product_ref": _MemberPolicy(),
+            "phase": _MemberPolicy(),
+            "task_kind": _MemberPolicy(),
+            "inputs": _MemberPolicy(),
+            "prompt": _MemberPolicy(
+                note="Program-managed exact text; Compiler must not rewrite it."
+            ),
+            "thinking_mode": _MemberPolicy(),
+            "response_adapter": _MemberPolicy(),
+            "task_digest": _MemberPolicy(),
+            "input_projection_digest": _MemberPolicy(),
+            "prompt_digest": _MemberPolicy(),
+            "model_profile": _MemberPolicy(),
+        },
+        methods={"from_dict": _MemberPolicy()},
+    ),
+    "HookPromptOutput": _ObjectPolicy(
+        target=HookPromptOutput,
+        category="model",
+        stability="experimental",
+        shape="closed",
+        import_path="search_harness.framework",
+        fields={
+            "kind": _MemberPolicy(),
+            "value": _MemberPolicy(
+                shape="open",
+                note=(
+                    "Decision label, generated text, validated edit tuple, or "
+                    "None according to the managed response adapter."
+                ),
+            ),
+        },
+        methods={},
+        note=(
+            "Private rollout state keys use "
+            "extension.<owner_hook_id>.<name>; include the owner Hook in "
+            "writers when it updates the key."
+        ),
+    ),
+    "HookEditOperation": _ObjectPolicy(
+        target=HookEditOperation,
+        category="model",
+        stability="experimental",
+        shape="closed",
+        import_path="search_harness.framework",
+        fields={
+            "operation": _MemberPolicy(),
+            "block_id": _MemberPolicy(),
+            "anchor_block_id": _MemberPolicy(),
+            "position": _MemberPolicy(),
+            "role": _MemberPolicy(),
+            "content": _MemberPolicy(),
+        },
+        methods={"from_dict": _MemberPolicy()},
     ),
     "ToolCall": _ObjectPolicy(
         target=ToolCall,
@@ -420,13 +493,6 @@ _CORE_POLICIES: dict[str, _StatePolicy] = {
     "core.status": _StatePolicy(
         "str", "core", "stable", "closed", "Current RunStatus value."
     ),
-    "core.final_answer": _StatePolicy(
-        "str | None",
-        "core",
-        "experimental",
-        "closed",
-        "Accepted final answer, normally absent while a Hook is running.",
-    ),
     "core.error": _StatePolicy(
         "str | None",
         "core",
@@ -453,7 +519,10 @@ _CORE_POLICIES: dict[str, _StatePolicy] = {
         "core",
         "experimental",
         "open",
-        "Serialized prior ParsedOutput values.",
+        (
+            "Serialized cumulative ParsedOutput values for history analysis. "
+            "At PRE_FINAL use stage.final_decision for the active candidate."
+        ),
     ),
     "core.tool_interactions": _StatePolicy(
         "list[dict[str, Any]]",

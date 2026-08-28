@@ -31,6 +31,7 @@ from search_harness.evolution.control.transitions import (
     transition_completed,
 )
 from search_harness.evolution.experience import file_digest
+from search_harness.evolution.identifiers import new_run_id
 from search_harness.evolution.versioning import TemplateVersionStore
 
 
@@ -93,13 +94,13 @@ def clone_run_from_incumbent(
     source_work_dir = source_artifacts.work_dir(evaluation_work.work_id)
     relative_refs = _relative_evaluation_refs(source_effect, source_work_dir)
 
-    run_id = uuid4().hex
+    run_id = new_run_id()
     new_evaluation = initial_work(
         run_id=run_id,
         version_id=evaluation_work.payload["version_id"],
     )
     staging = destination.with_name(
-        f".{destination.name}.{uuid4().hex}.staging"
+        f".clone_{uuid4().hex[:8]}"
     )
     if staging.exists():
         raise FileExistsError(f"Staging directory already exists: {staging}")
@@ -212,6 +213,8 @@ def _materialize_clone(
                 {
                     "run_id": run_id,
                     "initial_version": new_work.payload["version_id"],
+                    "generation": new_work.lineage.generation,
+                    "generation_id": new_work.lineage.generation_id,
                 },
             ),
             ("work_scheduled", {"work": new_work.to_dict()}),
@@ -326,11 +329,10 @@ def _clone_version_store(
         if record.candidate_attempt_id is not None
     }
     metadata_dir = staged_store / ".harness-store"
-    for name in ("candidate_attempts.jsonl", "iterations.jsonl"):
-        _retain_candidate_attempts(
-            metadata_dir / name,
-            accepted_attempt_ids=accepted_attempt_ids,
-        )
+    _retain_candidate_attempts(
+        metadata_dir / "candidate_attempts.jsonl",
+        accepted_attempt_ids=accepted_attempt_ids,
+    )
 
     cloned_store = TemplateVersionStore(staged_store)
     source_versions = source_store.list_versions()
@@ -375,7 +377,11 @@ def _retain_candidate_attempts(
             raise TypeError(
                 f"Candidate Attempt event must be an object: {path}:{line_number}"
             )
-        attempt_id = value.get("candidate_attempt_id", value.get("iteration_id"))
+        if value.get("schema_version") != 3:
+            raise ValueError(
+                f"Unsupported Candidate Attempt schema at {path}:{line_number}"
+            )
+        attempt_id = value.get("candidate_attempt_id")
         if attempt_id in accepted_attempt_ids:
             retained.append(line)
     if retained:
@@ -389,7 +395,7 @@ def _completed_incumbent_work(state: ControlState) -> WorkItem:
         record.item
         for record in state.works.values()
         if record.item.kind is WorkKind.EVALUATE_INCUMBENT
-        and record.item.payload.get("generation") == 1
+        and record.item.lineage.generation == 1
         and record.status == "completed"
     ]
     if len(matches) != 1:
@@ -425,8 +431,8 @@ def _relative_evaluation_refs(
 
 
 def _validate_source_run(source: Path, payload: dict[str, Any]) -> None:
-    if payload.get("schema_version") != 2:
-        raise ValueError("Only Evolution Run schema v2 is supported")
+    if payload.get("schema_version") != 3:
+        raise ValueError("Only Evolution Run schema v3 is supported")
     initial_version = _required_string(payload, "initial_version")
     version_store = TemplateVersionStore(
         Path(_required_string(payload, "version_store"))

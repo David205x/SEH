@@ -31,11 +31,13 @@ Evaluation 目录包含：
 
 ## Teacher Role artifact
 
-当前 `schema_version` 为 `1`。共享 envelope 包含 `created_at`、`template_root`、`harness_id`、`role`、`output_contract`、`runtime`、非秘密 model provenance、实际 `role_budget`、validated input/output、resource config/artifacts、tool calls、usage 与 transcript。`output_contract.schema_digest` 用于确认本次运行实际使用的 JSON Schema。
+当前 `schema_version` 为 `2`。共享 envelope 包含 `created_at`、`template_root`、`harness_id`、`role`、`output_contract`、`runtime`、非秘密 model provenance、实际 `role_budget`、validated input/output、resource config/artifacts、tool calls、usage 与 transcript。`output_contract.schema_digest` 用于确认本次运行实际使用的 JSON Schema。
 
 Evidence Reviewer artifact 的 validated input 含完整 `trial_reviews`、程序维护的 `coverage_summary` 与当前 `trial_selection_capabilities`；同一 Effect 另写 `coverage_summary.json`，供恢复和外部审计直接读取。Mechanism Distiller 与 Compiler artifact 的 `resource_artifacts.student_model_experiments` 保存 Teacher 发起的描述性 Student 模型实验：稳定 `experiment_signature`、实验目的、完整 system prompt、案例输入、逐请求 thinking mode、原始输出、错误、usage 和 provider metadata。工具回显按 case/mode 聚合原始输出与总 token，不生成 expected label、匹配率或程序所有的通过结论；相同签名在后续 Compiler revision 中直接复用。提交的 `candidate_workspace.json` 同步携带这些实验以支持新 Role Session 的结构化接续。
 
 `verify_hook_feasibility` 写入 `probe.json` 与 Hook Feasibility Reviewer 的 `role.json`。Probe 按 phase 保存冻结 decision contract、Trial Review reference label、原 prefix 的 Student-visible observation、实际 system/user prompt、thinking mode、repetition、raw output、错误、usage 与 provider metadata；不保存恢复后的 Student 分支，因为该调用在 Hook 判断后终止。Reviewer artifact 的 `resource_artifacts.hook_feasibility_probe` 保留同一完整 Probe，Effect Receipt 分别引用两份文件。进入 Compiler 时，各 phase 的 experiment 以原 `experiment_signature` 合入 `student_model_experiments`，Reviewer 的 `compiler_guidance` 进入实现约束。
+
+Capability 与 Direction Summarizer 使用相同 Role Artifact envelope。Capability side work 写入 `capability_summarizer_artifact` 和程序组装的 `capability_experience_artifact`；Direction 仍写入 `direction_draft_artifact`。Capability Role Artifact 的模型输出只含 `observed_limitation` 与本地 Observation refs，独立 `capability_experience.json` 则含从来源 Artifact 原样提取的冻结 predicate（`decision_scope`）、由结构化 expected/observed decision 聚合的紧凑 `evidence_summary` 和解析后的稳定来源 refs。模型输入保存规范化 Observation 和不含正文的数字 Detail Directory；`resource_config.experience_summary` 保存 Source Processing Context、授权 Detail 投影、Observation 来源映射和程序专用的结构化 Capability Evidence。`resource_artifacts.experience_observation_sources` 保存稳定来源引用，`experience_details_read` 保存实际读取的 Detail ID。正式 Experience Store 尚未建立，因此 Capability Product 尚未结算或跨 Attempt 合并。
 
 Evidence Review 在总评前把每条已完成的 Trial Reviewer artifact 写入 `trial_reviews/trial_review_NNN.json`。同一 Work 重试会发现并复用这些 checkpoint；若后续角色失败，failure artifact 的 usage 同时计入本次已完成但尚未形成 Effect Receipt 的子角色调用，避免漏记或重复调用。
 

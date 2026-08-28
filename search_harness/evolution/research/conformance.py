@@ -283,6 +283,7 @@ def aggregate_conformance(
         item.repair_obligation
         for item in finding_items
         if item.verdict in hard_failures
+        and item.recommended_route == "implementation"
     )
     per_example: dict[str, dict[str, Any]] = {}
     missing_faithful = []
@@ -347,11 +348,7 @@ def aggregate_conformance(
         )
         for route in ("evidence", "mechanism", "implementation")
     }
-    if (
-        efficacy_gate == "fail"
-        and not (set(counts) & hard_failures)
-        and not missing_faithful
-    ):
+    if efficacy_gate == "fail":
         route_feedback["evidence"] = tuple(
             _unique(
                 [

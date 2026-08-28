@@ -41,9 +41,7 @@ class ControlJournal:
                     f"control journal event must be an object at "
                     f"{self.path}:{line_number}"
                 )
-            events.append(
-                ControlEvent.from_dict(_migrate_legacy_attempt_names(value))
-            )
+            events.append(ControlEvent.from_dict(value))
         project_events(events)
         return events
 
@@ -139,22 +137,4 @@ class ControlArtifactStore:
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise TypeError(f"effect artifact must be a JSON object: {path}")
-        return EffectResult.from_dict(_migrate_legacy_attempt_names(value))
-
-
-def _migrate_legacy_attempt_names(value: object) -> object:
-    """Map legacy Iteration keys at persisted Control read boundaries."""
-
-    if isinstance(value, list):
-        return [_migrate_legacy_attempt_names(item) for item in value]
-    if not isinstance(value, dict):
-        return value
-    migrated: dict[str, object] = {}
-    for raw_key, raw_value in value.items():
-        key = str(raw_key)
-        if key == "iteration_id":
-            key = "candidate_attempt_id"
-        elif key.startswith("iteration_"):
-            key = f"candidate_attempt_{key.removeprefix('iteration_')}"
-        migrated[key] = _migrate_legacy_attempt_names(raw_value)
-    return migrated
+        return EffectResult.from_dict(value)

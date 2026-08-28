@@ -36,7 +36,7 @@ class TimelineGeneratorTest(TestCase):
             shutil.rmtree(WORK_ROOT)
 
     def test_incrementally_projects_only_complete_new_format_events(self) -> None:
-        self._write_run(schema_version=2)
+        self._write_run(schema_version=3)
         effect_path = WORK_ROOT / "artifacts" / "evaluate-1" / "effect.json"
         self._write_json(
             effect_path,
@@ -136,7 +136,7 @@ class TimelineGeneratorTest(TestCase):
         self._write_run(schema_version=1)
         self._write_events([])
 
-        with self.assertRaisesRegex(ValueError, "only supports.*schema_version 2"):
+        with self.assertRaisesRegex(ValueError, "only supports.*schema_version 3"):
             TimelineGenerator().update(WORK_ROOT)
 
     def test_summary_profile_reuses_configured_credentials(self) -> None:

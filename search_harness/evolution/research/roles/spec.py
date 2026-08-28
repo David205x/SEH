@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from search_harness.framework.harness import HarnessManifest
 from search_harness.framework.tools import ToolSet
@@ -90,10 +90,45 @@ class TeacherOutputSpec:
     """把 Teacher Role 的稳定 Output Contract 暴露给 Runner。"""
 
     kind: str = "role_contract"
+    submission_type: type[TeacherPayload] | None = None
+    materializer: Callable[[TeacherPayload], TeacherPayload] | None = None
 
     def __post_init__(self) -> None:
         if self.kind != "role_contract":
             raise ValueError(f"unsupported Teacher output kind: {self.kind}")
+        if (self.submission_type is None) != (self.materializer is None):
+            raise ValueError(
+                "Teacher output submission_type and materializer must be "
+                "configured together"
+            )
+
+    def model_submission_type(
+        self,
+        final_type: type[TeacherPayload],
+    ) -> type[TeacherPayload]:
+        """Return the transport schema shown to the model."""
+
+        return self.submission_type or final_type
+
+    def materialize(
+        self,
+        submission: TeacherPayload,
+        *,
+        final_type: type[TeacherPayload],
+    ) -> TeacherPayload:
+        """Convert a transport submission into the public Role Output."""
+
+        output = (
+            self.materializer(submission)
+            if self.materializer is not None
+            else submission
+        )
+        if not isinstance(output, final_type):
+            raise TypeError(
+                "Teacher output materializer returned "
+                f"{type(output).__name__}; expected {final_type.__name__}"
+            )
+        return output
 
 
 @dataclass(frozen=True)

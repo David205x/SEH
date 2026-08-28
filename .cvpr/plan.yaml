@@ -1,0 +1,1156 @@
+{
+  "schema_version": "1.0",
+  "plan_id": "PLAN-001",
+  "version": 1,
+  "status": "accepted",
+  "created_at": "2026-08-21T11:41:03+08:00",
+  "updated_at": "2026-08-21T11:41:03+08:00",
+  "goal_ref": {
+    "goal_id": "G-001",
+    "goal_version": 1,
+    "goal_status": "accepted",
+    "goal_file": ".cvpr/goal.yaml",
+    "required_criterion_ids": [
+      "AC-H1-PREDICTION",
+      "AC-H1-EFFICIENCY",
+      "AC-H2A-PREDICTION",
+      "AC-H2B-ROUTING",
+      "AC-H3-SEARCH",
+      "AC-SAFETY-UTILITY"
+    ],
+    "protocol_ids": [
+      "EVAL-CALIBRATION",
+      "EVAL-H1",
+      "EVAL-H2",
+      "EVAL-H3",
+      "EVAL-UTILITY"
+    ]
+  },
+  "development_base_ref": {
+    "project_state": "existing_project",
+    "project_root": "D:\\_Project\\Agent\\search_harness",
+    "repository_source": "用户现有 Git 项目 search_harness；远程 origin 为 https://github.com/David205x/SEH",
+    "repository_version": "72754289913aa0c251aeb559b8ee698862f56150",
+    "target_model_or_system": "固定 qwen3:8b Student 的 Search Harness Evidence-Gated and Experience-Guided Evolution 系统；当前主验证任务为 HotpotQA supported task family",
+    "goal_evidence_ref": ".cvpr/goal.yaml#development_base",
+    "user_confirmed": true
+  },
+  "planning_basis": {
+    "inspected_code_refs": [
+      "search_harness/evolution/control/domain.py",
+      "search_harness/evolution/control/controller.py",
+      "search_harness/evolution/control/journal.py",
+      "search_harness/evolution/control/transitions.py",
+      "search_harness/evolution/control/effects.py",
+      "search_harness/evolution/control/policies.py",
+      "search_harness/evolution/control/research_role_effects.py",
+      "search_harness/evolution/control/intervention_effects.py",
+      "search_harness/evolution/control/hook_feasibility_effects.py",
+      "search_harness/evolution/control/evaluation.py",
+      "search_harness/evolution/research/roles/contracts.py",
+      "search_harness/evolution/research/roles/native_chat_runner.py",
+      "search_harness/evolution/research/resources/base.py",
+      "search_harness/evolution/research/candidate_digest.py",
+      "search_harness/evolution/research/candidate_views.py",
+      "search_harness/evolution/research/hook_feasibility.py",
+      "search_harness/evolution/research/intervention/",
+      "search_harness/evolution/experience/sets.py",
+      "search_harness/evaluation/",
+      "tests/evolution/",
+      "config/runtime.yaml"
+    ],
+    "confirmed_project_facts": [
+      "Controller 已有 append-only journal、可重放 WorkItem/EffectResult、跨 generation 状态和多层 reject/revision 路由。",
+      "Candidate outcome digest 已能保存 mechanism fingerprint、paired outcome 和 hook attribution，可作为未来 settled experience 的来源之一。",
+      "CandidateReviewerInput.historical_experience 当前是无作用域的 list[str]，ResearchRoleEffects 固定传入空列表；FailureAnalyst/HypothesisResearcher 尚无 typed experience projection。",
+      "现有 evolution/experience package 表示冻结评测 Experience Set，不是 optimizer research experience；新增 H3 必须保持术语和接口隔离。",
+      "当前 token budget 是 effect 启动前 soft check，ControlState 只聚合 total_tokens；尚无 reservation/commit/refund 和完整 all-in cost ledger。",
+      "当前 H1 代码没有完整的 repeated matched no-op/intervention 双臂与 Gate 后盲编译协议。",
+      "当前 H2 主要覆盖 hook-model feasibility，尚未完整实现 recognition、decision、adherence、fallback、parse 五职责标签与四类 routing 对照。",
+      "Goal 确认前的所有 Run、报告和开发测试数值均被排除，不得作为本计划任何正式证据。"
+    ],
+    "assumptions": [
+      "目标投稿 venue 和可选第二 Student/任务不会改变当前 G-001 required scope；若后续要升级为必需范围，必须返回 cvpr-goal。",
+      "校准阶段可以在与正式方法比较和 held-out 都隔离的数据上建立可复查 pilot manifest。",
+      "正式实验所需计算资源将在 calibration 后依据预注册资源合同由用户决定是否继续，不通过降低 Goal 判据来适配资源。"
+    ],
+    "unresolved_questions": []
+  },
+  "global_boundaries": [
+    "H3 是当前主要研究实现对象；H1/H2 只允许经验接入、正式可观测性、核验协议补齐和明确缺陷修复，不得借计划执行重新设计其机制语义。",
+    "若实现或开发检查表明 H1/H2/H3 主张、评测协议、development base 或验收规则必须改变，停止当前计划并返回 cvpr-goal。",
+    "不训练或微调 Student，不修改冻结 Evaluator 语义、任务答案或基础 Agent Loop。",
+    "Goal 确认前的全部实验、Run、报告和数字只能用于开发定位，禁止进入 formal baseline、目标校准、Claim 或最终验收。",
+    "Development check、少量样例、合成输入、导入或 smoke test 不能替代 EVAL-H1、EVAL-H2、EVAL-H3 或 EVAL-UTILITY。",
+    "Research/development、calibration、formal method comparison 和 held-out utility 使用互斥 manifest 与 digest firewall。",
+    "正式方法比较只允许在 result-candidate 和 preregistration 双重冻结后开始；其后任何代码、Prompt、Gate、Reviewer、路由、标签、数据、服务或统计变更都必须形成新版本并重跑受影响证据。",
+    "经验必须按确认的 consumer/scope 投影，不得成为所有角色共享上下文、当前 Gate 的替代证据或永久黑名单。",
+    "所有成本比较必须计入 Student/hook、全部 Teacher roles、经验总结/检索/上下文、Judge、Retriever、rollout 和完整 Candidate Evaluation。",
+    "不以最佳 seed、单次 rollout、单个 Store 内 proposal 伪装独立实验单位，也不在正式结果可见后改变统计或 control-selection 规则。"
+  ],
+  "stages": [
+    {
+      "id": "STAGE-001",
+      "order": 1,
+      "name": "H1/H2 语义基线与可结算轨迹合同",
+      "objective": "在不改变 H1/H2 机制语义的前提下，把现有 Controller 的研究周期、Reviewer/Gate 回流和有研究意义终态定义为可定位、可重放、可供 H3 总结的稳定合同。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [],
+      "entry_conditions": [
+        "G-001 和 main@72754289913aa0c251aeb559b8ee698862f56150 可定位。",
+        "当前研究代码保持为 development base 的后续版本，现有实验不进入证据链。"
+      ],
+      "code_context": [
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/controller.py",
+        "search_harness/evolution/control/journal.py",
+        "search_harness/evolution/control/transitions.py",
+        "search_harness/evolution/control/research_role_effects.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/research/candidate_digest.py"
+      ],
+      "stage_scope": [
+        "定义 optimizer_episode_id、research_attempt_id、candidate_attempt_id 与 generation 的边界和包含关系。",
+        "建立 Trial/Evidence/Hook Feasibility/Compiler/Validation/Conformance/Candidate Review/Promotion/Budget 终态到 revision obligation 和上游责任的完整矩阵。",
+        "定义 provisional、settled-positive、settled-negative、invalid/indeterminate terminal taxonomy；promotion 不是唯一结算终态。",
+        "冻结 role identity：role_id、model、base prompt/template content digest、role contract 和 input-view digest。",
+        "形成最小 typed settled-trajectory 与 outcome/cost source contract，保留 deterministic replay 和 resume 语义。"
+      ],
+      "excluded_scope": [
+        "实现 H3 检索或经验 Store。",
+        "修改 H1/H2 Reviewer 判据、Gate 含义或研究主张。",
+        "把历史 Run 当作语义合同正确性的正式证据。"
+      ],
+      "expected_outputs": [
+        "研究周期与终态 taxonomy artifact",
+        "Reviewer/Gate route-to-obligation matrix",
+        "role identity 与 settled-trajectory schema",
+        "相关 deterministic contract/replay 开发检查"
+      ],
+      "stage_validation": {
+        "kind": "research_development",
+        "description": "通过代码级 route inventory、schema validation、journal replay 和代表性终态检查确认每个有研究意义的结果均可稳定定位和结算；这不是方法效果验证。",
+        "protocol_refs": [],
+        "evaluation_objects": [
+          "Controller Work/Event/Effect journal",
+          "Reviewer/Gate transitions",
+          "attempt/candidate/generation lineage"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "全部已确认 reject/revise/accept/terminal/budget routes 都映射到唯一来源、责任和结算状态。",
+          "journal replay、retry、resume 不改变 terminal identity 或重复结算。",
+          "H1/H2 核心语义与 G-001 保持一致；发现实质冲突则阻断并返回 cvpr-goal。"
+        ],
+        "evidence_artifacts": [
+          "route coverage matrix",
+          "schema and replay check outputs",
+          "H1/H2 semantic-diff audit"
+        ]
+      },
+      "user_decision_points": [
+        "若代码现状与 Goal 的 H1/H2 语义存在实质冲突，由用户决定修订 Goal，而不是在执行中静默改变。"
+      ],
+      "blocking_conditions": [
+        "存在无法归属或无法稳定重放的研究终态。",
+        "必须改变 Goal 主张才能形成 settled trajectory。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-002",
+      "order": 2,
+      "name": "H3 类型化经验生命周期",
+      "objective": "把轨迹总结、经验结算和失效建成可重放的第一等 Controller 生命周期，使三类经验能够跨 attempt/generation 持久化而不混淆 provisional 反馈与 settled 事实。",
+      "goal_criterion_refs": [
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-001"
+      ],
+      "entry_conditions": [
+        "STAGE-001 的 terminal taxonomy、lineage 和 role identity 已接受。",
+        "三类经验的消费者边界与 G-001 一致。"
+      ],
+      "code_context": [
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/controller.py",
+        "search_harness/evolution/control/journal.py",
+        "search_harness/evolution/control/transitions.py",
+        "search_harness/evolution/control/effects.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/experience/sets.py"
+      ],
+      "stage_scope": [
+        "将经验总结和结算实现为可重试、可持久化、可重放的显式 Controller work/event，而不是 transition 或角色调用中的隐式副作用。",
+        "Reject/revise 回流可生成 provisional 总结；只有 promoted/accepted、not-distillable、预算耗尽、最终 reject 及其他有研究意义 settled terminal 才能形成跨 generation settled experience。",
+        "分别定义 Student capability boundary、Teacher role work experience 与 experiment-direction map 的 typed schema、provenance、consumer/scope、confidence/status 和 source refs。",
+        "Direction map 消费全部 settled 正负方向结果；Student capability boundary 消费 settled feasibility/conformance 结果，不只记录失败。",
+        "建立 provisional-to-settled、contradiction、invalidation、supersession 和 recheck 生命周期。",
+        "使用 append-only/atomic artifact 与确定性 index；幂等键绑定 source verdict/event、trajectory/attempt 和 summarizer contract。",
+        "保持 optimizer experience 与现有 frozen Experience Set 的命名、schema 和 API 边界。"
+      ],
+      "excluded_scope": [
+        "为经验检索提前引入无必要的外部数据库或独立向量服务。",
+        "把一次 reject 直接写成跨 generation 永久事实。",
+        "让经验修改当前 Gate verdict。"
+      ],
+      "expected_outputs": [
+        "三类 optimizer experience schemas 与 contract",
+        "经验总结 role/work 和 settled lifecycle",
+        "append-only Store/index 与 invalidation records",
+        "幂等、retry、resume、contradiction 和跨 generation 开发检查"
+      ],
+      "stage_validation": {
+        "kind": "research_development",
+        "description": "在代表性正负 terminal、回流、重试和恢复路径上验证经验生命周期与持久化一致性；只证明实现行为，不证明 H3 搜索收益。",
+        "protocol_refs": [],
+        "evaluation_objects": [
+          "settled trajectory artifacts",
+          "三类 typed optimizer experience",
+          "Controller journal replay and Store state"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "相同 source event/trajectory/summarizer contract 重试不会产生重复经验。",
+          "正向和负向 settled outcome 均可更新方向地图，provisional 内容不能越权成为 settled fact。",
+          "失效、冲突和 supersession 可追溯且不覆盖历史。",
+          "经验 Store 的持久状态可由 journal/effect artifacts 重建或核对。"
+        ],
+        "evidence_artifacts": [
+          "experience lifecycle test matrix",
+          "journal/effect/store replay outputs",
+          "typed schema and provenance validation"
+        ]
+      },
+      "user_decision_points": [],
+      "blocking_conditions": [
+        "任一经验类型无法绑定稳定 source verdict、trajectory 或 consumer scope。",
+        "重试/恢复会重复结算或改变已持久化事实。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-003",
+      "order": 3,
+      "name": "H3 定向消费、Receipt 与对照闭环",
+      "objective": "完成经验的严格定向投影、使用/效果追踪、旁路复查和实验条件闭环，使 H3 与全部 memory controls 能在独立冷 Store 和统一成本口径下运行。",
+      "goal_criterion_refs": [
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-002"
+      ],
+      "entry_conditions": [
+        "三类经验 schema、settled lifecycle 和 Store 已通过开发验收。",
+        "role identity、consumer 和 scope 均可确定性匹配。"
+      ],
+      "code_context": [
+        "search_harness/evolution/control/research_role_effects.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/research/roles/native_chat_runner.py",
+        "search_harness/evolution/research/resources/base.py",
+        "search_harness/evolution/research/candidate_views.py",
+        "harness_templates/teacher/",
+        "config/runtime.yaml"
+      ],
+      "stage_scope": [
+        "移除或迁移 CandidateReviewerInput.historical_experience:list[str] 的无作用域入口，禁止绕过 typed projection。",
+        "Hypothesis Researcher 只接收 Student capability boundary、experiment-direction map 和匹配其自身身份的 Teacher work experience。",
+        "其他 Teacher role 只接收匹配 role/model/base-prompt/template/contract 的 Teacher work experience。",
+        "保存 projection digest 和不可变 usage receipt：retrieved、rendered、cited-or-ignored IDs、role output digest、bypass/recheck flag。",
+        "Downstream attempt/candidate settled 后新增 linked effect receipt，不原地回写 usage receipt。",
+        "实现预注册旁路/recheck 能力和选择概率记录接口，未旁路对象不默认标为无效。",
+        "分别实现 no-memory、shared/global、generic role-local、DREvo-like、Auto-Robotist-like、full-H3 和 provenance/scope/invalidation/bypass/component 安全消融。",
+        "每个 condition 从相同 cold start 创建独立 Store；本阶段发出经验总结、检索和上下文成本，硬预算统一结算留给 STAGE-005。"
+      ],
+      "excluded_scope": [
+        "向所有角色广播三类经验。",
+        "以单一 nearest-neighbor 包装替代 DREvo-like 和 Auto-Robotist-like。",
+        "根据最终正式结果改变 control semantics。"
+      ],
+      "expected_outputs": [
+        "各角色 typed experience projection contracts",
+        "usage/effect receipt chain",
+        "bypass/recheck interface",
+        "全部 H3 memory condition 与安全/组件消融 adapters",
+        "Store isolation、scope 和 cost emission 开发检查"
+      ],
+      "stage_validation": {
+        "kind": "research_development",
+        "description": "验证每个角色的可见经验、receipt 时序、独立 Store 和 condition adapter 一致性；开发结果不得作为 AC-H3-SEARCH 证据。",
+        "protocol_refs": [
+          "EVAL-H3"
+        ],
+        "evaluation_objects": [
+          "role-scoped projection",
+          "usage/effect receipt chain",
+          "H3 and memory-control conditions",
+          "independent Store initialization"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "任何角色都无法读取其 scope 之外的经验。",
+          "usage receipt 与 downstream effect receipt 均不可变、可链接且可重放。",
+          "全部 Goal-required H3 controls 和消融具有独立、冻结、可核对的 condition identity。",
+          "相同 cold start 和 seed 下各 condition Store 相互隔离。"
+        ],
+        "evidence_artifacts": [
+          "projection visibility matrix",
+          "receipt linkage/replay outputs",
+          "condition adapter conformance records",
+          "Store isolation checks"
+        ]
+      },
+      "user_decision_points": [],
+      "blocking_conditions": [
+        "存在非类型化经验后门或跨 role/scope 泄漏。",
+        "任一 required memory control 无法与 full-H3 使用公平输入和成本语义。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-004",
+      "order": 4,
+      "name": "H1/H2 正式协议补齐与 H1/H2/H3 联合开发验证",
+      "objective": "在 H3 完成后补齐 Goal 已锁定但当前代码尚未实现的 H1/H2 核验能力，并在非 held-out 数据上完成完整系统的 development-only 集成检查，不把协议补齐扩展为机制重设计。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-003"
+      ],
+      "entry_conditions": [
+        "H3 lifecycle、scoped projection、receipts 和 condition adapters 已通过开发验收。",
+        "H1/H2 semantic baseline 未被 H3 实现改变。"
+      ],
+      "code_context": [
+        "search_harness/evolution/control/intervention_effects.py",
+        "search_harness/evolution/research/intervention/",
+        "search_harness/evolution/control/hook_feasibility_effects.py",
+        "search_harness/evolution/research/hook_feasibility.py",
+        "search_harness/evolution/control/transitions.py",
+        "search_harness/evolution/control/evaluation.py",
+        "search_harness/evolution/research/conformance.py",
+        "tests/evolution/",
+        "experiments/"
+      ],
+      "stage_scope": [
+        "实现 H1 repeated matched no-op/intervention continuation、确定性 Prefix/Trial selection、冻结 Gate decision 和 Gate 后 blind compilation。",
+        "实现 H2 recognition、decision、adherence、fallback、parse 五职责 probe、独立 shadow/in-loop labels 和 reject/simplify/deterministic lowering/ownership reassignment。",
+        "实现 candidate-first/Direct Compile、H1-only、H2-only、H1+H2、no-feasibility-routing、always-Student、always-deterministic 和 adaptive routing conditions。",
+        "H1/H2 开发比较时禁用 H3 或使用全条件一致的空白独立 Store。",
+        "在 research/development split 上完成 H1/H2/H3 端到端集成、错误路由和恢复检查。",
+        "联合检查只用于发现实现、接口和协议可执行性问题，禁止支持 Claim、调节 held-out 或继承为 formal baseline。"
+      ],
+      "excluded_scope": [
+        "改变 H1/H2 的 Gate、职责或 routing 主张。",
+        "使用 held-out 数据、Goal 前历史 Run 或 development-only 输出校准正式阈值。",
+        "在本阶段判定任何 Goal AC。"
+      ],
+      "expected_outputs": [
+        "完整 H1 matched two-arm/blind compilation protocol implementation",
+        "完整 H2 responsibility probe/label/routing implementation",
+        "H1/H2 formal control adapters",
+        "H1/H2/H3 development-only integration records",
+        "H1/H2 semantic preservation audit"
+      ],
+      "stage_validation": {
+        "kind": "research_development",
+        "description": "在非 held-out 数据上覆盖正式协议的输入、条件、路由、输出和恢复语义，仅判定研究实现是否具备进入正式评测基础设施阶段的能力。",
+        "protocol_refs": [
+          "EVAL-H1",
+          "EVAL-H2",
+          "EVAL-H3"
+        ],
+        "evaluation_objects": [
+          "matched Prefix two-arm trial",
+          "blind compiler",
+          "five responsibility probes and independent labels",
+          "fixed/adaptive routing and H3 conditions"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "H1 双臂只在 intervention 条件不同，Gate 后 blind compiler 不可见 Gate label、trial outcome 或 downstream result。",
+          "H2A probe-construction Prefix 与 label Prefix 隔离，标签不由同一预测角色或最终 accuracy 自证。",
+          "H2B 四类条件使用相同 evidence-backed mechanism portfolio 和 Compiler/Conformance contract。",
+          "H3 可完全关闭且空 Store 不改变 H1/H2 condition 的其他输入。",
+          "若补齐协议需要改变 H1/H2 核心语义，则阶段阻断并返回 cvpr-goal。"
+        ],
+        "evidence_artifacts": [
+          "protocol conformance matrix",
+          "blindness and Prefix-isolation checks",
+          "routing-condition equivalence checks",
+          "development-only integration outputs"
+        ]
+      },
+      "user_decision_points": [
+        "若协议补齐暴露 Goal 与现有机制不可兼容，由用户决定修订 Goal 或终止对应 Claim。"
+      ],
+      "blocking_conditions": [
+        "H1/H2 required protocol 仍无法端到端执行。",
+        "正式对照之间存在除目标机制外的系统性输入或合同差异。",
+        "需要使用 held-out 或历史结果才能让协议运行。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-005",
+      "order": 5,
+      "name": "正式评测基础设施与 Result-Candidate 冻结",
+      "objective": "建立统一的硬预算、数据隔离、盲法、旁路抽样、条件一致性、Run manifest 和统计输入基础设施，并冻结可进入独立 calibration 的完整 result-candidate。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-004"
+      ],
+      "entry_conditions": [
+        "H1/H2/H3 required protocol 和 control adapters 均已通过 development-only conformance。",
+        "没有未裁决的 H1/H2/H3 语义变化。"
+      ],
+      "code_context": [
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/controller.py",
+        "search_harness/evolution/control/journal.py",
+        "search_harness/evolution/control/policies.py",
+        "search_harness/evolution/control/evaluation.py",
+        "search_harness/evolution/control/cli.py",
+        "search_harness/evaluation/",
+        "config/runtime.yaml",
+        "cvpr_workspace/"
+      ],
+      "stage_scope": [
+        "实现 Controller 级 hard reservation/commit/refund，统一计量 tokens、rollouts、full Candidate Evaluation 和各模型外成本。",
+        "验证 effect failure、部分 batch、retry、restart、resume 和 effect replay 下成本守恒、无漏记和不重复。",
+        "建立 research/development、calibration、formal method、held-out 的 split/digest firewall 和不可变 manifest。",
+        "建立 paired seeds/task blocks、cold start、independent Store、condition identity 和等预算截断接口。",
+        "建立 blind compilation、independent labeling、reviewer input view 和 control adapter conformance 检查。",
+        "建立 rejected/pruned 分层抽样框、每项非零纳入概率、选择概率日志和设计一致加权/区间估计输入。",
+        "建立 Run/config/service/prompt/Store/receipt/stat manifest 与纳入/排除状态。",
+        "冻结 result-candidate commit、Student/Teacher/Judge 身份与参数、role/base prompts、data/split digests、Evaluator、Retriever snapshot/逐请求返回、预算实现、统计实现和带参数槽的 protocol skeleton。"
+      ],
+      "excluded_scope": [
+        "运行正式 calibration 或方法比较。",
+        "以 soft pre-check 代替 hard reservation。",
+        "允许不同 condition 共用可变 Store 或不一致成本口径。"
+      ],
+      "expected_outputs": [
+        "hard all-in budget ledger and conservation checks",
+        "split/condition/blindness/bypass manifests",
+        "formal Run and statistic input contracts",
+        "result-candidate freeze manifest and commit",
+        "protocol skeleton conformance report"
+      ],
+      "stage_validation": {
+        "kind": "research_development",
+        "description": "用确定性检查和代表性失败/恢复路径确认 formal infrastructure 能保持预算、隔离、盲法、condition 和证据追溯；不运行方法效果验证。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION",
+          "EVAL-H1",
+          "EVAL-H2",
+          "EVAL-H3",
+          "EVAL-UTILITY"
+        ],
+        "evaluation_objects": [
+          "hard budget ledger",
+          "split and condition manifests",
+          "bypass sampling frame",
+          "result-candidate frozen system"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "所有 cost reservation 均能 commit 或 refund，journal replay 后守恒。",
+          "四类数据用途 manifest 互斥且可由 digest 核对。",
+          "blindness、Store isolation、condition identity 和 bypass probability 可由 artifact 独立审计。",
+          "result-candidate 的代码、模型、服务、Prompt、数据、Evaluator、Retriever、预算和统计实现均可定位。"
+        ],
+        "evidence_artifacts": [
+          "budget conservation report",
+          "split/condition/blindness conformance report",
+          "bypass frame/probability schema checks",
+          "result-candidate freeze manifest"
+        ]
+      },
+      "user_decision_points": [
+        "用户确认 result-candidate 与 protocol skeleton 后才允许进入 calibration。"
+      ],
+      "blocking_conditions": [
+        "预算或 effect replay 不守恒。",
+        "split、Store、blindness 或 condition 无法确定性隔离。",
+        "关键模型/服务/数据/Prompt/Evaluator/Retriever 无不可变定位。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-006",
+      "order": 6,
+      "name": "隔离 Calibration、Power Analysis 与正式预注册",
+      "objective": "在冻结 result-candidate 上运行不支持方法 Claim 的独立 EVAL-CALIBRATION，确定统计、资源和旁路规则，并在任何正式方法结果可见前冻结完整 preregistration。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-005"
+      ],
+      "entry_conditions": [
+        "Result-candidate freeze manifest 已确认。",
+        "Calibration pool 与 formal/held-out manifests 互斥。",
+        "Calibration 运行不得访问正式方法或 held-out 结果。"
+      ],
+      "code_context": [
+        "cvpr_workspace/",
+        "config/runtime.yaml",
+        "search_harness/evolution/control/",
+        "search_harness/evaluation/",
+        "Goal EVAL-CALIBRATION protocol"
+      ],
+      "stage_scope": [
+        "运行冻结 incumbent/control 的 paired repeatability、all-in cost 和职责/Gate/experience observability pilot。",
+        "确定 primary estimand、实验单位、run/seed 聚类层级、CI 方法和多重比较策略。",
+        "冻结 useful Candidate、capability violation、duplicate direction、same-role obligation recurrence、correctly avoided waste、false rejection 和 false pruning 的操作定义、盲审和仲裁协议。",
+        "确定纳入/排除、失败 Run、停止、缺失、等预算截断和提前终止规则。",
+        "通过 power analysis 确定 sample size、hard budget、重复数和 delta_calibration。",
+        "冻结 rejected/pruned 分层抽样、每项非零选择概率、概率日志、设计一致加权估计量和置信上界。",
+        "冻结 H3 run/seed 推断单位、pruning opportunity/time-window 定义和 held-out deterministic advancement/control-selection rule。",
+        "若 pilot 暴露实现、观测或计量缺陷，返回 STAGE-005 或 STAGE-004 形成新版本并从头重跑 calibration。"
+      ],
+      "excluded_scope": [
+        "使用 calibration 结果支持 H1/H2/H3。",
+        "从 Goal 前历史实验继承阈值、样本量或预算。",
+        "在看到正式方法或 held-out 结果后修改 preregistration。"
+      ],
+      "expected_outputs": [
+        "calibration pool manifest and raw runs",
+        "repeatability/cost/observability summary",
+        "power analysis and resource contract",
+        "label/estimand/statistical analysis plan",
+        "bypass and held-out selection preregistration",
+        "formal protocol freeze artifact"
+      ],
+      "stage_validation": {
+        "kind": "research_evidence",
+        "description": "核对 calibration 与其他数据用途隔离，确认其足以冻结统计和资源规则但未被用于方法 Claim。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION"
+        ],
+        "evaluation_objects": [
+          "frozen control repeatability",
+          "all-in cost distributions",
+          "label and audit observability",
+          "formal preregistration"
+        ],
+        "acceptance_criteria_refs": [],
+        "acceptance_rules": [
+          "Calibration manifest 与 formal/held-out 完全互斥。",
+          "所有 required AC 的 estimand、实验单位、目标规则、区间方法和失败处理均已预注册。",
+          "旁路对象具有已知非零纳入概率和可审计 denominator。",
+          "资源合同满足 power/precision 规则；资源不足时阻断，不降低 Goal。",
+          "任何 pilot 驱动的实现修复均形成新 result-candidate 并重跑 calibration。"
+        ],
+        "evidence_artifacts": [
+          "calibration manifest and raw evidence",
+          "power/resource analysis",
+          "statistical analysis and label protocol",
+          "signed formal preregistration/freeze artifact"
+        ]
+      },
+      "user_decision_points": [
+        "用户确认 calibration 形成的样本量、资源合同、delta、统计和 bypass/selection preregistration 后才进入正式实验。"
+      ],
+      "blocking_conditions": [
+        "Calibration 暴露未修复的实现、观测或预算问题。",
+        "数据或资源不足以支持预注册的 power/precision。",
+        "标签、实验单位、旁路估计或 held-out selection 仍有未决项。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-007",
+      "order": 7,
+      "name": "H1/H2 前瞻性正式分项核验",
+      "objective": "在 H3 关闭和空白独立 Store 条件下，从零执行 EVAL-H1/EVAL-H2 的完整预算匹配对照，分别判定 Evidence Gate、职责预测和 adaptive routing。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-006"
+      ],
+      "entry_conditions": [
+        "Formal protocol、result-candidate 和 preregistration 已冻结。",
+        "H3 完全关闭或各条件使用一致空 Store。",
+        "正式 H1/H2 manifests 未在 calibration/development 中使用。"
+      ],
+      "code_context": [
+        "frozen result-candidate",
+        "cvpr_workspace formal EVAL-H1/EVAL-H2 entries",
+        "formal H1/H2 manifests and preregistration"
+      ],
+      "stage_scope": [
+        "H1 比较 candidate-first/Direct Compile 与 Evidence-Gated 条件；共享 Compiler、Conformance、routing、task blocks、paired seeds 和 hard budget，唯一系统差异是 pre-materialization evidence/gate。",
+        "Gate decision 冻结后，blind compiler 不可见 Gate label、trial outcome 和 downstream result；按已知概率对 supported/rejected portfolio 盲编译和旁路。",
+        "冻结 H2 使用的 evidence-backed mechanism portfolio。",
+        "H2A 在与 probe construction 隔离的 Prefix 上使用独立 shadow/in-loop labels 核验五职责 prediction。",
+        "H2B 在同一 portfolio、Compiler/Conformance contract、task blocks 和 paired seeds 上比较 no-feasibility-routing、always-Student、always-deterministic 与 adaptive routing。",
+        "输出 AC-H1-PREDICTION、AC-H1-EFFICIENCY、AC-H2A-PREDICTION、AC-H2B-ROUTING 判定，以及 AC-SAFETY-UTILITY 的 H1 false-rejection/H2 组成证据；不提前判完整 AC-SAFETY-UTILITY。"
+      ],
+      "excluded_scope": [
+        "启用 H3 或预灌任何 experience Store。",
+        "重新选择 portfolio、标签或对照以改善结果。",
+        "读取 held-out utility。"
+      ],
+      "expected_outputs": [
+        "formal H1/H2 raw runs and manifests",
+        "Gate/effect joined table and false-rejection bypass audit",
+        "H1 efficiency/cost statistics",
+        "H2 responsibility prediction and routing statistics",
+        "per-criterion formal judgments"
+      ],
+      "stage_validation": {
+        "kind": "goal_verification",
+        "description": "严格按冻结 EVAL-H1/EVAL-H2、paired hard budget 和预注册统计执行真实 HotpotQA supported formal comparison。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION",
+          "EVAL-H1",
+          "EVAL-H2"
+        ],
+        "evaluation_objects": [
+          "Gate-supported/rejected blind Candidate portfolio",
+          "candidate-first/Direct Compile controls",
+          "five Student responsibility predictions and independent labels",
+          "four H2 routing conditions"
+        ],
+        "acceptance_criteria_refs": [
+          "AC-H1-PREDICTION",
+          "AC-H1-EFFICIENCY",
+          "AC-H2A-PREDICTION",
+          "AC-H2B-ROUTING",
+          "AC-SAFETY-UTILITY"
+        ],
+        "acceptance_rules": [
+          "逐项应用 Goal AC-H1-PREDICTION、AC-H1-EFFICIENCY、AC-H2A-PREDICTION 和 AC-H2B-ROUTING 的 target_value，不修改阈值。",
+          "按预注册权重估计 false rejection；未旁路对象不得默认无效。",
+          "本阶段只形成 AC-SAFETY-UTILITY 的 H1/H2 分量，不宣告完整安全判据通过。",
+          "若 H1/H2 required AC 未通过，阻断 STAGE-008；不得通过调参后继续复用同一正式证据。"
+        ],
+        "evidence_artifacts": [
+          "formal H1/H2 run manifest and raw artifacts",
+          "paired/clustered statistics",
+          "false-rejection weighted audit",
+          "H2 responsibility/routing evidence",
+          "AC-H1/H2 component judgment table"
+        ]
+      },
+      "user_decision_points": [
+        "H1/H2 未满足 required AC 时，按 Goal 判为未完成并停止 H3 正式比较；任何研究方向修订返回 cvpr-start/cvpr-goal。"
+      ],
+      "blocking_conditions": [
+        "H1/H2 formal runs 出现协议漂移、H3 污染、blindness 破坏或不完整 paired blocks。",
+        "H1/H2 required AC 未通过或证据 indeterminate。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-008",
+      "order": 8,
+      "name": "H3 多 Episode/Generation 正式核验",
+      "objective": "在已通过并冻结的 H1/H2 pipeline 上，从相同 cold start 运行全部 H3 controls、完整方法与消融，直接核验跨 settled episode/generation 的搜索效率和 false pruning。",
+      "goal_criterion_refs": [
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-007"
+      ],
+      "entry_conditions": [
+        "STAGE-007 的 H1/H2 required AC 已通过且 pipeline、labels、Gate 和 portfolio 已冻结。",
+        "各 H3 condition 的 cold-start manifest、独立 Store 和 paired run/seed blocks 已预注册。",
+        "Calibration 和 H1/H2 正式轨迹/verdict 不进入任何 condition 的初始 Store。"
+      ],
+      "code_context": [
+        "frozen H1/H2/H3 result system",
+        "cvpr_workspace formal EVAL-H3 entries",
+        "formal H3 manifests and preregistration"
+      ],
+      "stage_scope": [
+        "运行 no-memory、shared/global、generic role-local、DREvo-like、Auto-Robotist-like、full-H3 和 provenance/scope/invalidation/bypass/component 消融。",
+        "所有 condition 从相同 cold start 创建全新独立 Store，使用相同 task blocks、paired seeds、模型配置和 hard all-in budget。",
+        "完整 run/seed 是推断单位；同一 Store 内的 proposal、retrieval 或 episode 不是独立重复。",
+        "冻结 pruning opportunity、time window 和 duplicate/recurrence labels；按已知非零概率旁路被压制方向并保存 denominator/weights。",
+        "判定 AC-H3-SEARCH，并形成 AC-SAFETY-UTILITY 的 false-pruning/net-harm 组成证据。"
+      ],
+      "excluded_scope": [
+        "将 H1/H2/calibration 轨迹预灌进 H3 Store。",
+        "事后把暂缓方向重新解释为成功 pruning。",
+        "使用 held-out 选择 memory control 或 full-H3 版本。"
+      ],
+      "expected_outputs": [
+        "formal H3 condition runs and independent Store snapshots",
+        "typed experience/projection/usage/effect receipt evidence",
+        "proposal/recurrence/direction-map joined data",
+        "component/safety ablations",
+        "weighted false-pruning and search-efficiency statistics",
+        "AC-H3 and safety-component judgments"
+      ],
+      "stage_validation": {
+        "kind": "goal_verification",
+        "description": "按冻结 EVAL-H3 和完整 run/seed 实验单位，在真实 multi-episode/multi-generation Evolution 上比较全部 required memory conditions。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION",
+          "EVAL-H3"
+        ],
+        "evaluation_objects": [
+          "three scoped experience types",
+          "required memory controls and full-H3",
+          "multi-episode/multi-generation proposals and outcomes",
+          "pruned-direction bypass sample"
+        ],
+        "acceptance_criteria_refs": [
+          "AC-H3-SEARCH",
+          "AC-SAFETY-UTILITY"
+        ],
+        "acceptance_rules": [
+          "逐项应用 Goal AC-H3-SEARCH 的 rate-ratio、yield 和 required-control 规则。",
+          "按预注册概率和设计一致估计核验 false pruning/net harm；未旁路对象不得默认无效。",
+          "本阶段只形成 AC-SAFETY-UTILITY 的 H3 分量，不宣告完整安全判据通过。",
+          "任何 Store 污染、cross-condition sharing 或 run/seed pseudo-replication 使结果 indeterminate。"
+        ],
+        "evidence_artifacts": [
+          "formal H3 run/Store manifests and raw artifacts",
+          "experience and receipt snapshots",
+          "run/seed clustered statistics",
+          "weighted false-pruning audit",
+          "AC-H3 component judgment table"
+        ]
+      },
+      "user_decision_points": [],
+      "blocking_conditions": [
+        "任何 condition 未从独立冷 Store 开始。",
+        "Required control 无公平输入、成本或 Store 语义。",
+        "AC-H3-SEARCH 未通过或证据 indeterminate。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-009",
+      "order": 9,
+      "name": "隔离 Held-Out Utility 核验",
+      "objective": "在不再调整机制、Prompt、标签或对照的冻结系统上，按预注册 deterministic advancement/control-selection 运行 held-out utility，完成各 H 对应的非劣性安全证据。",
+      "goal_criterion_refs": [
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-008"
+      ],
+      "entry_conditions": [
+        "STAGE-007/008 formal artifacts 已冻结，且 held-out 从未对 Researcher、Store、Gate、阈值或 control selection 可见。",
+        "Preregistration 已确定 advancement 和每个 Claim 的 control-selection rule。",
+        "完整系统及对应 H1/H2/H3 controls 的版本和配置已冻结。"
+      ],
+      "code_context": [
+        "frozen result systems and key controls",
+        "cvpr_workspace formal EVAL-UTILITY entry",
+        "HotpotQA supported held-out manifest",
+        "frozen Evaluator/Judge/Retriever/config"
+      ],
+      "stage_scope": [
+        "同时评估冻结完整系统、H1 candidate-first/Direct Compile 对照、H2 strongest fixed routing 和 H3 strongest memory control 中由 preregistration 确定的对象。",
+        "使用相同 held-out examples、sampling blocks、paired seeds、Student/Teacher Judge/Evaluator/Retriever snapshot 和失败纳入规则。",
+        "应用 delta_calibration 和 Goal heldout_difference_lower_95ci 规则，形成 AC-SAFETY-UTILITY 的 held-out non-inferiority 分量。",
+        "保存 per-example/per-rollout 原始结果、评估、配对统计和 all-in cost。"
+      ],
+      "excluded_scope": [
+        "查看 held-out 后选择 control、Prompt、seed、版本、阈值或 stopping。",
+        "只评 full system 并把安全性外推到 H1/H2/H3。",
+        "根据 held-out 结果修补系统后继续复用旧结果。"
+      ],
+      "expected_outputs": [
+        "held-out raw runs and immutable manifests",
+        "per-example/per-rollout evaluator outputs",
+        "paired non-inferiority statistics",
+        "held-out all-in cost ledger",
+        "AC-SAFETY held-out component judgment"
+      ],
+      "stage_validation": {
+        "kind": "goal_verification",
+        "description": "按冻结 EVAL-UTILITY 在完全隔离的 HotpotQA supported held-out 上执行预注册系统与对应 strongest controls 的配对核验。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION",
+          "EVAL-H1",
+          "EVAL-H2",
+          "EVAL-H3",
+          "EVAL-UTILITY"
+        ],
+        "evaluation_objects": [
+          "frozen full H1/H2/H3 system",
+          "H1 candidate-first/Direct Compile control",
+          "H2 strongest fixed routing control",
+          "H3 strongest memory control",
+          "HotpotQA supported held-out examples"
+        ],
+        "acceptance_criteria_refs": [
+          "AC-SAFETY-UTILITY"
+        ],
+        "acceptance_rules": [
+          "严格应用预注册 advancement/control-selection，禁止事后替换比较对象。",
+          "严格应用 Goal delta_calibration 和 heldout_difference_lower_95ci 规则。",
+          "任一 held-out 泄漏、版本漂移、paired block 缺失或 evaluator/service 不一致使结果 indeterminate。",
+          "完整 AC-SAFETY-UTILITY 仍需 STAGE-010 联合 false-rejection、false-pruning 和 held-out 分量审计。"
+        ],
+        "evidence_artifacts": [
+          "held-out split/config/service digest manifest",
+          "per-example/per-rollout raw and evaluator outputs",
+          "paired non-inferiority statistics",
+          "held-out cost ledger and component judgment"
+        ]
+      },
+      "user_decision_points": [],
+      "blocking_conditions": [
+        "Held-out 在冻结前已泄漏或被用于选择系统。",
+        "Preregistered system/control 无法以同协议运行。",
+        "Held-out non-inferiority 未通过或证据 indeterminate。"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "STAGE-010",
+      "order": 10,
+      "name": "证据审计与最终 Goal 判定",
+      "objective": "冻结、重算并交叉核对所有正式 Run、统计和结构化证据，按 G-001 逐项形成 passed、not_met 或 indeterminate 的最终判定，不掩盖负面结果。",
+      "goal_criterion_refs": [
+        "AC-H1-PREDICTION",
+        "AC-H1-EFFICIENCY",
+        "AC-H2A-PREDICTION",
+        "AC-H2B-ROUTING",
+        "AC-H3-SEARCH",
+        "AC-SAFETY-UTILITY"
+      ],
+      "dependencies": [
+        "STAGE-007",
+        "STAGE-008",
+        "STAGE-009"
+      ],
+      "entry_conditions": [
+        "所有 formal verification stages 已完成或留下明确未通过/indeterminate 结果。",
+        "Included、excluded、failed Run 和 preregistration 均已冻结。"
+      ],
+      "code_context": [
+        "all frozen formal run artifacts",
+        "cvpr_workspace statistics and audit entries",
+        ".cvpr/goal.yaml",
+        ".cvpr/plan.yaml",
+        ".cvpr/runs.jsonl and deviations.jsonl"
+      ],
+      "stage_scope": [
+        "从原始 evidence package 重算全部 primary estimands、CI、rate ratios、yield、non-inferiority 和 cost。",
+        "核对 code/config/model/service/prompt/data/Evaluator/Retriever/stat digests 和 preregistration 一致性。",
+        "核对 bypass selection probabilities/weights/denominators、blindness、independent labels、Store cold-start/isolation、paired blocks 和 hard budget reservation/commit/refund 守恒。",
+        "核对 calibration/formal/held-out manifests 互斥、纳排/失败/停止规则和未报告 seed。",
+        "分别判定六项 required AC；AC-SAFETY-UTILITY 联合 STAGE-007 false-rejection、STAGE-008 false-pruning 与 STAGE-009 held-out 分量。",
+        "协议污染、版本漂移或证据缺失判为 indeterminate 并路由到受影响阶段重跑；科研效果未达到规则才判 not_met。"
+      ],
+      "excluded_scope": [
+        "修改 Goal 阈值、排除不利 Run 或补造缺失证据。",
+        "把开发检查或 calibration pilot 纳入 Claim。",
+        "因整体分数尚可而覆盖单项 AC 失败。"
+      ],
+      "expected_outputs": [
+        "frozen evidence package and inclusion manifest",
+        "independently recomputed statistics",
+        "protocol/version/split/budget/receipt audit report",
+        "per-AC machine-readable judgment table",
+        "Claim-to-Run-to-statistic traceability index",
+        "final G-001 passed/not_met/indeterminate assessment"
+      ],
+      "stage_validation": {
+        "kind": "evidence_audit",
+        "description": "独立复核所有正式协议、原始结果、统计和证据边界，并按 Goal acceptance_logic 形成最终判断。",
+        "protocol_refs": [
+          "EVAL-CALIBRATION",
+          "EVAL-H1",
+          "EVAL-H2",
+          "EVAL-H3",
+          "EVAL-UTILITY"
+        ],
+        "evaluation_objects": [
+          "complete formal evidence package",
+          "all required AC statistics and component judgments",
+          "version/split/budget/receipt traceability"
+        ],
+        "acceptance_criteria_refs": [
+          "AC-H1-PREDICTION",
+          "AC-H1-EFFICIENCY",
+          "AC-H2A-PREDICTION",
+          "AC-H2B-ROUTING",
+          "AC-H3-SEARCH",
+          "AC-SAFETY-UTILITY"
+        ],
+        "acceptance_rules": [
+          "六项 required AC 全部通过且无 validity veto，G-001 才为 passed。",
+          "协议污染、证据缺失或版本不一致为 indeterminate/blocked，并明确重跑路由。",
+          "满足协议但效果未达 target_rule 为 not_met，并保留全部负面结果。",
+          "审计重算必须能从冻结原始 artifact 复现正式统计和 cost。"
+        ],
+        "evidence_artifacts": [
+          "frozen evidence snapshot",
+          "recomputed statistics package",
+          "validity and traceability audit",
+          "per-AC final judgment and Goal assessment"
+        ]
+      },
+      "user_decision_points": [
+        "最终 Goal 判定完成后交由 cvpr-result 进行独立二次复核。"
+      ],
+      "blocking_conditions": [
+        "任一 required AC 缺少可重算原始证据。",
+        "协议污染或版本漂移尚未按路由重跑。",
+        "正式统计与原始 artifact 无法一致重算。"
+      ],
+      "status": "proposed"
+    }
+  ],
+  "criterion_coverage": [
+    {
+      "goal_criterion_id": "AC-H1-PREDICTION",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-007"
+      ],
+      "evidence_artifacts": [
+        "H1 blind audit manifest",
+        "Gate/effect joined table",
+        "paired/clustered discrimination statistics",
+        "weighted false-rejection audit"
+      ]
+    },
+    {
+      "goal_criterion_id": "AC-H1-EFFICIENCY",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-007"
+      ],
+      "evidence_artifacts": [
+        "budget-matched H1 control runs",
+        "Candidate outcome ledger",
+        "all-in cost ledger",
+        "paired efficiency statistics"
+      ]
+    },
+    {
+      "goal_criterion_id": "AC-H2A-PREDICTION",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-007"
+      ],
+      "evidence_artifacts": [
+        "responsibility probe/independent-label table",
+        "per-responsibility confusion and calibration",
+        "macro/micro predictive statistics"
+      ]
+    },
+    {
+      "goal_criterion_id": "AC-H2B-ROUTING",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-007"
+      ],
+      "evidence_artifacts": [
+        "four routing-condition runs",
+        "ownership/lowering decisions",
+        "realizability/conformance/outcome table",
+        "paired routing statistics and cost ledger"
+      ]
+    },
+    {
+      "goal_criterion_id": "AC-H3-SEARCH",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-002",
+        "STAGE-003",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-008"
+      ],
+      "evidence_artifacts": [
+        "multi-episode/multi-generation condition runs",
+        "independent Store and experience/receipt snapshots",
+        "proposal/recurrence/direction-map joined data",
+        "component ablations and run/seed clustered statistics"
+      ]
+    },
+    {
+      "goal_criterion_id": "AC-SAFETY-UTILITY",
+      "supporting_stage_ids": [
+        "STAGE-001",
+        "STAGE-002",
+        "STAGE-003",
+        "STAGE-004",
+        "STAGE-005",
+        "STAGE-006"
+      ],
+      "verification_stage_ids": [
+        "STAGE-007",
+        "STAGE-008",
+        "STAGE-009"
+      ],
+      "evidence_artifacts": [
+        "calibration and preregistration artifact",
+        "weighted false-rejection audit",
+        "weighted false-pruning audit",
+        "held-out raw runs and paired non-inferiority statistics",
+        "frozen split/config/service digests"
+      ]
+    }
+  ],
+  "someagents_review": {
+    "mode": "B",
+    "status": "completed",
+    "final_verdict": "pass",
+    "input_plan_version": 1,
+    "role_reviews": [
+      {
+        "agent_id": "/root/plan_code_review",
+        "role": "code_consistency_and_engineering",
+        "verdict": "pass",
+        "findings": [
+          "要求 first-class 可重放 experience work/event、稳定 episode/attempt terminal taxonomy 和 role prompt/template digest。",
+          "要求移除 untyped historical_experience 后门，并分离 immutable usage receipt 与 linked downstream effect receipt。",
+          "发现当前 H1/H2 尚缺完整 Goal 协议；修订后在 STAGE-004 补齐 matched two-arm/blind compilation、五职责 probe 和 adaptive routing。",
+          "要求统一 hard budget ledger，并覆盖 failure/partial batch/restart/effect replay 守恒。",
+          "PLAN-DRAFT-v2 已解决全部代码一致性和工程适度性阻断。"
+        ],
+        "blocking_issues": [],
+        "evidence_refs": [
+          ".cvpr/plan_artifacts/someagents_review_v1.md#code-review",
+          "search_harness/evolution/control/domain.py",
+          "search_harness/evolution/control/transitions.py",
+          "search_harness/evolution/control/journal.py",
+          "search_harness/evolution/control/policies.py",
+          "search_harness/evolution/control/research_role_effects.py",
+          "search_harness/evolution/research/roles/contracts.py"
+        ]
+      },
+      {
+        "agent_id": "/root/plan_science_review",
+        "role": "scientific_path_and_goal_coverage",
+        "verdict": "pass",
+        "findings": [
+          "确认 H3-primary、H1/H2-stable 的总体因果顺序成立。",
+          "要求 H3 direction map 覆盖所有 settled 正负 outcome，而不是 reject-only。",
+          "要求完整实现所有 memory controls，并在 H1/H2 正式核验中关闭 H3、使用空 Store。",
+          "要求 AC-SAFETY-UTILITY 分为 H1 false rejection、H3 false pruning 和 held-out non-inferiority 三部分，由 evidence audit 最终联合判定。",
+          "PLAN-DRAFT-v2 已覆盖全部 required AC 且无剩余科研路径阻断。"
+        ],
+        "blocking_issues": [],
+        "evidence_refs": [
+          ".cvpr/plan_artifacts/someagents_review_v1.md#science-review",
+          ".cvpr/start.yaml#final_idea",
+          ".cvpr/goal.yaml#evaluation_protocols",
+          ".cvpr/goal.yaml#acceptance_criteria"
+        ]
+      },
+      {
+        "agent_id": "/root/plan_validity_review",
+        "role": "experimental_validity_and_real_verification",
+        "verdict": "pass",
+        "findings": [
+          "要求区分 result-candidate freeze 与 calibration 后 formal protocol freeze。",
+          "要求预注册 cluster-aware estimand、labels、CI/multiplicity、纳排/失败/停止和等预算截断。",
+          "要求 bypass 具有非零纳入概率、概率日志和设计一致加权估计。",
+          "要求 H3 独立冷 Store、held-out deterministic control-selection 和污染时 indeterminate 路由。",
+          "PLAN-DRAFT-v2 已解决全部实验有效性和真实验证阻断。"
+        ],
+        "blocking_issues": [],
+        "evidence_refs": [
+          ".cvpr/plan_artifacts/someagents_review_v1.md#validity-review",
+          ".cvpr/goal.yaml",
+          "search_harness/evolution/control/controller.py",
+          "search_harness/evolution/control/policies.py",
+          "search_harness/evolution/research/candidate_digest.py"
+        ]
+      }
+    ],
+    "blocking_issues": [],
+    "resolved_issues": [
+      "补齐 H1/H2 正式协议与全部强对照，不再假设当前代码可直接正式运行。",
+      "将 H3 总结/结算建成 first-class lifecycle，并覆盖正负 settled outcome。",
+      "移除非类型化经验后门，落实 consumer scope、不可变 receipts 和独立 Store。",
+      "拆分 development-only integration、result-candidate freeze、calibration/prereg freeze 和 formal evidence。",
+      "预注册旁路抽样概率、加权估计、统计单位、标签和 held-out control-selection。",
+      "明确 AC-SAFETY-UTILITY 的分项核验与最终联合审计。"
+    ],
+    "evidence_refs": [
+      ".cvpr/plan_artifacts/someagents_review_v1.md"
+    ]
+  },
+  "open_questions": [
+    {
+      "question": "目标投稿 venue、track、年份与 submission stage 尚未确定，但不改变当前 G-001 和 PLAN-001 的 required stages。",
+      "blocking": false,
+      "status": "open"
+    },
+    {
+      "question": "第二 Student 或第二任务是否作为可选边界诊断，待主域结果和资源明确后决定；不得静默升级为 required evidence。",
+      "blocking": false,
+      "status": "open"
+    }
+  ],
+  "user_confirmation": {
+    "status": "confirmed",
+    "confirmed_at": "2026-08-21T11:41:03+08:00",
+    "confirmed_by": "user",
+    "evidence_ref": ".cvpr/decisions.jsonl#DEC-20260821-003"
+  },
+  "supersedes": null
+}

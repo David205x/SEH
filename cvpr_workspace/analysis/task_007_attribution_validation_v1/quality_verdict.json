@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "TASK-007-ATTRIBUTION-V1",
+  "status": "completed",
+  "task_acceptance": "not_accepted",
+  "case_results": {
+    "pass": 6,
+    "partial": 11,
+    "fail": 1
+  },
+  "api_execution": {
+    "case_count": 18,
+    "run_count": 30,
+    "completed_runs": 30,
+    "failed_runs": 0,
+    "provider_requests": 69,
+    "input_tokens": 205953,
+    "output_tokens": 131475,
+    "total_tokens": 337428
+  },
+  "structural_results": {
+    "type_rubric_pass_runs": 19,
+    "tool_expectation_pass_runs": 25,
+    "tool_view_pass_runs": 27,
+    "tool_protocol_pass_runs": 15,
+    "tool_attempts": 51,
+    "successful_tool_calls": 23,
+    "failed_tool_calls": 28,
+    "runs_with_failed_tool_calls": 15,
+    "runs_over_two_tool_attempts": 10
+  },
+  "confirmed_issues": [
+    "tool call budget counts successful reads instead of every invocation",
+    "free-text evidence observations do not reliably expose ref/view/selector affordances",
+    "student_capability is emitted for implementation and invalid-input failures",
+    "an explicit Compiler projection defect can omit route-target teacher_work",
+    "lesson terminology and local factual qualifiers can drift from the evidence"
+  ],
+  "evidence_refs": [
+    "cvpr_workspace/analysis/task_007_attribution_validation_v1/summary.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v1/structural_audit.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v1/quality_audit.md"
+  ]
+}

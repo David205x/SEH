@@ -20,13 +20,19 @@ from search_harness.integrations.openai_compatible import (
 from search_harness._internal import read_runtime_config, teacher_role_budget
 
 from .contracts import TeacherPayload, TrialReview
-from .spec import TeacherPromptSpec
+from .spec import TeacherOutputSpec, TeacherPromptSpec
 from ..resources.base import TeacherResourceConfig, TeacherResources
 from .role_execution import (
     build_failed_role_artifact,
     build_role_artifact,
     prepare_role_run,
     validate_role_output,
+)
+from .provenance import (
+    input_view_digest,
+    model_input_view,
+    teacher_role_scope,
+    teacher_role_scope_from_artifact,
 )
 from .sessions import RoleContinuation, RoleSession
 
@@ -86,16 +92,6 @@ class NativeChatRoleRunner:
         )
         resources = prepared.resources
         spec = prepared.spec
-        session = _prepare_role_session(
-            spec_role_id=spec.role.role_id,
-            template_root=template_root,
-            role_input=prepared.role_input.model_dump(mode="json"),
-            resource_config=resource_config.model_dump(mode="json"),
-            prompt=spec.prompt,
-            user_input=prepared.rendered_input,
-            resources=resources,
-            continuation=continuation,
-        )
         config = self.config or OpenAICompatibleConfig.from_env(
             env_file=self.env_file,
             prefix="TEACHER",
@@ -116,7 +112,42 @@ class NativeChatRoleRunner:
         config = config.with_configured_thinking_mode(
             budget.thinking_mode
         )
+        model_provenance = config.provenance()
+        session_prompt_digest = _continued_base_prompt_digest(continuation)
+        session = _prepare_role_session(
+            spec_role_id=spec.role.role_id,
+            spec_role_version=spec.role.version,
+            model=model_provenance,
+            template_root=template_root,
+            role_input=prepared.role_input.model_dump(mode="json"),
+            resource_config=resource_config.model_dump(mode="json"),
+            prompt=spec.prompt,
+            user_input=prepared.rendered_input,
+            resources=resources,
+            continuation=continuation,
+        )
         output_tool_name = f"submit_{spec.role.output_contract_id}"
+        terminal_tool_description = (
+            "Submit the final validated role result. Call this only "
+            "after all necessary evidence and tools have been inspected."
+        )
+        submission_type = spec.output.model_submission_type(
+            spec.role.output_type
+        )
+        output_schema = submission_type.model_json_schema()
+        model_input = model_input_view(
+            messages=session.messages,
+            tools=spec.tools.tools,
+            terminal_tool={
+                "type": "function",
+                "function": {
+                    "name": output_tool_name,
+                    "description": terminal_tool_description,
+                    "parameters": output_schema,
+                },
+            },
+        )
+        input_digest = input_view_digest([model_input])
         try:
             native_result = await OpenAICompatibleToolRunner(
                 config=config,
@@ -125,18 +156,17 @@ class NativeChatRoleRunner:
                 messages=session.messages,
                 tools=spec.tools.tools,
                 terminal_tool_name=output_tool_name,
-                terminal_tool_description=(
-                    "Submit the final validated role result. Call this only "
-                    "after all necessary evidence and tools have been inspected."
-                ),
-                terminal_output_schema=spec.role.output_type.model_json_schema(),
+                terminal_tool_description=terminal_tool_description,
+                terminal_output_schema=output_schema,
                 missing_terminal_message=(
                     "No terminal structured result was submitted. Continue the "
                     f"assigned role and call {output_tool_name} when the result "
                     "is ready."
                 ),
                 submit_terminal=lambda arguments: _submit_output(
-                    output_type=spec.role.output_type,
+                    submission_type=submission_type,
+                    final_output_type=spec.role.output_type,
+                    output_spec=spec.output,
                     arguments=arguments,
                     resources=resources,
                 ),
@@ -148,7 +178,8 @@ class NativeChatRoleRunner:
             artifact = build_failed_role_artifact(
                 prepared,
                 runtime="native_chat",
-                model=config.provenance(),
+                model=model_provenance,
+                input_view_digest=input_digest,
                 error={
                     "type": "structured_output_exhausted",
                     "message": str(exc),
@@ -159,6 +190,7 @@ class NativeChatRoleRunner:
                 tool_calls=[asdict(call) for call in failure.tool_calls],
                 usage=failure.usage,
                 transcript=failure.transcript,
+                base_prompt_digest_override=session_prompt_digest,
                 runtime_fields={
                     "role_budget": {
                         "max_tokens": budget.max_tokens,
@@ -175,11 +207,13 @@ class NativeChatRoleRunner:
         return build_role_artifact(
             prepared,
             runtime="native_chat",
-            model=config.provenance(),
+            model=model_provenance,
+            input_view_digest=input_digest,
             output=output,
             tool_calls=[asdict(call) for call in native_result.tool_calls],
             usage=native_result.usage,
             transcript=native_result.transcript,
+            base_prompt_digest_override=session_prompt_digest,
             runtime_fields={
                 "role_budget": {
                     "max_tokens": budget.max_tokens,
@@ -365,6 +399,8 @@ def _expanded_resource_config(
 def _prepare_role_session(
     *,
     spec_role_id: str,
+    spec_role_version: int,
+    model: dict[str, Any],
     template_root: Path,
     role_input: dict[str, Any],
     resource_config: dict[str, Any],
@@ -389,10 +425,11 @@ def _prepare_role_session(
     _validate_continuation_artifact(
         artifact,
         spec_role_id=spec_role_id,
+        spec_role_version=spec_role_version,
+        model=model,
         template_root=template_root,
         role_input=role_input,
         resource_config=resource_config,
-        instructions=prompt.instructions,
     )
     session = artifact["role_session"]
     resources.restore_role_session_state(session["resource_state"])
@@ -421,11 +458,22 @@ def _validate_continuation_artifact(
     artifact: dict[str, Any],
     *,
     spec_role_id: str,
+    spec_role_version: int,
+    model: dict[str, Any],
     template_root: Path,
     role_input: dict[str, Any],
     resource_config: dict[str, Any],
-    instructions: str,
 ) -> None:
+    previous_scope = teacher_role_scope_from_artifact(artifact)
+    current_scope = teacher_role_scope(
+        role_id=spec_role_id,
+        role_contract_version=spec_role_version,
+        model=model,
+    )
+    if previous_scope != current_scope:
+        raise ValueError(
+            "continued artifact Teacher Role scope differs from current run"
+        )
     role = artifact.get("role")
     if not isinstance(role, dict) or role.get("id") != spec_role_id:
         raise ValueError("continued artifact role differs from current role")
@@ -453,11 +501,10 @@ def _validate_continuation_artifact(
     if (
         not isinstance(first, dict)
         or first.get("role") != "system"
-        or first.get("content") != instructions
+        or not isinstance(first.get("content"), str)
+        or not first["content"].strip()
     ):
-        raise ValueError(
-            "continued transcript system instruction differs from template"
-        )
+        raise ValueError("continued transcript system instruction is invalid")
     session = artifact.get("role_session")
     if not isinstance(session, dict):
         raise ValueError("continued artifact has no role_session checkpoint")
@@ -471,6 +518,19 @@ def _validate_continuation_artifact(
         raise TypeError("role_session.output_history must be a list")
     if not isinstance(session.get("feedback_history"), list):
         raise TypeError("role_session.feedback_history must be a list")
+
+
+def _continued_base_prompt_digest(
+    continuation: RoleContinuation | None,
+) -> str | None:
+    """Keep one Role Session bound to its initially recorded base Prompt."""
+
+    if continuation is None:
+        return None
+    value = continuation.previous_artifact.get("base_prompt_digest")
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("continued artifact base_prompt_digest must be a string")
+    return value
 
 
 def _continuation_input_matches(
@@ -538,12 +598,18 @@ def _continuation_resources_match(
 
 def _submit_output(
     *,
-    output_type: type[TeacherPayload],
+    submission_type: type[TeacherPayload],
+    final_output_type: type[TeacherPayload],
+    output_spec: TeacherOutputSpec,
     arguments: dict[str, Any],
     resources: TeacherResources,
 ) -> tuple[TeacherPayload | None, str, dict[str, Any]]:
     try:
-        output = output_type.model_validate(arguments)
+        submission = submission_type.model_validate(arguments)
+        output = output_spec.materialize(
+            submission,
+            final_type=final_output_type,
+        )
         validate_role_output(output, resources)
     except ValidationError as exc:
         feedback, fields = _structured_validation_feedback(exc, arguments)
@@ -557,7 +623,7 @@ def _submit_output(
             "validation_error": True,
             "validation_error_fields": fields,
         }
-    except (ValueError, KeyError) as exc:
+    except (TypeError, ValueError, KeyError) as exc:
         return None, (
             "Structured output validation failed. Correct the stated semantic "
             "obligation and call the submit tool again with the complete "

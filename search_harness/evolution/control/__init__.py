@@ -6,6 +6,11 @@ from .domain import (
     ControlState,
     EffectResult,
     EvolutionControlConfig,
+    OutcomeSource,
+    SettlementClass,
+    SettlementScope,
+    TrajectoryLineage,
+    TrajectorySettlement,
     WorkItem,
     WorkKind,
 )
@@ -21,6 +26,11 @@ __all__ = [
     "EvolutionController",
     "LocalControlEffects",
     "LocalControlEffectsConfig",
+    "OutcomeSource",
+    "SettlementClass",
+    "SettlementScope",
+    "TrajectoryLineage",
+    "TrajectorySettlement",
     "WorkItem",
     "WorkKind",
 ]

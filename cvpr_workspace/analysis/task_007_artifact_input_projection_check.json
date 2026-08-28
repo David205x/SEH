@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "check_id": "CHECK-TASK-007-ARTIFACT-INPUT-PROJECTION",
+  "status": "passed",
+  "scope": "development_check_only",
+  "case_count": 18,
+  "audit_row_count": 150,
+  "assertions": {
+    "artifact_native_schema_only": true,
+    "all_eighteen_cases_build": true,
+    "no_hand_authored_business_input_fields": true,
+    "all_projected_text_has_path_pointer_operation_and_value": true,
+    "no_silent_truncation": true,
+    "forbidden_artifact_sections_not_projected": true,
+    "hash_and_digest_not_used": true,
+    "external_api_called": false
+  }
+}

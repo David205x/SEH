@@ -49,11 +49,11 @@ class EvolutionControlCliTest(unittest.TestCase):
         ):
             self.assertFalse(hasattr(args, runtime_field))
 
-    def test_reads_new_run_artifact_schema_v2(self) -> None:
+    def test_reads_current_run_artifact_schema(self) -> None:
         payload = {
-            "schema_version": 2,
+            "schema_version": 3,
             "version_store": "versions",
-            "version_store_id": "store_v2",
+            "version_store_id": "store_v3",
         }
 
         loaded = _read_payload(payload)
@@ -61,17 +61,17 @@ class EvolutionControlCliTest(unittest.TestCase):
         self.assertEqual(loaded, payload)
         self.assertNotIn("checkpoint_store", loaded)
 
-    def test_migrates_legacy_run_artifact_schema_v1_in_memory(self) -> None:
-        loaded = _read_payload(
-            {
-                "schema_version": 1,
-                "checkpoint_store": "legacy_versions",
-                "checkpoint_store_id": "legacy_store",
-            }
-        )
-
-        self.assertEqual(loaded["version_store"], "legacy_versions")
-        self.assertEqual(loaded["version_store_id"], "legacy_store")
+    def test_rejects_previous_run_artifact_schemas(self) -> None:
+        for schema_version in (1, 2):
+            with self.subTest(schema_version=schema_version):
+                with self.assertRaises(ValueError):
+                    _read_payload(
+                        {
+                            "schema_version": schema_version,
+                            "version_store": "versions",
+                            "version_store_id": "old_store",
+                        }
+                    )
 
 
 def _read_payload(payload: dict[str, object]) -> dict[str, object]:

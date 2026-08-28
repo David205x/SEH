@@ -1,4 +1,4 @@
-"""Start or resume the v2 evidence-driven Evolution Controller."""
+"""Start or resume the evidence-driven Evolution Controller."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Sequence
-from uuid import uuid4
 
 from search_harness.datasets import DatasetConfig, create_dataset_loader
 from search_harness._internal import (
@@ -17,6 +16,7 @@ from search_harness._internal import (
     read_runtime_config,
 )
 from search_harness.evolution.experience import materialize_experience_set
+from search_harness.evolution.identifiers import new_run_id
 from search_harness.evolution.versioning import TemplateVersionStore
 
 from .controller import ControlProjection, EvolutionController
@@ -110,8 +110,8 @@ async def _start(args: argparse.Namespace) -> ControlOutcome:
         show_progress=not args.no_progress,
     )
     payload = {
-        "schema_version": 2,
-        "run_id": uuid4().hex,
+        "schema_version": 3,
+        "run_id": new_run_id(),
         "version_store": str(store.root),
         "version_store_id": store.version_store_id,
         "initial_version": versions[-1].version_id,
@@ -232,25 +232,17 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _read_run_payload(path: Path) -> dict[str, Any]:
-    """Read current Run Artifact schema or migrate one legacy v1 payload."""
+    """Read the current Run Artifact schema."""
 
     raw = _read_json(path)
     schema_version = raw.get("schema_version")
-    if schema_version == 2:
-        _required_string(raw, "version_store")
-        _required_string(raw, "version_store_id")
-        return raw
-    if schema_version == 1:
-        legacy_store = _required_string(raw, "checkpoint_store")
-        legacy_store_id = _required_string(raw, "checkpoint_store_id")
-        return {
-            **raw,
-            "version_store": legacy_store,
-            "version_store_id": legacy_store_id,
-        }
-    raise ValueError(
-        f"unsupported Evolution Run schema_version: {schema_version}"
-    )
+    if schema_version != 3:
+        raise ValueError(
+            f"unsupported Evolution Run schema_version: {schema_version}"
+        )
+    _required_string(raw, "version_store")
+    _required_string(raw, "version_store_id")
+    return raw
 
 
 def _write_json(path: Path, value: dict[str, Any]) -> None:

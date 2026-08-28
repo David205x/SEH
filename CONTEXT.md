@@ -396,6 +396,44 @@ _Avoid_: Research Experience、Artifact、Metric
 经过确认、能够跨 Evolution Run 复用的抽象研究结论；未经审查的模型自由文本不构成 Research Experience。
 _Avoid_: Evidence、Historical Experience、Memory
 
+**Experience Observation Packet**:
+程序围绕一次经验触发事件、从其来源范围内规范化形成的有界观察输入，向经验提炼提供来源处理状态、事实、有效性状态、Evidence Structure 和可定向读取的细节目录；不同来源不必提供相同证据，每项内容只能直接投影、确定性派生或显式未知与不适用，不能补写。它不是完整研究进展、因果结论或 Experience Draft。
+_Avoid_: Experience Draft、Research Experience、完整 Artifact
+
+**Experience Source Context**:
+Experience Observation Packet 中说明触发事件、本次实际完成的测试与审查以及证据上限的程序维护上下文；它约束观察应如何解释，但来源角色的通过、拒绝或路由本身不证明因果归属。
+_Avoid_: 完整 Evolution Run 时间线、由触发名称推测的测试历史、Experience Draft
+
+**Evidence Structure**:
+Experience Observation Packet 中由程序维护的样本与比较关系，例如同输入重复、不同 Example、配对比较、matched control、thinking mode 和计数；它描述证据如何形成，不判定证据是否支持某类 Experience Draft。
+_Avoid_: Support Verdict、Experience Draft、由程序推断的语义等价性
+
+**Experience Detail**:
+从授权来源 Artifact 确定性投影、用于解决 Experience Observation 中一个已声明未知条件的有界内容；它是既有 Observation 的按需展开，不是新的 Evidence，也不允许扩展经验主题。
+_Avoid_: 完整 Artifact、自由检索结果、新 Observation、模型二次摘要
+
+**Experience Draft**:
+Experience Summarizer 从 Experience Observation Packet 形成的待后续确认经验，只包含类型、结论、适用边界和证据引用；它尚不是 Research Experience。
+_Avoid_: Research Experience、Experience Record、Memory
+
+**Student Capability Experience Draft**:
+对冻结 Student 或 Hook model 在有效 reference、有效输入、忠实实现且无数据混杂条件下重复出现的狭窄语义限制；它以来源确定的 Capability Decision Scope、观察到的具体限制和可追溯 Evidence 表达，不携带研究策略或修复建议。单次未复现异常只保留为 Experience Observation，不形成该 Draft。
+_Avoid_: 单次异常、实现缺陷、Experiment Direction、Teacher Work
+
+**Capability Decision Scope**:
+Capability Evidence 实际评估的狭窄语义判定及其可见输入范围；它由冻结的来源合同确定，而不是由 Experience Summarizer 重新命名或从预定义 Capability 分类中选择。
+_Avoid_: Tested Decision、Capability Area、宽泛能力标签、预定义 Taxonomy
+
+**Experiment Direction Experience Draft**:
+对一个程序维护 Research Direction 中指定 Failure Direction、Research Scheme 或 Mechanism Scheme 的证据更新；其消费者是 Hypothesis Researcher，结论必须说明证据限定的处置以及改变该处置的条件。一个有效的决定性反例、matched control、不可操作性证据或完整通过的效果与晋升门禁即可支持不超出其证据范围的更新；普通证据不足只保留为 Experience Observation。
+_Avoid_: Student Capability、Teacher Work、无处置的结果摘要
+
+Student Capability 与 Experiment Direction 独立成立，可以引用相同 Evidence；前者只描述模型行为边界，后者必须对明确研究方案产生额外处置价值，不能只是改写前者。
+
+**Teacher Work Experience Draft**:
+由证据确认属于某个明确 `teacher_role_id` 职责、且该角色已获得足够输入时形成的工作修正；它是低优先级、尽力提取的结果，消费者是草稿中指定的 Teacher Role。
+_Avoid_: Route Target Role、未确定的责任角色、Student Capability
+
 **Experience Store**:
 持久化和检索 Research Experience 的确定性存储边界。
 _Avoid_: Evolution Set、Memory Store、Evidence Store
@@ -483,8 +521,20 @@ _Avoid_: Evidence、Review、Decision
 ### Evolution Research
 
 **Failure Direction**:
-从 Task Evaluation 中识别并选定的、具有 Evidence 范围和适用边界的 Student Agent 行为问题。
+Failure Analyst 从 Task Evaluation 中一次识别并选定的、具有 Evidence 范围和适用边界的 Student Agent 行为问题；每次成功提交建立新的 Failure Direction，而非修改既有身份。
 _Avoid_: Failure Case、Implementation Proposal、Mechanism
+
+**Research Scheme**:
+Hypothesis Researcher 在一个 Failure Direction 下提出的因果研究方案，是 Intervention Hypothesis、Trial 和 Evidence Review 的稳定谱系；补充说明或保留核心因果方案的修订延续同一身份，更换核心方案才建立新身份，同一 Failure Direction 可以包含多个平行 Research Scheme。
+_Avoid_: 单次 Trial、Mechanism Scheme、Candidate Implementation
+
+**Mechanism Scheme**:
+Mechanism Distiller 将一个 Research Scheme 提炼成的实现无关机制谱系；其 Mechanism Spec 修订延续同一身份并保留历史版本，一个 Mechanism Scheme 可以产生多个 Candidate Implementation。
+_Avoid_: Research Scheme、Compiler Workspace、Candidate Implementation、Implementation Scheme
+
+**Research Direction**:
+由一个 Failure Direction、其下一个 Research Scheme 及可选 Mechanism Scheme 组成的程序维护研究谱系；它用于聚合同一问题下的平行方案、同一方案的证据更新以及同一机制的多次 Candidate 尝试。
+_Avoid_: 模型自由生成的 Direction 文本、单次 Research Attempt、单个 Candidate
 
 **Intervention Hypothesis**:
 关于在指定 Harness 生命周期位置施加某种临时 Intervention 会产生何种可观察效果的可证伪预测。
@@ -528,6 +578,18 @@ _Avoid_: Python Compilation、Harness Instantiation、Distillation
 
 ### Teacher Roles
 
+**Teacher Role Scope**:
+Teacher work experience 的硬兼容范围，由 Teacher Role ID、Role Contract Version 与 Teacher Model Provider/Name 组成。Base Prompt 和单次 Model Input 的内容指纹属于审计 provenance，不属于该 Scope。
+_Avoid_: Role Identity Object、Prompt Digest Scope、Input Digest Gate
+
+**Role Contract Version**:
+Teacher Role 输入、输出或可用行为边界的兼容性版本；不兼容变化必须提升版本。
+_Avoid_: Input Scope Version、Tool Scope Version、Schema Digest Scope
+
+**Input View Digest**:
+一次 Teacher Role Run 实际紧凑 Model Input 的内容指纹，用于 provenance、漂移诊断和 recheck，不作为经验检索的精确匹配键。
+_Avoid_: Input ID、Role Scope Key、Validation JSON Digest
+
 **Failure Analyst**:
 从 Task Evaluation 中选择 Failure Direction 的 Teacher Role。
 _Avoid_: Failure Critic、Critic
@@ -563,6 +625,30 @@ _Avoid_: Candidate Reviewer、Conformance Judge
 **Candidate Reviewer**:
 综合候选 Evidence 并提出采纳、修订或拒绝建议的 Teacher Role；它不执行 Promotion。
 _Avoid_: Promotion Gate、Candidate Critic
+
+**Experience Summarizer**:
+从 Experience Observation Packet 判断证据是否足以支持 Experience Draft 的 Teacher 能力；它通过相互独立的 Capability Summarization Pass 与 Direction Summarization Pass 工作，两者可以共享底层 Evidence，但不消费对方的 Draft。它不从完整 Artifact 重新发现问题，不处理 Teacher Work，也不负责持久化、去重或修正既有 Research Experience。
+_Avoid_: Root Cause Analyst、Mechanism Distiller、Experience Store、Memory Agent
+
+**Capability Summarization Pass**:
+只判断规范化观察是否足以形成 Student Capability Experience Draft 的独立 Experience Summarizer 调用；它不提出研究处置，也不读取 Direction Draft。
+_Avoid_: Direction Summarization Pass、Capability Reviewer
+
+**Direction Summarization Pass**:
+只判断规范化观察是否足以形成 Experiment Direction Experience Draft 的独立 Experience Summarizer 调用；它不形成模型行为画像，也不读取 Capability Draft。
+_Avoid_: Capability Summarization Pass、Researcher Revision
+
+**Experience Trigger Event**:
+触发一个 Experience Summarization Pass 的 typed 工作流结果，可以是修订、拒绝、门禁失败或经完整评审与门禁确认的正向结果；产生该事件的角色不因此被视为根因角色。
+_Avoid_: Root Cause、Route Target Role、Settlement、仅限负向的 Trigger Decision
+
+**Route Target Role**:
+确定性流程为下一步修正指定的 Teacher Role 提示；它不是根因事实，Experience Summarizer 可以不为其生成 Teacher Work。
+_Avoid_: Responsible Role、Trigger Role、Root Cause
+
+**Teacher Work Subject**:
+`Teacher Work Experience Draft` 中由证据确认承担具体修正义务的 `teacher_role_id`；它可以不同于 Trigger Decision 的角色和 Route Target Role。
+_Avoid_: Route Target Role、Trigger Role、隐式责任角色
 
 Teacher Role 的闭合集合不包含 Evolution Controller 或 Teacher Judgment；前者是确定性控制机制，后者是 Task Evaluation 的可选评分能力。
 

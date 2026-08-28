@@ -94,8 +94,9 @@ overall decision separately. Do not repeat each phase narrative in the overall
 assessment. Before submitting, verify all of these constraints:
 
 - preserve the frozen phase order and submit exactly one finding per phase;
-- each `phase_findings[].assessment` is at most 500 characters and states only
-  the decisive evidence, judgment and material limitation;
+- each `phase_findings[].assessment` targets at most 500 characters and states
+  only the decisive evidence, judgment and material limitation; the Schema
+  rejects values only above 600 characters;
 - `assessment` is at most 1200 characters and explains only the overall causal
   judgment and why the selected decision follows;
 - `key_risk` is either null or at most 500 characters;

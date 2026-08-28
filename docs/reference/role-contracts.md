@@ -5,28 +5,38 @@ Teacher Role 的输入、输出与版本由 `search_harness/evolution/research/r
 | 规范角色 | 内部 `role_id@version` | Output contract |
 | --- | --- | --- |
 | Failure Analyst | `failure_analyst@1` | `failure_direction@1` |
-| Hypothesis Researcher | `hypothesis_researcher@1` | `intervention_hypothesis@5` |
+| Hypothesis Researcher | `hypothesis_researcher@2` | `hypothesis_researcher_result@1` |
 | Intervention Executor | `intervention_worker@1` | `intervention_worker_result@4` |
 | Trial Reviewer | `trial_reviewer@1` | `trial_review@2` |
 | Evidence Reviewer | `evidence_reviewer@1` | `evidence_review@2` |
 | Mechanism Distiller | `mechanism_distiller@1` | `mechanism_distillation@2` |
+| Shadow Mechanism Distiller | `shadow_mechanism_distiller@1` | `shadow_distillation_result@1` |
+| Shadow Prompt Researcher | `shadow_prompt_researcher@1` | `shadow_prompt_research_result@1` |
 | Hook Feasibility Reviewer | `hook_feasibility_reviewer@1` | `hook_feasibility_review@1` |
 | Mechanism Compiler | `compiler@1` | `compiler_result@2` |
+| Shadow Mechanism Compiler | `shadow_compiler@1` | `compiler_result@2` |
 | Conformance Reviewer | `conformance_reviewer@1` | `conformance_review_batch@5` |
+| Shadow Conformance Reviewer | `shadow_conformance_reviewer@1` | `conformance_review_batch@5` |
 | Candidate Reviewer | `candidate_reviewer@1` | `candidate_review@2` |
+| Capability Summarizer | `capability_summarizer@2` | `capability_experience_proposal@1` |
+| Direction Summarizer | `direction_summarizer@1` | `direction_summary@1` |
 
 ## 职责与终态
 
 - Failure Analyst 从 incumbent Evaluation 选择有证据引用的失败方向。
-- Hypothesis Researcher 输出带 phase plan、成功条件和 falsifier 的可证伪干预假设；`fork_phase` 是用于重建分支的执行锚点，可早于首个实际干预 phase，从而让 `post_model`、`post_parse`、`pre_tool` 改写发生在真实 live transaction 中而无需增加 no-op 指令。程序提供通用跨案例正负覆盖要求，Researcher 只在默认要求不足时补充至多两项假设特有证据义务。Evidence Reviewer 要求修订时，Researcher 优先直接应用反馈约束；只有反馈不足以确定具体 condition、instruction 或 falsifier 时，才按 `list_trial_evidence`、`get_trial_evidence`、必要时 `get_trial_event` 的顺序读取旧 Trial。旧 Trial 只用于修订诊断，不计入新版 Hypothesis 的 Evidence。
+- Hypothesis Researcher 输出 `scheme_action` 与可选完整 Hypothesis。初始调用必须使用 `start_new`；continuation 使用 `revise_current` 保留当前 Research Scheme、使用 `start_new` 建立同一 Failure Direction 下的平行 Scheme，或使用 `reanalyse_failure` 请求 Analyst 建立新 Failure Direction，且最后一种不得提交伪造 Hypothesis。Hypothesis 带 phase plan、成功条件和 falsifier；`fork_phase` 是用于重建分支的执行锚点，可早于首个实际干预 phase。程序提供通用跨案例正负覆盖要求，Researcher 只在默认要求不足时补充至多两项假设特有证据义务。Evidence Reviewer 要求修订时，Researcher 优先直接应用反馈约束；只有反馈不足以确定具体 condition、instruction 或 falsifier 时才读取旧 Trial。旧 Trial 只用于修订诊断，不计入新版 Hypothesis 的 Evidence。
 - Intervention Executor 在冻结 prefix 上使用数字编号的 Editable Context Block 执行分支实验；其结果由程序从跨 phase transcript 提取，不能通过通用 standalone role runner 伪造。目标 phase 已到达且 Worker 正确选择 `continue_without_change` 时，Trial 仍以 `executed` 保留，`modified_phases` 为空；只有目标 phase 未到达时才视为 `unsuitable_assignment`。
 - Trial Reviewer 对单条完整 intervention trajectory 作事实性分析，并为每个冻结 phase 记录 `positive`、`negative` 或 `uncertain` predicate label、决定性观察、实际执行状态、直接行为效果和独立的 outcome evidence。标签描述 activation predicate 是否成立，不把干预成功与触发条件混为一谈。
 - Evidence Reviewer 聚合 trial review，并接收当前 trial/assignment 上限、已用与剩余预算、程序维护的证据覆盖摘要，以及 Trial Selector 的权威能力边界；返回 `continue`、`revise`、`reject` 或 `ready_to_distill`。Selector 只能定位冻结 phase 的未使用 prefix 并优先扩展 Example/replicate，不能按未来 Student 响应或语义正负标签选择，因此 Reviewer 不得要求“持续采样直到出现某个随机失败”。默认要求至少覆盖 3 个不同案例，并为每个 phase 从不同案例收集至少 2 个正例和 2 个负例；同题 replicate 只用于判断稳定性，不增加覆盖计数。默认覆盖未满足时程序禁止 `ready_to_distill`，任一剩余调度预算为零时程序也禁止 `continue`，角色必须缩小或否定当前结论，而不能把缺失证据降格为已蒸馏机制的限制。`revise` 时，Reviewer 在现有自由文本 `assessment` 中按 Observed failure、Required revision、Must preserve、Claim limit 的顺序组织反馈；`phase_findings` 保留局部判断，`key_risk` 保留首要风险，`next_obligation` 只服务于 `continue`。
 - Mechanism Distiller 接收完整结构化 Trial Review、程序生成的 coverage summary 以及与 Evidence Reviewer 相同的 Trial/Assignment 预算，返回 `distilled`、`needs_evidence` 或 `not_distillable`；预算耗尽时程序禁止 `needs_evidence`。每个 phase 必须分别声明确定性 `guards`、三值 `decision_contract`、语义输入、evaluator、positive action 和 negative/uncertain/budget-exhausted fallback。`decision_contract` 中模糊概念必须给出可观察的操作边界，并把已观察证据分类为 positive、negative、uncertain；不得用 `known_limits` 抵消更强的正文承诺。对重要的 `hook_model` 不确定性，Distiller 可运行描述性的 Student Model Experiment，自行选择输入、thinking mode 和重复次数；程序保存原始 observation，不计算 expected-label match，也不替角色给出通过结论。实验结果原样交接给 Compiler。
 - Hook Feasibility Reviewer 只在配置启用且 Mechanism 含 `hook_model` 时激活。Controller 从 Distiller 输入中的 Trial Review 恢复逐 phase reference label，在对应原始 prefix 上用同一 Student profile 分别运行配置的 thinking modes；Probe 不修改 prefix，也不恢复 Student。Reviewer 对每个 phase 返回 `supported`、`unstable`、`unsupported` 或 `inconclusive`，总体只允许 `feasible`、`needs_spec_revision` 或 `needs_research_revision`。程序只维护调用、计数和持久化，不用 label match 形成语义门禁；可行结论的 thinking/parser 指导进入 Compiler，模型能力或研究覆盖失败进入 Researcher。
 - Mechanism Compiler 返回 `submitted`、`needs_evidence`、`needs_mechanism_revision` 或 `implementation_blocked`；后三者必须给出一个 `next_obligation`，提交必须引用 Candidate Artifact。实现修订继承上一轮 Candidate workspace、已查询 API 标识和 Student Model Experiment artifact，但每次仍建立新的 Teacher Role Session；Conformance 的非 faithful finding 以紧凑结构携带失败层、期望/实际标签、决定性输入摘要和修复义务。相同实验签名会复用已持久化 observation；继续修订若未改变被拒 workspace，`finalize_candidate` 会拒绝原样重交。Compiler 只实现冻结的 evaluator 输入投影、提示、三值解析、状态和动作，不负责把含糊机制重新解释成可运行规则。
+- Shadow Mechanism Compiler 接收 `ShadowMechanismSpec` 与覆盖全部 Hook-model phase 的 `ShadowHookPromptProduct`。程序校验 Task/Input digest，向模型只公开 phase 到 Product Reference 的绑定和完整选定 API，并在目标 extension 旁物化不可读写的托管模块。Candidate 通过 `HookContext.call_prompt_product` 获得规范化 decision、generated text 或 structured edit operations；Compiler 负责 guard、每 rollout 的 activation counter、目标、作用域、状态、action 与 fallback。提交门拒绝直接 `HookModelRequest`、复制 Prompt、修改托管模块或没有实际消费绑定的候选。该角色当前只用于 standalone Shadow 调试，尚未进入正式 Controller。
+- Shadow Conformance Reviewer 直接接收 `ShadowMechanismSpec`，不将其填充为旧 Mechanism 字段。程序在隔离 Version Store 中物化 Candidate，按 Distiller 引用的 Trial Example 各运行 3 条 Student rollout，复用生产 Evaluation 和紧凑 Conformance trajectory view，并按 Example 批量审阅。Reviewer 分别核对 guards、Decision/Generation Task、on_success、fallback、state、activation limit 与局部 effect。正确投影下的托管模型语义错判路由到 evidence，由 Prompt Research 或研究方向处理；Compiler 只接收真实 implementation 路由。Reviewer Template 与 Role digest 进入 suite fingerprint，Prompt 变化不会复用旧审阅 checkpoint。该角色当前只用于 standalone Shadow 调试。
 - Conformance Reviewer 对 Candidate rollout 与参考 trial 作逐例保真判断，并同时执行一个与保真结论分离的小样本效果预检；每条 Finding 还用 `target_behavior_observed` 明确声明正向中间行为是否真实出现。`task_outcome` 必须出现可归因局部收益，`behavioral_intermediate` 可保持任务结果中性但必须观察到目标行为，任一目标下 harmful 都会拦截。非 faithful 结果仍必须标明失败层、决定性输入摘要、修复义务和路由。
 - Candidate Reviewer 返回 `accept`、`revise` 或 `reject`；它先读取确定性 Candidate Outcome Digest，再通过 changed-first 目录、配对 Case、Hook activity、配对轨迹和 Harness diff 核实归因。结果型目标要求可测全量收益，行为型目标要求跨逻辑样本的目标行为覆盖并满足准确率护栏；形式 conformance、fallback-only 行为或随机变化不能替代正向证据。
+- Capability Summarizer 接收带来源 Artifact 原始冻结 predicate 作为 `decision_scope` 的 trigger-specific Observation Packet；Hook Feasibility 默认按真实 prefix case 展开并直接呈现已审阅的 `decisive_observation`、expected label 与逐 thinking/repetition raw label。只有 reference、模型输入、实现忠实性与环境边界成立，且具有同输入重复偏差、同输入决策翻转或至少两个语义等价有效输入时才提交 Proposal。模型输出只含“对象 + 不稳定语义能力 + 具体混淆输入类别”形式的 `observed_limitation` 与 Observation 数字引用；程序随后附加原始 Decision Scope、机械 Evidence Summary 和稳定来源引用，形成 Capability Experience Product。
+- Direction Summarizer 接收一个程序维护的 Failure Direction → Research Scheme → Mechanism Scheme 上下文和明确 `update_target`，根据 Trial、feasibility、conformance、Candidate Review 或 Promotion Gate 结果形成零或一条 Direction Draft。`disposition` 是证据有界的自然语言研究更新，不是 Controller 命令。两个 Summarizer 共用 `inspect_experience_detail(detail_id)`，Detail 由 Source Projector 确定性生成，同一 ID 最多读取一次。
 
 ## 运行与资源
 

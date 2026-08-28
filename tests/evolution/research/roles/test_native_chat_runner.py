@@ -24,6 +24,10 @@ from search_harness.evolution.research.roles.native_chat_runner import (
     _structured_validation_feedback,
 )
 from search_harness.evolution.research.roles.contracts import EvidenceReview
+from search_harness.evolution.research.roles.provenance import (
+    input_view_digest,
+    teacher_role_scope_from_artifact,
+)
 from search_harness.evolution.research.resources.base import TeacherResourceConfig
 
 
@@ -33,6 +37,12 @@ DISTILLER_TEMPLATE = (
     / "harness_templates"
     / "teacher"
     / "mechanism_distiller"
+)
+SHADOW_DISTILLER_TEMPLATE = (
+    PROJECT_ROOT
+    / "harness_templates"
+    / "teacher"
+    / "shadow_mechanism_distiller"
 )
 RESEARCHER_TEMPLATE = (
     PROJECT_ROOT
@@ -96,7 +106,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                 {
                     "phase": "post_tool",
                     "status": "inconclusive",
-                    "assessment": "x" * 501,
+                    "assessment": "x" * 601,
                 }
             ],
             "assessment": "More evidence is required.",
@@ -114,8 +124,8 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             fields,
             ["phase_findings.0.assessment:string_too_long"],
         )
-        self.assertIn("actual_length=501", feedback)
-        self.assertIn("maximum_length=500", feedback)
+        self.assertIn("actual_length=601", feedback)
+        self.assertIn("maximum_length=600", feedback)
 
     async def test_exhausted_role_exposes_complete_failure_artifact(self) -> None:
         client = ReplayClient(
@@ -154,8 +164,26 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             )
 
         artifact = raised.exception.failure_artifact
+        request = client.completions.requests[0]
         self.assertEqual(artifact["status"], "failed")
+        self.assertEqual(artifact["schema_version"], 2)
         self.assertEqual(artifact["role"]["id"], "evidence_reviewer")
+        self.assertEqual(
+            teacher_role_scope_from_artifact(artifact).model_id,
+            "teacher-test",
+        )
+        self.assertEqual(
+            artifact["input_view_digest"],
+            input_view_digest(
+                [
+                    {
+                        "messages": request["messages"],
+                        "tools": request["tools"],
+                    }
+                ]
+            ),
+        )
+        self.assertEqual(len(artifact["base_prompt_digest"]), 64)
         self.assertEqual(artifact["error"]["turn_count"], 1)
         self.assertEqual(
             artifact["role_budget"],
@@ -163,6 +191,118 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(artifact["usage"]["requests"], 1)
         self.assertEqual(artifact["transcript"][-1]["role"], "user")
+
+    async def test_shadow_distiller_materializes_shallow_submission(
+        self,
+    ) -> None:
+        """The model submits a ref while the artifact stores the full product."""
+
+        responses = [
+            _tool_message(
+                "create_shadow_mechanism_draft",
+                "shadow_create",
+                {
+                    "effect_kind": "behavioral_intermediate",
+                    "effect_success": (
+                        "The next Student generation performs one search."
+                    ),
+                },
+            ),
+            _tool_message(
+                "add_shadow_decision_phase",
+                "shadow_phase",
+                {
+                    "draft_id": "shadow_draft_001",
+                    "phase": "pre_final",
+                    "guards": [
+                        "stage.final_decision is present."
+                    ],
+                    "evaluator": "hook_model",
+                    "inputs": [
+                        {
+                            "name": "question",
+                            "sources": ["core.question"],
+                        },
+                        {
+                            "name": "candidate",
+                            "sources": ["stage.final_decision"],
+                        },
+                    ],
+                    "positive": "A required fact is missing.",
+                    "negative": "All required facts are present.",
+                    "uncertain": "The inputs cannot establish either case.",
+                    "on_success": "Defer the final answer once.",
+                    "fallback_default": "continue_without_change",
+                    "activation_limit": 1,
+                    "fallback_uncertain": "",
+                    "fallback_exhausted": "",
+                },
+            ),
+            _tool_message(
+                "validate_shadow_mechanism_draft",
+                "shadow_validate",
+                {
+                    "draft_id": "shadow_draft_001",
+                    "state": [],
+                    "constraints": [],
+                },
+            ),
+            _tool_message(
+                "submit_shadow_distillation_result",
+                "shadow_submit",
+                {
+                    "outcome": "distilled",
+                    "mechanism_ref": "shadow_mechanism_001",
+                    "obligation": None,
+                },
+            ),
+        ]
+        client = ReplayClient(responses)
+        config = OpenAICompatibleConfig(
+            base_url="https://teacher.invalid",
+            model_id="teacher-test",
+            max_tokens=512,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            trial_file = Path(directory) / "trial_001" / "intervention.json"
+            trial_file.parent.mkdir()
+            trial_file.write_text(
+                json.dumps(
+                    {
+                        "intent": "Test one bounded intervention.",
+                        "comparison": {"process_success": True},
+                        "worker_summary": "The Student searched again.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            artifact = await NativeChatRoleRunner(
+                max_turns=6,
+                client=client,
+                config=config,
+            ).run(
+                template_root=SHADOW_DISTILLER_TEMPLATE,
+                role_id="shadow_mechanism_distiller",
+                role_version=1,
+                role_input=_distiller_input(),
+                resource_config=TeacherResourceConfig(
+                    trial_files=[trial_file]
+                ),
+            )
+
+        self.assertEqual(artifact["output"]["outcome"], "distilled")
+        self.assertEqual(
+            artifact["output"]["mechanism"]["phases"][0]["phase"],
+            "pre_final",
+        )
+        self.assertIn(
+            "shadow_mechanism_001",
+            artifact["validated_mechanisms"],
+        )
+        terminal = client.completions.requests[0]["tools"][-1]["function"]
+        self.assertIn("mechanism_ref", terminal["parameters"]["properties"])
+        self.assertNotIn("mechanism", terminal["parameters"]["properties"])
 
     async def test_trial_reviewer_must_read_its_single_full_trial(
         self,
@@ -396,14 +536,20 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                 ]
             ),
             _tool_message(
-                "submit_intervention_hypothesis",
+                "submit_hypothesis_researcher_result",
                 "call_submit_1",
-                first_hypothesis,
+                {
+                    "scheme_action": "start_new",
+                    "hypothesis": first_hypothesis,
+                },
             ),
             _tool_message(
-                "submit_intervention_hypothesis",
+                "submit_hypothesis_researcher_result",
                 "call_submit_2",
-                revised_hypothesis,
+                {
+                    "scheme_action": "revise_current",
+                    "hypothesis": revised_hypothesis,
+                },
             ),
         ]
         client = ReplayClient(responses)
@@ -426,7 +572,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             artifact = await runtime.run(
                 template_root=RESEARCHER_TEMPLATE,
                 role_id="hypothesis_researcher",
-                role_version=1,
+                role_version=2,
                 role_input=_researcher_input(),
                 resource_config=TeacherResourceConfig(
                     report_dir=report,
@@ -434,6 +580,10 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     student_template_root=template_root,
                 ),
             )
+            frozen_instruction = "Frozen Researcher session instruction."
+            frozen_digest = "f" * 64
+            artifact["transcript"][0]["content"] = frozen_instruction
+            artifact["base_prompt_digest"] = frozen_digest
             revision = await runtime.continue_researcher(
                 previous_artifact=artifact,
                 feedback_source="evidence_reviewer",
@@ -452,6 +602,7 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             artifact["role_session"]["session_id"],
         )
         self.assertEqual(len(revision["role_session"]["output_history"]), 2)
+        self.assertEqual(revision["base_prompt_digest"], frozen_digest)
         self.assertEqual(
             revision["role_session"]["feedback_history"][0]["payload"][
                 "decision"
@@ -460,6 +611,10 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
         )
         continuation_request = client.completions.requests[2]
         continuation_message = continuation_request["messages"][-1]
+        self.assertEqual(
+            continuation_request["messages"][0]["content"],
+            frozen_instruction,
+        )
         self.assertEqual(continuation_message["role"], "user")
         self.assertIn("evidence_reviewer", continuation_message["content"])
         self.assertIn(
@@ -467,7 +622,9 @@ class NativeChatRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
             continuation_message["content"],
         )
         self.assertEqual(
-            revision["output"]["phase_plan"][0]["instruction"],
+            revision["output"]["hypothesis"]["phase_plan"][0][
+                "instruction"
+            ],
             "Use defer_final_answer once at pre_final.",
         )
 

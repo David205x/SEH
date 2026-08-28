@@ -61,7 +61,7 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
         self.assertEqual(state.completed_work_count, 1)
         self.assertEqual(len(state.queued), 1)
         self.assertIs(state.queued[0].item.kind, WorkKind.ANALYZE_FAILURE)
-        self.assertEqual(state.queued[0].item.payload["research_attempt"], 1)
+        self.assertEqual(state.queued[0].item.lineage.research_attempt, 1)
 
         evaluation = next(
             record.item
@@ -195,6 +195,8 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
                     {
                         "run_id": "source-run",
                         "initial_version": "harness_v0001",
+                        "generation": work.lineage.generation,
+                        "generation_id": work.lineage.generation_id,
                     },
                 ),
                 ("work_scheduled", {"work": work.to_dict()}),
@@ -212,7 +214,7 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
         self._write_object(
             self.source / "run.json",
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "run_id": "source-run",
                 "version_store": str(self.store.resolve()),
                 "version_store_id": "test-store",
@@ -257,10 +259,10 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
         ).digest
         self._write_object(
             self.store / "version_store.json",
-            {"schema_version": 2, "version_store_id": "test-store"},
+            {"schema_version": 3, "version_store_id": "test-store"},
         )
         record = {
-            "schema_version": 2,
+            "schema_version": 3,
             "version_id": "harness_v0001",
             "parent_version": None,
             "git_commit": commit,
@@ -274,7 +276,7 @@ class CloneRunFromIncumbentTests(unittest.TestCase):
             encoding="utf-8",
         )
         rejected_event = {
-            "schema_version": 2,
+            "schema_version": 3,
             "candidate_attempt_id": "candidate_attempt_rejected",
             "sequence": 0,
             "event_type": "started",

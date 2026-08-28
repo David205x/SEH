@@ -9,6 +9,10 @@ from typing import Any
 from search_harness.evolution.research.resources.base import (
     TeacherResourceConfig,
 )
+from search_harness.evolution.research.experience_summary import (
+    ExperienceSummaryRequest,
+    materialize_capability_experience_product,
+)
 from search_harness.evolution.research.resources.stores import (
     CandidateComparisonStore,
     CandidateReviewResourceConfig,
@@ -23,9 +27,11 @@ from search_harness.evolution.research.hook_feasibility import (
 )
 from search_harness.evolution.research.roles.contracts import (
     CandidateReview,
+    CapabilityExperienceSummary,
     CompilerResult,
+    DirectionSummary,
     FailureDirection,
-    InterventionHypothesis,
+    HypothesisResearcherResult,
     MechanismDistillation,
     MechanismSpec,
 )
@@ -96,7 +102,7 @@ class ResearchRoleEffects:
         artifact = await self.role_runner.run(
             template_root=self._template("hypothesis_researcher"),
             role_id="hypothesis_researcher",
-            role_version=1,
+            role_version=2,
             role_input={"problem_direction": problem_direction},
             resource_config=TeacherResourceConfig(
                 report_dir=report_dir,
@@ -105,7 +111,11 @@ class ResearchRoleEffects:
                 candidate_review=recent_candidate,
             ),
         )
-        return _hypothesis_result(artifact, work_dir)
+        return _hypothesis_result(
+            artifact,
+            work_dir,
+            initial_call=True,
+        )
 
     async def continue_hypothesis(
         self,
@@ -122,7 +132,7 @@ class ResearchRoleEffects:
             feedback=feedback,
             trial_files=trial_files,
         )
-        return _hypothesis_result(artifact, work_dir)
+        return _hypothesis_result(artifact, work_dir, initial_call=False)
 
     async def distill_mechanism(
         self,
@@ -343,6 +353,66 @@ class ResearchRoleEffects:
             extra_outcome={"candidate_outcome_digest": outcome_digest},
         )
 
+    async def summarize_capability(
+        self,
+        *,
+        request: ExperienceSummaryRequest,
+        work_dir: Path,
+    ) -> EffectResult:
+        """Run one independent Capability Summarization Pass."""
+
+        artifact = await self.role_runner.run(
+            template_root=self._template("capability_summarizer"),
+            role_id="capability_summarizer",
+            role_version=2,
+            role_input=request.role_input.model_dump(mode="json"),
+            resource_config=TeacherResourceConfig(
+                experience_summary=request.resources
+            ),
+        )
+        output = CapabilityExperienceSummary.model_validate(
+            artifact.get("output")
+        )
+        product = materialize_capability_experience_product(request, output)
+        role_path = _write_json(work_dir / "role.json", artifact)
+        product_path = _write_json(
+            work_dir / "capability_experience.json",
+            product.model_dump(mode="json"),
+        )
+        return _role_result(
+            product.model_dump(mode="json"),
+            artifact,
+            {
+                "capability_summarizer_artifact": str(role_path),
+                "capability_experience_artifact": str(product_path),
+            },
+        )
+
+    async def summarize_direction(
+        self,
+        *,
+        request: ExperienceSummaryRequest,
+        work_dir: Path,
+    ) -> EffectResult:
+        """Run one independent Direction Summarization Pass."""
+
+        artifact = await self.role_runner.run(
+            template_root=self._template("direction_summarizer"),
+            role_id="direction_summarizer",
+            role_version=1,
+            role_input=request.role_input.model_dump(mode="json"),
+            resource_config=TeacherResourceConfig(
+                experience_summary=request.resources
+            ),
+        )
+        output = DirectionSummary.model_validate(artifact.get("output"))
+        path = _write_json(work_dir / "role.json", artifact)
+        return _role_result(
+            output.model_dump(mode="json"),
+            artifact,
+            {"direction_draft_artifact": str(path)},
+        )
+
     def _template(self, role_id: str) -> Path:
         return self.teacher_template_root / role_id
 
@@ -350,8 +420,16 @@ class ResearchRoleEffects:
 def _hypothesis_result(
     artifact: dict[str, Any],
     work_dir: Path,
+    *,
+    initial_call: bool,
 ) -> EffectResult:
-    output = InterventionHypothesis.model_validate(artifact.get("output"))
+    output = HypothesisResearcherResult.model_validate(
+        artifact.get("output")
+    )
+    if initial_call and output.scheme_action != "start_new":
+        raise ValueError(
+            "initial Hypothesis Researcher call must start a Research Scheme"
+        )
     path = _write_json(work_dir / "role.json", artifact)
     return _role_result(
         output.model_dump(mode="json"),

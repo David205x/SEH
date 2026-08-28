@@ -42,6 +42,7 @@ from search_harness.evolution.versioning import (
     CandidateWorkspace,
     HarnessSnapshot,
     HarnessValidator,
+    normalize_template_path,
 )
 
 from ..mechanism.review import review_compiler_candidate
@@ -307,6 +308,13 @@ class CompilerWorkspaceStore:
     queried_symbols: set[str] = field(default_factory=set)
     prior_queried_symbols: frozenset[str] = frozenset()
     continuation: dict[str, Any] | None = None
+    managed_prompt_products: dict[str, dict[str, Any]] = field(
+        default_factory=dict
+    )
+    managed_prompt_path: PurePosixPath | None = None
+    managed_prompt_content: str | None = None
+    exact_query_budget: int = COMPILER_EXACT_QUERY_BUDGET
+    reject_packet_requeries: bool = False
 
     @classmethod
     def load(cls, config: CompilerResourceConfig) -> "CompilerWorkspaceStore":
@@ -401,7 +409,7 @@ class CompilerWorkspaceStore:
             "continuation": self.continuation,
             "continuation_changed_files": continuation_changed_files,
             "exact_api_query": {
-                "unique_symbol_budget": COMPILER_EXACT_QUERY_BUDGET,
+                "unique_symbol_budget": self.exact_query_budget,
                 "scope": (
                     "Runtime Input Topics, exact public symbols, and unknown-query "
                     "suggestions; only successfully resolved symbols absent from the "
@@ -417,6 +425,16 @@ class CompilerWorkspaceStore:
         if not isinstance(contracts, list):
             raise TypeError("Compiler capability packet contracts must be an array")
         self.packet_symbols = frozenset(_contract_symbols(contracts))
+        selection = packet.get("selection")
+        strategy = (
+            selection.get("strategy")
+            if isinstance(selection, dict)
+            else None
+        )
+        self.reject_packet_requeries = strategy == "shadow_phase_task_exact"
+        self.exact_query_budget = (
+            3 if self.reject_packet_requeries else COMPILER_EXACT_QUERY_BUDGET
+        )
         documents = packet.get("runtime_input_documents", [])
         self.packet_topics = frozenset(
             str(item["runtime_input_id"])
@@ -424,6 +442,76 @@ class CompilerWorkspaceStore:
             if isinstance(item, dict) and item.get("runtime_input_id")
         )
         self.queried_symbols.clear()
+
+    def bind_managed_prompt_products(
+        self,
+        products: dict[str, dict[str, Any]],
+    ) -> None:
+        """Bind exact phase-local Prompt Products without exposing Prompt text."""
+
+        if len(products) != len(set(products)):
+            raise ValueError("managed Prompt Product phases must be unique")
+        refs = [str(item.get("product_ref") or "") for item in products.values()]
+        if any(not reference for reference in refs):
+            raise ValueError("managed Prompt Products require product refs")
+        if len(refs) != len(set(refs)):
+            raise ValueError("managed Prompt Product refs must be unique")
+        self.managed_prompt_products = {
+            phase: dict(payload) for phase, payload in products.items()
+        }
+
+    def materialize_managed_prompt_products(
+        self,
+        *,
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """Write one program-owned sibling module for a mutable extension."""
+
+        if not self.managed_prompt_products:
+            raise ValueError("Shadow Compiler has no managed Prompt Products")
+        manifest = json.loads(self.workspace.read_text("harness.json"))
+        extensions = manifest.get("extensions")
+        if not isinstance(extensions, list):
+            raise TypeError("harness.json extensions must be an array")
+        matches = [
+            item
+            for item in extensions
+            if isinstance(item, dict) and item.get("instance_id") == instance_id
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                "managed Prompt Product target must be one registered extension"
+            )
+        policy = json.loads(self.workspace.read_text("evolution.json"))
+        policies = policy.get("components")
+        if not isinstance(policies, dict) or policies.get(instance_id) != "mutable":
+            raise ValueError(
+                "managed Prompt Product target extension must be mutable"
+            )
+        entrypoint = str(matches[0].get("entrypoint") or "")
+        module_text, separator, _ = entrypoint.partition(":")
+        if separator != ":":
+            raise ValueError("extension entrypoint must include factory name")
+        component_dir = normalize_template_path(module_text).parent
+        path = component_dir / "managed_prompt_products.py"
+        if self.workspace.exists(path) and path != self.managed_prompt_path:
+            raise ValueError(
+                f"managed Prompt Product path already exists: {path}"
+            )
+        content = _managed_prompt_module(self.managed_prompt_products)
+        self.workspace.write_text(path, content)
+        self.managed_prompt_path = path
+        self.managed_prompt_content = content
+        self.last_validation = None
+        return {
+            "instance_id": instance_id,
+            "module": ".managed_prompt_products",
+            "path": str(path),
+            "bindings": {
+                phase: payload["product_ref"]
+                for phase, payload in self.managed_prompt_products.items()
+            },
+        }
 
     def list_files(self) -> dict[str, Any]:
         files = self.workspace.materialized_files()
@@ -436,6 +524,8 @@ class CompilerWorkspaceStore:
         }
 
     def read_file(self, path: str) -> dict[str, Any]:
+        if normalize_template_path(path) == self.managed_prompt_path:
+            raise ValueError("managed Prompt Product source is not model-readable")
         return {"path": path, "content": self.workspace.read_text(path)}
 
     def authoring_guide(self, topic: str) -> dict[str, Any]:
@@ -468,13 +558,39 @@ class CompilerWorkspaceStore:
             return {"status": "rejected", "reason": "empty_query"}
         result = query_hook_api_reference(normalized)
         if result.get("status") != "resolved":
+            if self.reject_packet_requeries:
+                if normalized not in self.queried_symbols:
+                    if len(self.queried_symbols) >= self.exact_query_budget:
+                        return {
+                            "status": "rejected",
+                            "reason": "query_budget_exhausted",
+                            "query": normalized,
+                            "remaining_unique_queries": 0,
+                        }
+                    self.queried_symbols.add(normalized)
             return {
                 **result,
                 "remaining_unique_queries": (
-                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                    self.exact_query_budget - len(self.queried_symbols)
                 ),
             }
         if result.get("query_kind") == "runtime_input_topic":
+            if (
+                self.reject_packet_requeries
+                and (
+                    self.packet_topics is None
+                    or normalized not in self.packet_topics
+                )
+                and normalized not in self.queried_symbols
+            ):
+                if len(self.queried_symbols) >= self.exact_query_budget:
+                    return {
+                        "status": "rejected",
+                        "reason": "query_budget_exhausted",
+                        "query": normalized,
+                        "remaining_unique_queries": 0,
+                    }
+                self.queried_symbols.add(normalized)
             return {
                 **result,
                 "source": (
@@ -484,15 +600,24 @@ class CompilerWorkspaceStore:
                     else "runtime_input_registry"
                 ),
                 "remaining_unique_queries": (
-                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                    self.exact_query_budget - len(self.queried_symbols)
                 ),
             }
         if normalized in self.packet_symbols:
+            if self.reject_packet_requeries:
+                return {
+                    "status": "rejected",
+                    "reason": "already_in_capability_packet",
+                    "query": normalized,
+                    "remaining_unique_queries": (
+                        self.exact_query_budget - len(self.queried_symbols)
+                    ),
+                }
             return {
                 **result,
                 "source": "capability_packet",
                 "remaining_unique_queries": (
-                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                    self.exact_query_budget - len(self.queried_symbols)
                 ),
             }
         if normalized in self.prior_queried_symbols:
@@ -500,11 +625,11 @@ class CompilerWorkspaceStore:
                 **result,
                 "source": "continuation_query",
                 "remaining_unique_queries": (
-                    COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                    self.exact_query_budget - len(self.queried_symbols)
                 ),
             }
         if normalized not in self.queried_symbols:
-            if len(self.queried_symbols) >= COMPILER_EXACT_QUERY_BUDGET:
+            if len(self.queried_symbols) >= self.exact_query_budget:
                 return {
                     "status": "rejected",
                     "reason": "query_budget_exhausted",
@@ -516,11 +641,13 @@ class CompilerWorkspaceStore:
             **result,
             "source": "exact_query",
             "remaining_unique_queries": (
-                COMPILER_EXACT_QUERY_BUDGET - len(self.queried_symbols)
+                self.exact_query_budget - len(self.queried_symbols)
             ),
         }
 
     def write_file(self, *, path: str, content: str) -> dict[str, Any]:
+        if normalize_template_path(path) == self.managed_prompt_path:
+            raise ValueError("managed Prompt Product source is immutable")
         self.workspace.write_text(path, content)
         self.last_validation = None
         return {
@@ -529,6 +656,8 @@ class CompilerWorkspaceStore:
         }
 
     def delete_file(self, *, path: str) -> dict[str, Any]:
+        if normalize_template_path(path) == self.managed_prompt_path:
+            raise ValueError("managed Prompt Product source is immutable")
         self.workspace.delete(path)
         self.last_validation = None
         return {
@@ -608,6 +737,10 @@ class CompilerWorkspaceStore:
             "queried_symbols": sorted(
                 self.prior_queried_symbols | self.queried_symbols
             ),
+            "managed_hook_prompts": {
+                phase: payload["product_ref"]
+                for phase, payload in self.managed_prompt_products.items()
+            },
         }
         return {
             "candidate_ref": candidate_ref,
@@ -640,7 +773,10 @@ class CompilerWorkspaceStore:
                 ],
             }
         diff = self.diff()
-        review_errors = review_compiler_candidate(self.workspace)
+        review_errors = [
+            *review_compiler_candidate(self.workspace),
+            *self._managed_prompt_binding_errors(),
+        ]
         validation = self.validate()
         changed_paths = [item["path"] for item in diff["changes"]]
         errors = [*review_errors, *validation["errors"]]
@@ -672,6 +808,46 @@ class CompilerWorkspaceStore:
             return None
         return self.submitted[f"candidate_{len(self.submitted):03d}"]
 
+    def _managed_prompt_binding_errors(self) -> list[str]:
+        if not self.managed_prompt_products:
+            return []
+        if self.managed_prompt_path is None or self.managed_prompt_content is None:
+            return [
+                "Managed Prompt Products were not bound to the candidate "
+                "extension; call bind_hook_prompt_products before finalization."
+            ]
+        if not self.workspace.exists(self.managed_prompt_path):
+            return ["Managed Prompt Product module is missing from the candidate."]
+        if self.workspace.read_text(self.managed_prompt_path) != self.managed_prompt_content:
+            return ["Managed Prompt Product module differs from program content."]
+        consumers = []
+        errors = []
+        for path in self.workspace.changed_paths:
+            if path == self.managed_prompt_path or path.suffix != ".py":
+                continue
+            if not self.workspace.exists(path):
+                continue
+            content = self.workspace.read_text(path)
+            if "HookModelRequest" in content or "context.call_model" in content:
+                errors.append(
+                    f"{path} bypasses managed Prompt Products with a direct "
+                    "Hook model call."
+                )
+            for payload in self.managed_prompt_products.values():
+                prompt = payload.get("prompt")
+                if isinstance(prompt, str) and prompt in content:
+                    errors.append(
+                        f"{path} copies program-managed Prompt Product text."
+                    )
+            if "call_prompt_product" in content and "PROMPT_PRODUCTS" in content:
+                consumers.append(path)
+        if not consumers:
+            errors.append(
+                "Candidate does not call context.call_prompt_product with the "
+                "program-managed PROMPT_PRODUCTS binding."
+            )
+        return errors
+
 
 def _contract_symbols(contracts: list[Any]) -> set[str]:
     """递归收集 packet 已公开的顶层和成员符号。"""
@@ -688,6 +864,24 @@ def _contract_symbols(contracts: list[Any]) -> set[str]:
         elif isinstance(value, list):
             pending.extend(value)
     return symbols
+
+
+def _managed_prompt_module(products: dict[str, dict[str, Any]]) -> str:
+    """Render one exact sibling module without exposing text to the Compiler."""
+
+    lines = [
+        '"""Program-managed Hook Prompt Products. Do not edit."""',
+        "",
+        "from search_harness.framework import HookPromptProduct",
+        "",
+        "PROMPT_PRODUCTS = {",
+    ]
+    for phase, payload in products.items():
+        lines.append(
+            f"    {phase!r}: HookPromptProduct.from_dict({payload!r}),"
+        )
+    lines.extend(("}", ""))
+    return "\n".join(lines)
 
 
 def _query_rejection(symbol: str, reason: str) -> dict[str, Any]:

@@ -1,0 +1,2338 @@
+{
+  "suite_id": "TASK-007-ATTRIBUTION-V3",
+  "case_count": 12,
+  "run_count": 28,
+  "results": [
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_revise_corpus_confound\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "One-sided-retrieval hypothesis is inconclusive: trial_004 faithfully issued the required second-entity search for Cia Berg, but the corpus returned no title-count evidence, so the claim that one-sided retrieval causes absence-based comparison errors is unverified (full success 1/2). Continue only if the corpus can supply the required second-entity evidence; otherwise do not rely on the retrieval prompt to fix absence-based errors.",
+            "applicability": "Pre-final deferral retrieval prompts for named-entity comparison tasks where judging the causal effect requires corpus passages containing both entities' evidence; applies to one-shot soft-intervention trials with confirmed implementation fidelity but data-insufficient corpora.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_zvTD0KGDAXYqOTJv7URW1401",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "One-sided-retrieval hypothesis is inconclusive: trial_004 faithfully issued the required second-entity search for Cia Berg, but the corpus returned no title-count evidence, so the claim that one-sided retrieval causes absence-based comparison errors is unverified (full success 1/2). Continue only if the corpus can supply the required second-entity evidence; otherwise do not rely on the retrieval prompt to fix absence-based errors.",
+                "applicability": "Pre-final deferral retrieval prompts for named-entity comparison tasks where judging the causal effect requires corpus passages containing both entities' evidence; applies to one-shot soft-intervention trials with confirmed implementation fidelity but data-insufficient corpora.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"One-sided-retrieval hypothesis is inconclusive: trial_004 faithfully issued the required second-entity search for Cia Berg, but the corpus returned no title-count evidence, so the claim that one-sided retrieval causes absence-based comparison errors is unverified (full success 1/2). Continue only if the corpus can supply the required second-entity evidence; otherwise do not rely on the retrieval prompt to fix absence-based errors.\", \"applicability\": \"Pre-final deferral retrieval prompts for named-entity comparison tasks where judging the causal effect requires corpus passages containing both entities' evidence; applies to one-shot soft-intervention trials with confirmed implementation fidelity but data-insufficient corpora.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4620,
+        "output_tokens": 2012,
+        "total_tokens": 6632,
+        "calls": [
+          {
+            "completion_tokens": 2012,
+            "prompt_tokens": 4620,
+            "total_tokens": 6632,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1805
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1420
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_revise_corpus_confound\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The one-sided-retrieval hypothesis (asking the Student to search for the second entity prevents absence-based comparison errors) is inconclusive: trial_004 faithfully issued the query but the corpus returned no title-count evidence, so the success condition was unjudgeable and the absence-based conclusion is not attributable to retrieval direction. Revisit only with a corpus containing the second-entity evidence or a measurable success condition.",
+            "applicability": "Applies to this retrieval-then-judge comparison design (second-entity title-count evidence) where corpus coverage was insufficient; does not extend to corpora containing the required evidence, where the retrieval-direction mechanism remains untested.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_OIvNqGjT0wdk7es7RXS39882",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The one-sided-retrieval hypothesis (asking the Student to search for the second entity prevents absence-based comparison errors) is inconclusive: trial_004 faithfully issued the second-entity query but the corpus returned no title-count evidence, so the success condition was unjudgeable and the absence-based conclusion is not attributable to retrieval direction. Do not adopt or stop the claim; revisit only with a corpus that actually contains the second-entity evidence or a success condition measurable from available passages.",
+                "applicability": "Applies to this retrieval-then-judge comparison design (second-entity title-count evidence) where corpus coverage was insufficient; does not extend to corpora containing the required evidence, where the retrieval-direction mechanism remains untested.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_lL2JYu6pbcwq7eJq1A5b0169",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies to this retrieval-then-judge comparison design (second-entity title-count evidence) where corpus coverage was insufficient; does not extend to corpora containing the required evidence, where the retrieval-direction mechanism remains untested.",
+                "evidence_refs": [
+                  "review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "The one-sided-retrieval hypothesis (asking the Student to search for the second entity prevents absence-based comparison errors) is inconclusive: trial_004 faithfully issued the query but the corpus returned no title-count evidence, so the success condition was unjudgeable and the absence-based conclusion is not attributable to retrieval direction. Revisit only with a corpus containing the second-entity evidence or a measurable success condition."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The one-sided-retrieval hypothesis (asking the Student to search for the second entity prevents absence-based comparison errors) is inconclusive: trial_004 faithfully issued the query but the corpus returned no title-count evidence, so the success condition was unjudgeable and the absence-based conclusion is not attributable to retrieval direction. Revisit only with a corpus containing the second-entity evidence or a measurable success condition.\", \"applicability\": \"Applies to this retrieval-then-judge comparison design (second-entity title-count evidence) where corpus coverage was insufficient; does not extend to corpora containing the required evidence, where the retrieval-direction mechanism remains untested.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11197,
+        "output_tokens": 2107,
+        "total_tokens": 13304,
+        "calls": [
+          {
+            "completion_tokens": 1888,
+            "prompt_tokens": 4620,
+            "total_tokens": 6508,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1670
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1420
+          },
+          {
+            "completion_tokens": 219,
+            "prompt_tokens": 6577,
+            "total_tokens": 6796,
+            "completion_tokens_details": {
+              "reasoning_tokens": 16
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 1969
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_revise_corpus_confound\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The one-shot pre-final second-entity search ran faithfully (trial_004 queried Cia Berg), but returned passages lacked the title-count evidence the success condition required, so 'one-sided retrieval causes absence-based comparison errors' remains untested. Disposition: inconclusive; revisit only with trials whose retrieved corpus actually contains the second-entity evidence, or split success into search fidelity versus evidence availability.",
+            "applicability": "Scope: one-shot pre-final second-entity search and the absence-based comparison hypothesis on this corpus. Recheck when retrieved passages contain the required second-entity evidence, or when search fidelity is judged independently of corpus evidence availability.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_X4K92asLtVuvrs56BD6s3477",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The one-shot pre-final second-entity search ran faithfully (trial_004 queried Cia Berg), but returned passages lacked the title-count evidence the success condition required, so 'one-sided retrieval causes absence-based comparison errors' remains untested. Disposition: inconclusive; revisit only with trials whose retrieved corpus actually contains the second-entity evidence, or split success into search fidelity versus evidence availability.",
+                "applicability": "Scope: one-shot pre-final retrieval-deferral intervention and the absence-based comparison hypothesis on this corpus/task. Recheck when retrieved passages contain the second-entity evidence the success condition requires, or when search-trigger success is judged independently of corpus evidence availability.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.applicability: String should have at most 300 characters; maximum_length=300",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.applicability:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_d3TbYjGgn0JwccmCSsgl7887",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Scope: one-shot pre-final second-entity search and the absence-based comparison hypothesis on this corpus. Recheck when retrieved passages contain the required second-entity evidence, or when search fidelity is judged independently of corpus evidence availability.",
+                "evidence_refs": [
+                  "review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "The one-shot pre-final second-entity search ran faithfully (trial_004 queried Cia Berg), but returned passages lacked the title-count evidence the success condition required, so 'one-sided retrieval causes absence-based comparison errors' remains untested. Disposition: inconclusive; revisit only with trials whose retrieved corpus actually contains the second-entity evidence, or split success into search fidelity versus evidence availability."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The one-shot pre-final second-entity search ran faithfully (trial_004 queried Cia Berg), but returned passages lacked the title-count evidence the success condition required, so 'one-sided retrieval causes absence-based comparison errors' remains untested. Disposition: inconclusive; revisit only with trials whose retrieved corpus actually contains the second-entity evidence, or split success into search fidelity versus evidence availability.\", \"applicability\": \"Scope: one-shot pre-final second-entity search and the absence-based comparison hypothesis on this corpus. Recheck when retrieved passages contain the required second-entity evidence, or when search fidelity is judged independently of corpus evidence availability.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11017,
+        "output_tokens": 2094,
+        "total_tokens": 13111,
+        "calls": [
+          {
+            "completion_tokens": 1707,
+            "prompt_tokens": 4620,
+            "total_tokens": 6327,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1496
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 12
+          },
+          {
+            "completion_tokens": 387,
+            "prompt_tokens": 6397,
+            "total_tokens": 6784,
+            "completion_tokens_details": {
+              "reasoning_tokens": 185
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6272
+            },
+            "prompt_cache_hit_tokens": 6272,
+            "prompt_cache_miss_tokens": 125
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_no_differential_effect\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Inserting generic verification context does not cause a follow-up search before finalization: 3 of 4 faithful positive activations finalized without one, the only search success also occurred in the untreated source control, and the treated branch produced no differential action-type effect. Stop unchanged for this mechanism class; revisit only with a redesigned trigger whose search outcomes are attributed to the intervention rather than to control behavior.",
+            "applicability": "Applies to the generic inserted-verification-block mechanism on positive activations before finalization, evaluated by differential action-type effect against a matched source control. Recheck requires a trigger design with search effect activation-attributed and absent from controls.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_1HBmlYpz5gCfkY3UenQI0148",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Inserting generic verification context does not cause a follow-up search before finalization: 3 of 4 faithful positive activations finalized without one, the only search success also occurred in the untreated source control, and the treated branch produced no differential action-type effect. Stop unchanged for this mechanism class; revisit only with a redesigned trigger whose search outcomes are attributed to the intervention rather than to control behavior.",
+                "applicability": "Applies to the generic inserted-verification-block mechanism on positive activations before finalization, evaluated by differential action-type effect against a matched source control. Recheck requires a trigger design with search effect activation-attributed and absent from controls.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Inserting generic verification context does not cause a follow-up search before finalization: 3 of 4 faithful positive activations finalized without one, the only search success also occurred in the untreated source control, and the treated branch produced no differential action-type effect. Stop unchanged for this mechanism class; revisit only with a redesigned trigger whose search outcomes are attributed to the intervention rather than to control behavior.\", \"applicability\": \"Applies to the generic inserted-verification-block mechanism on positive activations before finalization, evaluated by differential action-type effect against a matched source control. Recheck requires a trigger design with search effect activation-attributed and absent from controls.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4605,
+        "output_tokens": 2483,
+        "total_tokens": 7088,
+        "calls": [
+          {
+            "completion_tokens": 2483,
+            "prompt_tokens": 4605,
+            "total_tokens": 7088,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2279
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1405
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_no_differential_effect\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Inserting a generic verification block on faithful positive activations does not cause a follow-up search before finalization: three of four activations finalized without one, the sole search success also occurred in its untreated source control, and the treated branch showed no differential action-type effect. Stop unchanged. Revisit only with a mechanism showing activation-attributed search beyond control and an explicit trigger predicate.",
+            "applicability": "Scope: the generic verification-context soft intervention on faithful positive activations in this task/decision setting; missing negative-stratum coverage is not causal. Recheck applies to refined context interventions tested against matched controls with explicit success predicates.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_Rutw67EdfyIyhwG9Ceas7043",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Inserting a generic verification block on faithful positive activations does not cause a follow-up search before finalization: three of four activations finalized without one, the sole search success also occurred in its untreated source control, and the treated branch showed no differential action-type effect. Stop unchanged; do not reuse the generic verification-context mechanism. Revisit only with an intervention that shows activation-attributed search beyond control and an explicit search-trigger predicate.",
+                "applicability": "Scope: the generic verification-context soft intervention on faithful positive activations in this task/decision setting; missing negative-stratum coverage is not causal. Recheck applies to refined context interventions tested against matched controls with explicit success predicates.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_bKvKoe421pa1QaR8xMqe2035",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Scope: the generic verification-context soft intervention on faithful positive activations in this task/decision setting; missing negative-stratum coverage is not causal. Recheck applies to refined context interventions tested against matched controls with explicit success predicates.",
+                "evidence_refs": [
+                  "review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Inserting a generic verification block on faithful positive activations does not cause a follow-up search before finalization: three of four activations finalized without one, the sole search success also occurred in its untreated source control, and the treated branch showed no differential action-type effect. Stop unchanged. Revisit only with a mechanism showing activation-attributed search beyond control and an explicit trigger predicate."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Inserting a generic verification block on faithful positive activations does not cause a follow-up search before finalization: three of four activations finalized without one, the sole search success also occurred in its untreated source control, and the treated branch showed no differential action-type effect. Stop unchanged. Revisit only with a mechanism showing activation-attributed search beyond control and an explicit trigger predicate.\", \"applicability\": \"Scope: the generic verification-context soft intervention on faithful positive activations in this task/decision setting; missing negative-stratum coverage is not causal. Recheck applies to refined context interventions tested against matched controls with explicit success predicates.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11151,
+        "output_tokens": 2188,
+        "total_tokens": 13339,
+        "calls": [
+          {
+            "completion_tokens": 1872,
+            "prompt_tokens": 4605,
+            "total_tokens": 6477,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1480
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4480
+            },
+            "prompt_cache_hit_tokens": 4480,
+            "prompt_cache_miss_tokens": 125
+          },
+          {
+            "completion_tokens": 316,
+            "prompt_tokens": 6546,
+            "total_tokens": 6862,
+            "completion_tokens_details": {
+              "reasoning_tokens": 101
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6400
+            },
+            "prompt_cache_hit_tokens": 6400,
+            "prompt_cache_miss_tokens": 146
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_no_differential_effect\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Inserting a generic verification block into faithful positive activations does not cause a follow-up search before finalization: 3 of 4 activations finalized without one, and the sole search success also occurred in the untreated source control, so the treated branch shows no differential action-type effect. Stop this mechanism unchanged.",
+            "applicability": "Verification-context insertion intended to trigger follow-up search before finalization in this task setting; revisit only with a redesigned mechanism demonstrating a differential effect against matched controls.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_QMZCZLB33qvlVzD0FiR46313",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Inserting a generic verification block into faithful positive activations does not cause a follow-up search before finalization: 3 of 4 activations finalized without one, and the sole search success also occurred in the untreated source control, so the treated branch shows no differential action-type effect. Stop this mechanism unchanged.",
+                "applicability": "Verification-context insertion intended to trigger follow-up search before finalization in this task setting; revisit only with a redesigned mechanism demonstrating a differential effect against matched controls.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Inserting a generic verification block into faithful positive activations does not cause a follow-up search before finalization: 3 of 4 activations finalized without one, and the sole search success also occurred in the untreated source control, so the treated branch shows no differential action-type effect. Stop this mechanism unchanged.\", \"applicability\": \"Verification-context insertion intended to trigger follow-up search before finalization in this task setting; revisit only with a redesigned mechanism demonstrating a differential effect against matched controls.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4605,
+        "output_tokens": 2224,
+        "total_tokens": 6829,
+        "calls": [
+          {
+            "completion_tokens": 2224,
+            "prompt_tokens": 4605,
+            "total_tokens": 6829,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2052
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4480
+            },
+            "prompt_cache_hit_tokens": 4480,
+            "prompt_cache_miss_tokens": 125
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_harmful_overtrigger\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Generic evidence-gap patch to induce follow-up search is rejected unchanged: of two faithful positive activations only one triggered the intended search, while a complete-evidence case over-triggered and changed a correct answer to wrong, showing no selectivity. Revisit only if a redesigned trigger with explicit-negative guarding demonstrates matched-control benefit and avoids harm on complete evidence.",
+            "applicability": "Generic evidence-gap patch interventions meant to induce follow-up search in evidence-review/trial pipelines, on the tested positive and complete-evidence case types; recheck only with a selective mechanism proven against explicit negatives.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_OAM7AqwB6xCU1OH1B6m06043",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Generic evidence-gap patch to induce follow-up search is rejected unchanged: of two faithful positive activations only one triggered the intended search, while a complete-evidence case over-triggered and changed a correct answer to wrong, showing no selectivity. Revisit only if a redesigned trigger with explicit-negative guarding demonstrates matched-control benefit and avoids harm on complete evidence.",
+                "applicability": "Generic evidence-gap patch interventions meant to induce follow-up search in evidence-review/trial pipelines, on the tested positive and complete-evidence case types; recheck only with a selective mechanism proven against explicit negatives.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Generic evidence-gap patch to induce follow-up search is rejected unchanged: of two faithful positive activations only one triggered the intended search, while a complete-evidence case over-triggered and changed a correct answer to wrong, showing no selectivity. Revisit only if a redesigned trigger with explicit-negative guarding demonstrates matched-control benefit and avoids harm on complete evidence.\", \"applicability\": \"Generic evidence-gap patch interventions meant to induce follow-up search in evidence-review/trial pipelines, on the tested positive and complete-evidence case types; recheck only with a selective mechanism proven against explicit negatives.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4618,
+        "output_tokens": 2396,
+        "total_tokens": 7014,
+        "calls": [
+          {
+            "completion_tokens": 2396,
+            "prompt_tokens": 4618,
+            "total_tokens": 7014,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2205
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1418
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_harmful_overtrigger\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Generic evidence-gap patch as a follow-up-search trigger is not viable: across two faithful activations it missed the intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. Disposition: stop unchanged; revisit only with a trigger shown selective on explicit-gap versus complete-evidence matched cases.",
+            "applicability": "Generic evidence-gap patch triggers for follow-up search under faithful activation with complete coverage; do not reuse until selectivity on both explicit-gap and complete-evidence cases is demonstrated with matched controls.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_VNswKsEmNjIJUoy2ACoM9222",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Generic evidence-gap patch as a follow-up-search trigger is not viable: across two faithful activations it missed the intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. Disposition: stop unchanged; revisit only with a trigger shown selective on explicit-gap versus complete-evidence matched cases.",
+                "applicability": "Generic evidence-gap patch triggers for follow-up search under faithful activation with complete coverage; do not reuse until selectivity on both explicit-gap and complete-evidence cases is demonstrated with matched controls.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Generic evidence-gap patch as a follow-up-search trigger is not viable: across two faithful activations it missed the intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. Disposition: stop unchanged; revisit only with a trigger shown selective on explicit-gap versus complete-evidence matched cases.\", \"applicability\": \"Generic evidence-gap patch triggers for follow-up search under faithful activation with complete coverage; do not reuse until selectivity on both explicit-gap and complete-evidence cases is demonstrated with matched controls.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4618,
+        "output_tokens": 1981,
+        "total_tokens": 6599,
+        "calls": [
+          {
+            "completion_tokens": 1981,
+            "prompt_tokens": 4618,
+            "total_tokens": 6599,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1793
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 10
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\evidence_reject_harmful_overtrigger\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Generic evidence-gap patch rejected unchanged: faithfully applied in both decisive trials, it missed an intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. The paired miss and harmful over-trigger contradict the direction's claimed selectivity; stop unchanged and require a selective trigger for any revisit.",
+            "applicability": "Generic evidence-gap soft interventions intended to induce follow-up search, evaluated in faithful activation trials with complete default coverage; revisit only with a trigger shown to fire on genuine gaps while leaving complete-evidence decisions untouched.",
+            "evidence_refs": [
+              "review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_jRAWpMS8ibhlNg00sQAZ7836",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Generic evidence-gap patch rejected unchanged: faithfully applied in both decisive trials, it missed an intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. The paired miss and harmful over-trigger contradict the direction's claimed selectivity; stop unchanged and require a selective trigger for any revisit.",
+                "applicability": "Generic evidence-gap soft interventions intended to induce follow-up search, evaluated in faithful activation trials with complete default coverage; revisit only with a trigger shown to fire on genuine gaps while leaving complete-evidence decisions untouched.",
+                "evidence_refs": [
+                  "review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Generic evidence-gap patch rejected unchanged: faithfully applied in both decisive trials, it missed an intended positive (clean falsifier immediately finalized wrong) and over-triggered on complete evidence, changing a correct answer to wrong. The paired miss and harmful over-trigger contradict the direction's claimed selectivity; stop unchanged and require a selective trigger for any revisit.\", \"applicability\": \"Generic evidence-gap soft interventions intended to induce follow-up search, evaluated in faithful activation trials with complete default coverage; revisit only with a trigger shown to fire on genuine gaps while leaving complete-evidence decisions untouched.\", \"evidence_refs\": [\"review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4618,
+        "output_tokens": 2356,
+        "total_tokens": 6974,
+        "calls": [
+          {
+            "completion_tokens": 2356,
+            "prompt_tokens": 4618,
+            "total_tokens": 6974,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2166
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 10
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\hook_feasibility_student_instability\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen Hook model: with thinking disabled, both valid explicit-negative cases (one-sided two-entity gaps) were repeatedly labeled positive; with thinking enabled, one identical negative flipped across repetitions. The explicit-negative boundary is narrow and unstable, so Hypothesis Researcher must not rely on it unchanged—revise evidence scope or add a deterministic negative guard.",
+            "applicability": "Only the frozen Hook three-way evaluator on real-prefix, parse-clean one-sided evidence-gap negatives in both thinking modes. Recheck if the decision contract, input scope, or model changes, or after a deterministic guard is added.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_qDrMmbfOBdUeRze1bryI6230",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook model: with thinking disabled, both valid explicit-negative cases (one-sided two-entity gaps) were repeatedly labeled positive; with thinking enabled, one identical negative flipped across repetitions. The explicit-negative boundary is narrow and unstable, so Hypothesis Researcher must not rely on it unchanged—revise evidence scope or add a deterministic negative guard.",
+                "applicability": "Only the frozen Hook three-way evaluator on real-prefix, parse-clean one-sided evidence-gap negatives in both thinking modes. Recheck if the decision contract, input scope, or model changes, or after a deterministic guard is added.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen Hook model: with thinking disabled, both valid explicit-negative cases (one-sided two-entity gaps) were repeatedly labeled positive; with thinking enabled, one identical negative flipped across repetitions. The explicit-negative boundary is narrow and unstable, so Hypothesis Researcher must not rely on it unchanged—revise evidence scope or add a deterministic negative guard.\", \"applicability\": \"Only the frozen Hook three-way evaluator on real-prefix, parse-clean one-sided evidence-gap negatives in both thinking modes. Recheck if the decision contract, input scope, or model changes, or after a deterministic guard is added.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4683,
+        "output_tokens": 2320,
+        "total_tokens": 7003,
+        "calls": [
+          {
+            "completion_tokens": 2320,
+            "prompt_tokens": 4683,
+            "total_tokens": 7003,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2124
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 75
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\hook_feasibility_student_instability\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen Hook model cannot reliably realize the explicit-negative boundary of the three-label one-sided two-entity-gap evaluator: both explicit negatives were repeatedly labeled positive with thinking disabled, one identical negative flipped with thinking enabled, and positives stayed stable and parse-clean. Do not rely unchanged: add a deterministic guard or run a fixed-mode repeated negative recheck.",
+            "applicability": "Frozen Hook three-way decision over real-prefix one-sided two-entity evidence-gap cases in both probed thinking modes. Limit may release only if a fixed-mode repeated probe stably labels both explicit negatives correctly.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_KsGfN0mN2kO5HD9erp5Y4490",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook model cannot reliably realize the explicit-negative boundary of the three-label one-sided two-entity-gap evaluator: over valid repeated real-prefix probes, both explicit negatives were repeatedly labeled positive with thinking disabled, and one identical negative flipped across repetitions with thinking enabled, while positives stayed stable and parse-clean. Do not rely unchanged: add a deterministic guard for explicit negatives or run a fixed-mode repeated negative recheck before reuse.",
+                "applicability": "Frozen Hook three-way decision over real-prefix one-sided two-entity evidence-gap cases in both probed thinking modes. Limit may release only if a fixed-mode repeated probe stably labels both explicit negatives correctly.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_QaEaJ85YpFe4gSj5zvHF1117",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen Hook three-way decision over real-prefix one-sided two-entity evidence-gap cases in both probed thinking modes. Limit may release only if a fixed-mode repeated probe stably labels both explicit negatives correctly.",
+                "evidence_refs": [
+                  "hook_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook model cannot reliably realize the explicit-negative boundary of the three-label one-sided two-entity-gap evaluator: both explicit negatives were repeatedly labeled positive with thinking disabled, one identical negative flipped with thinking enabled, and positives stayed stable and parse-clean. Do not rely unchanged: add a deterministic guard or run a fixed-mode repeated negative recheck."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen Hook model cannot reliably realize the explicit-negative boundary of the three-label one-sided two-entity-gap evaluator: both explicit negatives were repeatedly labeled positive with thinking disabled, one identical negative flipped with thinking enabled, and positives stayed stable and parse-clean. Do not rely unchanged: add a deterministic guard or run a fixed-mode repeated negative recheck.\", \"applicability\": \"Frozen Hook three-way decision over real-prefix one-sided two-entity evidence-gap cases in both probed thinking modes. Limit may release only if a fixed-mode repeated probe stably labels both explicit negatives correctly.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 12213,
+        "output_tokens": 3081,
+        "total_tokens": 15294,
+        "calls": [
+          {
+            "completion_tokens": 2778,
+            "prompt_tokens": 4683,
+            "total_tokens": 7461,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2566
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 75
+          },
+          {
+            "completion_tokens": 303,
+            "prompt_tokens": 7530,
+            "total_tokens": 7833,
+            "completion_tokens_details": {
+              "reasoning_tokens": 108
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7424
+            },
+            "prompt_cache_hit_tokens": 7424,
+            "prompt_cache_miss_tokens": 106
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\hook_feasibility_student_instability\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen Hook evaluator mislabels explicit negatives under the three-way decision contract: with thinking disabled, both valid negative real-prefix cases were positive on every repetition; with thinking enabled, one identical negative flipped across repetitions. Its explicit-negative boundary is neither selective nor stable. Hypothesis Researcher must not rely unchanged on the Hook negative verdict; add a deterministic guard or a specified recheck.",
+            "applicability": "Applies only to the frozen Hook model's three-way decision on one-sided two-entity real-prefix cases with explicit negatives; the boundary may be released or rechecked under the same decision contract by a deterministic guard or a specified recheck.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_sOP3hXb0XiqKL3HMaLD91159",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook evaluator mislabels explicit negatives under the three-way decision contract: with thinking disabled, both valid negative real-prefix cases were positive on every repetition; with thinking enabled, one identical negative flipped across repetitions. Its explicit-negative boundary is neither selective nor stable. Hypothesis Researcher must not rely unchanged on the Hook negative verdict; add a deterministic guard or a specified recheck.",
+                "applicability": "Applies only to the frozen Hook model's three-way decision on one-sided two-entity real-prefix cases with explicit negatives; the boundary may be released or rechecked under the same decision contract by a deterministic guard or a specified recheck.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen Hook evaluator mislabels explicit negatives under the three-way decision contract: with thinking disabled, both valid negative real-prefix cases were positive on every repetition; with thinking enabled, one identical negative flipped across repetitions. Its explicit-negative boundary is neither selective nor stable. Hypothesis Researcher must not rely unchanged on the Hook negative verdict; add a deterministic guard or a specified recheck.\", \"applicability\": \"Applies only to the frozen Hook model's three-way decision on one-sided two-entity real-prefix cases with explicit negatives; the boundary may be released or rechecked under the same decision contract by a deterministic guard or a specified recheck.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4683,
+        "output_tokens": 1923,
+        "total_tokens": 6606,
+        "calls": [
+          {
+            "completion_tokens": 1923,
+            "prompt_tokens": 4683,
+            "total_tokens": 6606,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1718
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 75
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\distiller_not_distillable_model_boundary\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen Hook model cannot realize the validated activation contract's required negative boundary: it mislabeled the both-entities-queried negative in 4/4 parse-clean probes across two contract wordings and also a valid single-entity negative, with reference, input, and probe fidelity confirmed. Hypothesis Researcher must not rely unchanged on this Hook evaluator; add a deterministic guard for both-entity negatives or run a specified boundary recheck before reuse.",
+            "applicability": "Applies to this Hook model's decision scope on both-entity and single-entity negatives for the one-sided-search task. Upstream control success does not transfer to deployability; reuse requires a recheck with another permitted model or a corrected boundary specification.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_WLT0AWac5NjsnzJJHQXF5884",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook model cannot realize the validated activation contract's required negative boundary: it mislabeled the both-entities-queried negative in 4/4 parse-clean probes across two contract wordings and also a valid single-entity negative, with reference, input, and probe fidelity confirmed. Hypothesis Researcher must not rely unchanged on this Hook evaluator; add a deterministic guard for both-entity negatives or run a specified boundary recheck before reuse.",
+                "applicability": "Applies to this Hook model's decision scope on both-entity and single-entity negatives for the one-sided-search task. The upstream intervention's control success does not transfer to deployability; reuse is possible only after a recheck with another permitted model or a corrected boundary specification.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.applicability: String should have at most 300 characters; maximum_length=300",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.applicability:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_KMnYZIMVMiFXBcNlKfn39216",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies to this Hook model's decision scope on both-entity and single-entity negatives for the one-sided-search task. Upstream control success does not transfer to deployability; reuse requires a recheck with another permitted model or a corrected boundary specification.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook model cannot realize the validated activation contract's required negative boundary: it mislabeled the both-entities-queried negative in 4/4 parse-clean probes across two contract wordings and also a valid single-entity negative, with reference, input, and probe fidelity confirmed. Hypothesis Researcher must not rely unchanged on this Hook evaluator; add a deterministic guard for both-entity negatives or run a specified boundary recheck before reuse."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen Hook model cannot realize the validated activation contract's required negative boundary: it mislabeled the both-entities-queried negative in 4/4 parse-clean probes across two contract wordings and also a valid single-entity negative, with reference, input, and probe fidelity confirmed. Hypothesis Researcher must not rely unchanged on this Hook evaluator; add a deterministic guard for both-entity negatives or run a specified boundary recheck before reuse.\", \"applicability\": \"Applies to this Hook model's decision scope on both-entity and single-entity negatives for the one-sided-search task. Upstream control success does not transfer to deployability; reuse requires a recheck with another permitted model or a corrected boundary specification.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11563,
+        "output_tokens": 2394,
+        "total_tokens": 13957,
+        "calls": [
+          {
+            "completion_tokens": 2163,
+            "prompt_tokens": 4665,
+            "total_tokens": 6828,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1940
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 57
+          },
+          {
+            "completion_tokens": 231,
+            "prompt_tokens": 6898,
+            "total_tokens": 7129,
+            "completion_tokens_details": {
+              "reasoning_tokens": 13
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6784
+            },
+            "prompt_cache_hit_tokens": 6784,
+            "prompt_cache_miss_tokens": 114
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\distiller_not_distillable_model_boundary\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen Hook model mislabeled valid explicit negatives in 4/4 both-entity-queried probes and also mislabeled a single-entity negative; two contract wordings and parse-clean probe execution rule out parser or wiring defects. The model cannot realize the required negative boundary from the validated activation contract, so Hypothesis Researcher must not rely unchanged on it: add a deterministic guard or run a specified recheck before reusing distillation.",
+            "applicability": "Scope: the permitted Hook model, three-way distillation of the one-sided-search intervention, valid both-entity-queried and single-entity queried negatives. Limit holds until a recheck on equivalent negatives shows reliable separation, or the negative boundary is moved to a deterministic guard.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_ylbuSA6L8Bvok1jGkXwD0089",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook model mislabeled valid explicit negatives in 4/4 both-entity-queried probes and also mislabeled a single-entity negative; two contract wordings and parse-clean probe execution rule out parser or wiring defects. The model cannot realize the required negative boundary from the validated activation contract, so Hypothesis Researcher must not rely unchanged on it: add a deterministic guard or run a specified recheck before reusing distillation.",
+                "applicability": "Scope: the permitted Hook model, three-way distillation of the one-sided-search intervention, valid both-entity-queried and single-entity queried negatives. Limit holds until a recheck on equivalent negatives shows reliable separation, or the negative boundary is moved to a deterministic guard.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen Hook model mislabeled valid explicit negatives in 4/4 both-entity-queried probes and also mislabeled a single-entity negative; two contract wordings and parse-clean probe execution rule out parser or wiring defects. The model cannot realize the required negative boundary from the validated activation contract, so Hypothesis Researcher must not rely unchanged on it: add a deterministic guard or run a specified recheck before reusing distillation.\", \"applicability\": \"Scope: the permitted Hook model, three-way distillation of the one-sided-search intervention, valid both-entity-queried and single-entity queried negatives. Limit holds until a recheck on equivalent negatives shows reliable separation, or the negative boundary is moved to a deterministic guard.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4665,
+        "output_tokens": 1508,
+        "total_tokens": 6173,
+        "calls": [
+          {
+            "completion_tokens": 1508,
+            "prompt_tokens": 4665,
+            "total_tokens": 6173,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1288
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 57
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\distiller_not_distillable_model_boundary\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen deployable Hook model mislabeled the contract's required both-entity negative in 4/4 probes and also a single-entity negative, despite valid inputs and two contract wordings ruling out parser/wiring defects. The upstream intervention passed controls, so the Hook model cannot realize the required negative rejection boundary. Hypothesis Researcher: do not rely unchanged; add a deterministic guard or recheck.",
+            "applicability": "Applies only to this Hook model's three-way decision on explicit both-entity and single-entity negatives from the validated activation contract. A model change, a revised contract boundary, or a deterministic rejection guard would release the limit.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_j1ZnSzmlrAEB0LyA2TUZ7674",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen deployable Hook model mislabeled the validated activation contract's required both-entity negative in 4/4 probes and also a single-entity negative, under valid inputs with two contract wordings and parse-clean probe execution ruling out parser or wiring defects. The upstream intervention passed controls, so the Hook model cannot realize the required negative rejection boundary. Hypothesis Researcher: do not rely unchanged on this model for that boundary; add a deterministic guard or run a recheck before reuse.",
+                "applicability": "Applies only to this Hook model's three-way decision on explicit both-entity and single-entity negatives from the validated activation contract. A model change, a revised contract boundary, or a deterministic rejection guard would release the limit.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_J5cgrP6b9lYg4xlL6VRi9555",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies only to this Hook model's three-way decision on explicit both-entity and single-entity negatives from the validated activation contract. A model change, a revised contract boundary, or a deterministic rejection guard would release the limit.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "The frozen deployable Hook model mislabeled the contract's required both-entity negative in 4/4 probes and also a single-entity negative, despite valid inputs and two contract wordings ruling out parser/wiring defects. The upstream intervention passed controls, so the Hook model cannot realize the required negative rejection boundary. Hypothesis Researcher: do not rely unchanged; add a deterministic guard or recheck."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen deployable Hook model mislabeled the contract's required both-entity negative in 4/4 probes and also a single-entity negative, despite valid inputs and two contract wordings ruling out parser/wiring defects. The upstream intervention passed controls, so the Hook model cannot realize the required negative rejection boundary. Hypothesis Researcher: do not rely unchanged; add a deterministic guard or recheck.\", \"applicability\": \"Applies only to this Hook model's three-way decision on explicit both-entity and single-entity negatives from the validated activation contract. A model change, a revised contract boundary, or a deterministic rejection guard would release the limit.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11263,
+        "output_tokens": 2101,
+        "total_tokens": 13364,
+        "calls": [
+          {
+            "completion_tokens": 1864,
+            "prompt_tokens": 4665,
+            "total_tokens": 6529,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1473
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 57
+          },
+          {
+            "completion_tokens": 237,
+            "prompt_tokens": 6598,
+            "total_tokens": 6835,
+            "completion_tokens_details": {
+              "reasoning_tokens": 23
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6528
+            },
+            "prompt_cache_hit_tokens": 6528,
+            "prompt_cache_miss_tokens": 70
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\conformance_empty_passage_projection\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Compiler violated its contract obligation to project the actual retrieved passages: the Candidate's semantic classifier received an empty placeholder while real passages existed in the trajectory, so the semantic decision ignored its declared input (four mismatches). Next action: re-wire projection so the classifier receives the actual retrieved passages; completion check: Candidate classifier input equals the trajectory passages with zero mismatches.",
+            "applicability": "Applies to Compiler implementation of the frozen Mechanism Spec where retrieved-passage runtime inputs must be projected into the Candidate; covers any placeholder substitution for available trajectory data in Candidate wiring.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "teacher_work",
+            "teacher_role_id": "compiler"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_03QsleblgEfXpZ2c5XPV3186",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "teacher_work",
+                "teacher_role_id": "compiler",
+                "lesson": "Compiler violated its contract obligation to project the actual retrieved passages: the Candidate's semantic classifier received an empty placeholder while real passages existed in the trajectory, so the semantic decision ignored its declared input (four mismatches). Next action: re-wire projection so the classifier receives the actual retrieved passages; completion check: Candidate classifier input equals the trajectory passages with zero mismatches.",
+                "applicability": "Applies to Compiler implementation of the frozen Mechanism Spec where retrieved-passage runtime inputs must be projected into the Candidate; covers any placeholder substitution for available trajectory data in Candidate wiring.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Compiler violated its contract obligation to project the actual retrieved passages: the Candidate's semantic classifier received an empty placeholder while real passages existed in the trajectory, so the semantic decision ignored its declared input (four mismatches). Next action: re-wire projection so the classifier receives the actual retrieved passages; completion check: Candidate classifier input equals the trajectory passages with zero mismatches.\", \"applicability\": \"Applies to Compiler implementation of the frozen Mechanism Spec where retrieved-passage runtime inputs must be projected into the Candidate; covers any placeholder substitution for available trajectory data in Candidate wiring.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"teacher_work\", \"teacher_role_id\": \"compiler\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4575,
+        "output_tokens": 1931,
+        "total_tokens": 6506,
+        "calls": [
+          {
+            "completion_tokens": 1931,
+            "prompt_tokens": 4575,
+            "total_tokens": 6506,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1737
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4480
+            },
+            "prompt_cache_hit_tokens": 4480,
+            "prompt_cache_miss_tokens": 95
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\conformance_semantic_evaluator_boundary\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen Hook evaluator cannot selectively implement 'defer only unsupported committed values': with faithful Hook structure and deterministic action wiring, four valid mismatches deferred explicitly grounded values (explicit-link negative boundary) and treated refusals/bare mentions as committed unsupported values (no-committed-value boundary). Repeated two-boundary over-trigger; do not rely unchanged - add a deterministic guard or recheck the defer boundary.",
+            "applicability": "Applies to the Hook evaluator's defer decision on valid committed-answer and evidence-gap inputs under the conformance three-way contract. Releases when a recheck with corrected boundary examples or a deterministic guard eliminates over-deferral on explicit negatives and non-commitments.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_v7PMMUPY8E5DFqSPKvUW1144",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook evaluator cannot selectively implement 'defer only unsupported committed values': with faithful Hook structure and deterministic action wiring, four valid mismatches deferred explicitly grounded values (explicit-link negative boundary) and treated refusals/bare mentions as committed unsupported values (no-committed-value boundary). Repeated two-boundary over-trigger; do not rely unchanged - add a deterministic guard or recheck the defer boundary.",
+                "applicability": "Applies to the Hook evaluator's defer decision on valid committed-answer and evidence-gap inputs under the conformance three-way contract. Releases when a recheck with corrected boundary examples or a deterministic guard eliminates over-deferral on explicit negatives and non-commitments.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen Hook evaluator cannot selectively implement 'defer only unsupported committed values': with faithful Hook structure and deterministic action wiring, four valid mismatches deferred explicitly grounded values (explicit-link negative boundary) and treated refusals/bare mentions as committed unsupported values (no-committed-value boundary). Repeated two-boundary over-trigger; do not rely unchanged - add a deterministic guard or recheck the defer boundary.\", \"applicability\": \"Applies to the Hook evaluator's defer decision on valid committed-answer and evidence-gap inputs under the conformance three-way contract. Releases when a recheck with corrected boundary examples or a deterministic guard eliminates over-deferral on explicit negatives and non-commitments.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 13426,
+        "output_tokens": 4622,
+        "total_tokens": 18048,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 4650,
+            "total_tokens": 8746,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 42
+          },
+          {
+            "completion_tokens": 526,
+            "prompt_tokens": 8776,
+            "total_tokens": 9302,
+            "completion_tokens_details": {
+              "reasoning_tokens": 173
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8704
+            },
+            "prompt_cache_hit_tokens": 8704,
+            "prompt_cache_miss_tokens": 72
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\conformance_semantic_evaluator_boundary\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen Hook evaluator cannot realize 'defer only unsupported committed values': four valid mismatches flagged explicitly grounded values as positive and refusals/bare mentions as committed unsupported values, violating both explicit-link negative and no-committed-value uncertain clauses despite faithful Hook and deterministic wiring. Hypothesis Researcher: do not rely unchanged; add a deterministic guard for explicit negatives and evidence-gap refusals, or recheck on a valid probe.",
+            "applicability": "Scope: Hook-model evaluator on committed-answer/evidence-gap examples in conformance with faithful Hook and deterministic wiring; limit holds for explicit-negative and uncertain clauses. Release only if a valid probe shows discrimination of explicit negatives from positives on both clauses.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_4OGcVpeRUjbWJPGS9G5K6147",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook evaluator cannot realize 'defer only unsupported committed values': four valid mismatches flagged explicitly grounded values as positive and refusals/bare mentions as committed unsupported values, violating both explicit-link negative and no-committed-value uncertain clauses despite faithful Hook and deterministic wiring. Hypothesis Researcher: do not rely unchanged; add a deterministic guard for explicit negatives and evidence-gap refusals, or recheck on a valid probe.",
+                "applicability": "Scope: Hook-model evaluator on committed-answer/evidence-gap examples in conformance, with faithful structural Hook and deterministic action wiring present; limit holds for explicit-negative and uncertain clauses. Recheck or release only if a valid probe shows the model discriminating explicit negatives from positives on both clauses.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.applicability: String should have at most 300 characters; maximum_length=300",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.applicability:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_eDVuo61Z2Q7q0ry9dHC16240",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Scope: Hook-model evaluator on committed-answer/evidence-gap examples in conformance with faithful Hook and deterministic wiring; limit holds for explicit-negative and uncertain clauses. Release only if a valid probe shows discrimination of explicit negatives from positives on both clauses.",
+                "evidence_refs": [
+                  "conformance"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook evaluator cannot realize 'defer only unsupported committed values': four valid mismatches flagged explicitly grounded values as positive and refusals/bare mentions as committed unsupported values, violating both explicit-link negative and no-committed-value uncertain clauses despite faithful Hook and deterministic wiring. Hypothesis Researcher: do not rely unchanged; add a deterministic guard for explicit negatives and evidence-gap refusals, or recheck on a valid probe."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen Hook evaluator cannot realize 'defer only unsupported committed values': four valid mismatches flagged explicitly grounded values as positive and refusals/bare mentions as committed unsupported values, violating both explicit-link negative and no-committed-value uncertain clauses despite faithful Hook and deterministic wiring. Hypothesis Researcher: do not rely unchanged; add a deterministic guard for explicit negatives and evidence-gap refusals, or recheck on a valid probe.\", \"applicability\": \"Scope: Hook-model evaluator on committed-answer/evidence-gap examples in conformance with faithful Hook and deterministic wiring; limit holds for explicit-negative and uncertain clauses. Release only if a valid probe shows discrimination of explicit negatives from positives on both clauses.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 22622,
+        "output_tokens": 5134,
+        "total_tokens": 27756,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 4650,
+            "total_tokens": 8746,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 42
+          },
+          {
+            "completion_tokens": 350,
+            "prompt_tokens": 8776,
+            "total_tokens": 9126,
+            "completion_tokens_details": {
+              "reasoning_tokens": 124
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8704
+            },
+            "prompt_cache_hit_tokens": 8704,
+            "prompt_cache_miss_tokens": 72
+          },
+          {
+            "completion_tokens": 688,
+            "prompt_tokens": 9196,
+            "total_tokens": 9884,
+            "completion_tokens_details": {
+              "reasoning_tokens": 470
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8704
+            },
+            "prompt_cache_hit_tokens": 8704,
+            "prompt_cache_miss_tokens": 492
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\conformance_semantic_evaluator_boundary\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen Hook-model evaluator cannot realize \"defer only unsupported committed values\": across four valid cases it treated explicitly grounded values as positive (defer) and refusals/bare mentions as committed unsupported values, false-positive on two required boundaries despite faithful structural Hook and deterministic wiring. Do not rely unchanged; revise the three-way decision contract or add a deterministic guard, then recheck.",
+            "applicability": "Hook-model evaluator for committed-value deferral under explicit-link negative and no-committed-value uncertain contract clauses. A revised contract/guard must be re-validated on both boundaries, or a different Hook model re-probed on these cases, before reuse.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_OZdhHTMiXDRIneQnEHIl1700",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook-model evaluator cannot realize \"defer only unsupported committed values\": across four valid cases it treated explicitly grounded values as positive (defer) and treated refusals/bare mentions as committed unsupported values, false-positive on two required boundaries despite a faithful structural Hook and present deterministic action wiring. Hypothesis Researcher: do not rely on the evaluator unchanged; revise the three-way decision contract or add a deterministic guard, then recheck both boundaries.",
+                "applicability": "Hook-model evaluator for committed-value deferral under explicit-link negative and no-committed-value uncertain contract clauses. A revised contract/guard must be re-validated on both boundaries, or a different Hook model re-probed on these cases, before reuse.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_0P7vYX4ykPvUKUvgGsMl8263",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen Hook-model evaluator cannot realize \"defer only unsupported committed values\": across four valid cases it treated explicitly grounded values as positive (defer) and refusals/bare mentions as committed unsupported values, false-positive on two required boundaries despite faithful structural Hook and deterministic wiring. Do not rely unchanged; revise the three-way decision contract or add a deterministic guard, then recheck.",
+                "applicability": "Hook-model evaluator for committed-value deferral under explicit-link negative and no-committed-value uncertain contract clauses. A revised contract/guard must be re-validated on both boundaries, or a different Hook model re-probed on these cases, before reuse.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen Hook-model evaluator cannot realize \\\"defer only unsupported committed values\\\": across four valid cases it treated explicitly grounded values as positive (defer) and refusals/bare mentions as committed unsupported values, false-positive on two required boundaries despite faithful structural Hook and deterministic wiring. Do not rely unchanged; revise the three-way decision contract or add a deterministic guard, then recheck.\", \"applicability\": \"Hook-model evaluator for committed-value deferral under explicit-link negative and no-committed-value uncertain contract clauses. A revised contract/guard must be re-validated on both boundaries, or a different Hook model re-probed on these cases, before reuse.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11575,
+        "output_tokens": 2432,
+        "total_tokens": 14007,
+        "calls": [
+          {
+            "completion_tokens": 2206,
+            "prompt_tokens": 4650,
+            "total_tokens": 6856,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1983
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 42
+          },
+          {
+            "completion_tokens": 226,
+            "prompt_tokens": 6925,
+            "total_tokens": 7151,
+            "completion_tokens_details": {
+              "reasoning_tokens": 16
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6784
+            },
+            "prompt_cache_hit_tokens": 6784,
+            "prompt_cache_miss_tokens": 141
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Strict single-passage grounding gate (a passage must explicitly state the relation before committing), faithfully implemented with conformance passed, yields no net benefit: accuracy +0.6pp, 14 regressions vs 15 improvements, ~5.6x tokens, and correct retrieval-supported answers repeatedly deferred. Stop unchanged as a mandatory withhold gate; revisit only with a selective predicate that avoids deferring supported answers at acceptable cost.",
+            "applicability": "Mandatory single-passage explicit-grounding withhold gates for relation-grounded Q&A over retrieval corpora; excludes soft-signal or multi-passage grounding variants and settings where deferral cost is negligible.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_h1infMXZSyI1ZdM2UAPL9987",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Strict single-passage grounding gate (a passage must explicitly state the relation before committing), faithfully implemented with conformance passed, yields no net benefit: accuracy +0.6pp, 14 regressions vs 15 improvements, ~5.6x tokens, and correct retrieval-supported answers repeatedly deferred. Stop unchanged as a mandatory withhold gate; revisit only with a selective predicate that avoids deferring supported answers at acceptable cost.",
+                "applicability": "Mandatory single-passage explicit-grounding withhold gates for relation-grounded Q&A over retrieval corpora; excludes soft-signal or multi-passage grounding variants and settings where deferral cost is negligible.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Strict single-passage grounding gate (a passage must explicitly state the relation before committing), faithfully implemented with conformance passed, yields no net benefit: accuracy +0.6pp, 14 regressions vs 15 improvements, ~5.6x tokens, and correct retrieval-supported answers repeatedly deferred. Stop unchanged as a mandatory withhold gate; revisit only with a selective predicate that avoids deferring supported answers at acceptable cost.\", \"applicability\": \"Mandatory single-passage explicit-grounding withhold gates for relation-grounded Q&A over retrieval corpora; excludes soft-signal or multi-passage grounding variants and settings where deferral cost is negligible.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4642,
+        "output_tokens": 1881,
+        "total_tokens": 6523,
+        "calls": [
+          {
+            "completion_tokens": 1881,
+            "prompt_tokens": 4642,
+            "total_tokens": 6523,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1677
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1442
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The single-passage grounding predicate (require one passage to explicitly state the relation before committing an answer), faithfully conformant and evaluated on the same 225 records, gave no net benefit: +0.6pp accuracy, 14 regressions vs 15 improvements, ~5.6x tokens, higher instability, and repeated deferral of correct retrieval-supported answers. Stop using this predicate unchanged as the answer-commit gate; a legitimate revisit requires evidence that changes this trade-off.",
+            "applicability": "Two-phase withhold/defer mechanism whose commit predicate demands one passage explicitly state the relation, versus incumbent, on 225 records. Revisit only with evidence of materially better deferral precision or a cheaper gate form yielding accuracy gain without the ~5.6x token cost.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_h2FTWitVpjK8m1GJG6Od0565",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The single-passage grounding predicate (require one passage to explicitly state the relation before committing an answer), faithfully conformant and evaluated on the same 225 records, gave no net benefit: +0.6pp accuracy, 14 regressions vs 15 improvements, ~5.6x tokens, higher instability, and repeated deferral of correct retrieval-supported answers. Stop using this predicate unchanged as the answer-commit gate; a legitimate revisit requires evidence that changes this trade-off.",
+                "applicability": "Two-phase withhold/defer mechanism whose commit predicate demands one passage explicitly state the relation, versus incumbent, on 225 records. Revisit only with evidence of materially better deferral precision or a cheaper gate form yielding accuracy gain without the ~5.6x token cost.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The single-passage grounding predicate (require one passage to explicitly state the relation before committing an answer), faithfully conformant and evaluated on the same 225 records, gave no net benefit: +0.6pp accuracy, 14 regressions vs 15 improvements, ~5.6x tokens, higher instability, and repeated deferral of correct retrieval-supported answers. Stop using this predicate unchanged as the answer-commit gate; a legitimate revisit requires evidence that changes this trade-off.\", \"applicability\": \"Two-phase withhold/defer mechanism whose commit predicate demands one passage explicitly state the relation, versus incumbent, on 225 records. Revisit only with evidence of materially better deferral precision or a cheaper gate form yielding accuracy gain without the ~5.6x token cost.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4642,
+        "output_tokens": 1801,
+        "total_tokens": 6443,
+        "calls": [
+          {
+            "completion_tokens": 1801,
+            "prompt_tokens": 4642,
+            "total_tokens": 6443,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1572
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 34
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Single-passage grounding (require one passage to explicitly state the relation before committing) is unsupported: vs the incumbent on 225 records it gained only +0.6pp accuracy with 14 regressions vs 15 improvements, deferred correct retrieval-supported answers, lowered stable-correct, and raised tokens ~5.6x. Disposition: stop unchanged. Revisit only with evidence of differential benefit on genuinely unsupported cases, preserved supported-answer rate, and acceptable cost.",
+            "applicability": "Scope: single-passage grounding / withhold-defer mechanisms for retrieval-supported QA under the frozen Mechanism Spec on this 225-record comparison. A legitimate revisit requires separately measured selectivity on unsupported relations, no deferral of supported answers, and cost near the incumbent.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_3QW4SJEJtIyRaJClxIy70971",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Single-passage grounding (require one passage to explicitly state the relation before committing) is unsupported: vs the incumbent on 225 records it gained only +0.6pp accuracy with 14 regressions vs 15 improvements, deferred correct retrieval-supported answers, lowered stable-correct, and raised tokens ~5.6x. Disposition: stop unchanged. Revisit only with evidence of differential benefit on genuinely unsupported cases, preserved supported-answer rate, and acceptable cost.",
+                "applicability": "Scope: single-passage grounding / withhold-defer mechanisms for retrieval-supported QA under the frozen Mechanism Spec on this 225-record comparison. A legitimate revisit requires separately measured selectivity on unsupported relations, no deferral of supported answers, and cost near the incumbent.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Single-passage grounding (require one passage to explicitly state the relation before committing) is unsupported: vs the incumbent on 225 records it gained only +0.6pp accuracy with 14 regressions vs 15 improvements, deferred correct retrieval-supported answers, lowered stable-correct, and raised tokens ~5.6x. Disposition: stop unchanged. Revisit only with evidence of differential benefit on genuinely unsupported cases, preserved supported-answer rate, and acceptable cost.\", \"applicability\": \"Scope: single-passage grounding / withhold-defer mechanisms for retrieval-supported QA under the frozen Mechanism Spec on this 225-record comparison. A legitimate revisit requires separately measured selectivity on unsupported relations, no deferral of supported answers, and cost near the incumbent.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4642,
+        "output_tokens": 1648,
+        "total_tokens": 6290,
+        "calls": [
+          {
+            "completion_tokens": 1648,
+            "prompt_tokens": 4642,
+            "total_tokens": 6290,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1421
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 34
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_hook_false_positive_scope\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen semantic Hook model activated positive on two distinct valid explicit contract-negative questions (joint and single-entity); one caused a direct regression, and no intended positive behavior appeared. Narrow boundary: the Hook's positive decision does not separate genuine one-sided two-candidate evidence gaps from explicit contract negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck before any use.",
+            "applicability": "Frozen Hook three-way decision on valid real evaluation prefixes with explicit contract-negative joint/single-entity questions. Released if a matched probe shows no positive activation on explicit negatives or a deterministic negative filter precedes Hook activation.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Semantic Hook for detecting genuine one-sided two-candidate evidence gaps: stop unchanged. Faithful runs produced positive activations only on explicit contract-negative questions, no intended positive behavior, no attributed utility (improvements only on Hook-negative no-op runs), accuracy declined, Hook cost rose sharply. Revisit only with a mechanism showing selective activation on genuine gaps with measured utility at acceptable cost.",
+            "applicability": "Applies to semantic-Hook-based gap detection in this two-candidate evaluation setting. It does not cover Hook contracts with explicit negative-rule pre-filtering or other decision scopes; those need their own selectivity and utility evidence.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_UpPZt0nmvHaJv0CI6OoI1934",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook model activated positive on two distinct valid explicit contract-negative questions (joint and single-entity); one caused a direct regression, and no intended positive behavior appeared. Narrow boundary: the Hook's positive decision does not separate genuine one-sided two-candidate evidence gaps from explicit contract negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck before any use.",
+                "applicability": "Observed only on the frozen Hook's three-way decision for valid real evaluation prefixes containing explicit contract-negative joint/single-entity questions. Limit is released if a matched probe shows no positive activation on explicit negatives, or if a deterministic negative-rule filter precedes Hook activation.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Using a semantic Hook to detect genuine one-sided two-candidate evidence gaps: stop unchanged. With faithful implementation, positive activations occurred only on explicit contract-negative questions, no intended positive behavior was observed, and there was no attributed utility: improvements appeared only on Hook-negative no-op runs, while accuracy declined and Hook cost rose sharply. Revisit only with a mechanism showing selective activation on genuine gaps plus measured utility at acceptable cost.",
+                "applicability": "Applies to semantic-Hook-based gap detection in this two-candidate evaluation setting. It does not cover Hook contracts with explicit negative-rule pre-filtering or other decision scopes; those need their own selectivity and utility evidence.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.applicability: String should have at most 300 characters; maximum_length=300\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.applicability:string_too_long",
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_wkDcI0SnXq7e57Nb5P582347",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen Hook three-way decision on valid real evaluation prefixes with explicit contract-negative joint/single-entity questions. Released if a matched probe shows no positive activation on explicit negatives or a deterministic negative filter precedes Hook activation.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook model activated positive on two distinct valid explicit contract-negative questions (joint and single-entity); one caused a direct regression, and no intended positive behavior appeared. Narrow boundary: the Hook's positive decision does not separate genuine one-sided two-candidate evidence gaps from explicit contract negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck before any use."
+              },
+              {
+                "applicability": "Applies to semantic-Hook-based gap detection in this two-candidate evaluation setting. It does not cover Hook contracts with explicit negative-rule pre-filtering or other decision scopes; those need their own selectivity and utility evidence.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic Hook for detecting genuine one-sided two-candidate evidence gaps: stop unchanged. Faithful runs produced positive activations only on explicit contract-negative questions, no intended positive behavior, no attributed utility (improvements only on Hook-negative no-op runs), accuracy declined, Hook cost rose sharply. Revisit only with a mechanism showing selective activation on genuine gaps with measured utility at acceptable cost."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen semantic Hook model activated positive on two distinct valid explicit contract-negative questions (joint and single-entity); one caused a direct regression, and no intended positive behavior appeared. Narrow boundary: the Hook's positive decision does not separate genuine one-sided two-candidate evidence gaps from explicit contract negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck before any use.\", \"applicability\": \"Frozen Hook three-way decision on valid real evaluation prefixes with explicit contract-negative joint/single-entity questions. Released if a matched probe shows no positive activation on explicit negatives or a deterministic negative filter precedes Hook activation.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Semantic Hook for detecting genuine one-sided two-candidate evidence gaps: stop unchanged. Faithful runs produced positive activations only on explicit contract-negative questions, no intended positive behavior, no attributed utility (improvements only on Hook-negative no-op runs), accuracy declined, Hook cost rose sharply. Revisit only with a mechanism showing selective activation on genuine gaps with measured utility at acceptable cost.\", \"applicability\": \"Applies to semantic-Hook-based gap detection in this two-candidate evaluation setting. It does not cover Hook contracts with explicit negative-rule pre-filtering or other decision scopes; those need their own selectivity and utility evidence.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 24388,
+        "output_tokens": 6934,
+        "total_tokens": 31322,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 4668,
+            "total_tokens": 8764,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 60
+          },
+          {
+            "completion_tokens": 2036,
+            "prompt_tokens": 8794,
+            "total_tokens": 10830,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1658
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8704
+            },
+            "prompt_cache_hit_tokens": 8704,
+            "prompt_cache_miss_tokens": 90
+          },
+          {
+            "completion_tokens": 802,
+            "prompt_tokens": 10926,
+            "total_tokens": 11728,
+            "completion_tokens_details": {
+              "reasoning_tokens": 443
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10752
+            },
+            "prompt_cache_hit_tokens": 10752,
+            "prompt_cache_miss_tokens": 174
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_hook_false_positive_scope\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen semantic Hook model over-triggers on explicit contract negatives: on two valid evaluation prefixes (a joint and a single-entity explicit-negative question) it emitted positive activations, one causing a direct regression, with no intended positive behavior. It cannot selectively detect genuine one-sided evidence gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or recheck its selectivity before reuse.",
+            "applicability": "Semantic Hook three-way decision on two-candidate evaluation prefixes with explicit contract-negative joint and single-entity questions, faithful Candidate wiring. Recheck after adding an explicit-negative guard or recalibrating the Hook so neither case over-triggers.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Semantic-Hook detection of one-sided two-candidate evidence gaps showed no attributed utility: positive activations fell only on explicit contract negatives, improvements came only from Hook-negative no-op runs, accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with a variant showing differential positive-case benefit and acceptable cost.",
+            "applicability": "Semantic-Hook evidence-gap detection in two-candidate evaluation on valid prefixes; continue only with separately measured positive-case utility and bounded Hook cost, or a cheaper selective mechanism.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_6xTdYXJqWs3Chh6zaaFQ8658",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook model over-triggers on explicit contract negatives: on two valid evaluation prefixes (a joint and a single-entity explicit-negative question) it emitted positive activations, one causing a direct regression, with no intended positive behavior. It cannot selectively detect genuine one-sided evidence gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or recheck its selectivity before reuse.",
+                "applicability": "Semantic Hook three-way decision on two-candidate evaluation prefixes with explicit contract-negative joint and single-entity questions, faithful Candidate wiring. Recheck after adding an explicit-negative guard or recalibrating the Hook so neither case over-triggers.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook detection of one-sided two-candidate evidence gaps showed no attributed utility: positive activations fell only on explicit contract negatives, improvements came only from Hook-negative no-op runs, accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with a variant showing differential positive-case benefit and acceptable cost.",
+                "applicability": "Semantic-Hook evidence-gap detection in two-candidate evaluation on valid prefixes; continue only with separately measured positive-case utility and bounded Hook cost, or a cheaper selective mechanism.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen semantic Hook model over-triggers on explicit contract negatives: on two valid evaluation prefixes (a joint and a single-entity explicit-negative question) it emitted positive activations, one causing a direct regression, with no intended positive behavior. It cannot selectively detect genuine one-sided evidence gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or recheck its selectivity before reuse.\", \"applicability\": \"Semantic Hook three-way decision on two-candidate evaluation prefixes with explicit contract-negative joint and single-entity questions, faithful Candidate wiring. Recheck after adding an explicit-negative guard or recalibrating the Hook so neither case over-triggers.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Semantic-Hook detection of one-sided two-candidate evidence gaps showed no attributed utility: positive activations fell only on explicit contract negatives, improvements came only from Hook-negative no-op runs, accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with a variant showing differential positive-case benefit and acceptable cost.\", \"applicability\": \"Semantic-Hook evidence-gap detection in two-candidate evaluation on valid prefixes; continue only with separately measured positive-case utility and bounded Hook cost, or a cheaper selective mechanism.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4668,
+        "output_tokens": 3213,
+        "total_tokens": 7881,
+        "calls": [
+          {
+            "completion_tokens": 3213,
+            "prompt_tokens": 4668,
+            "total_tokens": 7881,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2789
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 60
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_hook_false_positive_scope\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen semantic Hook model positively activates on explicit contract-negative joint and single-entity questions in two valid evaluation prefixes, one activation causing a direct regression and no intended positive behavior; it does not selectively detect genuine one-sided two-candidate evidence gaps. Do not rely unchanged: add a deterministic explicit-negative guard or recheck Hook selectivity on negatives before reuse.",
+            "applicability": "Applies to the frozen Hook model's decisions on valid evaluation prefixes under the current contract, covering explicit contract-negative joint and single-entity questions. A release/recheck needs valid positive cases with matched negatives showing zero negative activation.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Semantic-Hook gating for one-sided two-candidate evidence gaps is not viable as run: every positive activation hit an explicit contract-negative and aggregate evidence shows no attributed utility - gains only on Hook-negative no-op runs, accuracy declined, Hook cost rose sharply. Stop unchanged; revisit only with a design measuring activation-attributed benefit on genuine positives and bounded cost.",
+            "applicability": "Applies to the semantic-Hook soft-intervention class under the current decision contract and evaluation prefixes. A legitimate revisit needs a redesigned mechanism with measured activation-attributed utility, zero explicit-negative activation, and cost-bounded operation.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_8Sm1QlPUyCZ15EcsJm062726",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen semantic Hook model positively activates on explicit contract-negative joint and single-entity questions in two valid evaluation prefixes, one activation causing a direct regression and no intended positive behavior; it does not selectively detect genuine one-sided two-candidate evidence gaps. Do not rely unchanged: add a deterministic explicit-negative guard or recheck Hook selectivity on negatives before reuse.",
+                "applicability": "Applies to the frozen Hook model's decisions on valid evaluation prefixes under the current contract, covering explicit contract-negative joint and single-entity questions. A release/recheck needs valid positive cases with matched negatives showing zero negative activation.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook gating for one-sided two-candidate evidence gaps is not viable as run: every positive activation hit an explicit contract-negative and aggregate evidence shows no attributed utility - gains only on Hook-negative no-op runs, accuracy declined, Hook cost rose sharply. Stop unchanged; revisit only with a design measuring activation-attributed benefit on genuine positives and bounded cost.",
+                "applicability": "Applies to the semantic-Hook soft-intervention class under the current decision contract and evaluation prefixes. A legitimate revisit needs a redesigned mechanism with measured activation-attributed utility, zero explicit-negative activation, and cost-bounded operation.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen semantic Hook model positively activates on explicit contract-negative joint and single-entity questions in two valid evaluation prefixes, one activation causing a direct regression and no intended positive behavior; it does not selectively detect genuine one-sided two-candidate evidence gaps. Do not rely unchanged: add a deterministic explicit-negative guard or recheck Hook selectivity on negatives before reuse.\", \"applicability\": \"Applies to the frozen Hook model's decisions on valid evaluation prefixes under the current contract, covering explicit contract-negative joint and single-entity questions. A release/recheck needs valid positive cases with matched negatives showing zero negative activation.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Semantic-Hook gating for one-sided two-candidate evidence gaps is not viable as run: every positive activation hit an explicit contract-negative and aggregate evidence shows no attributed utility - gains only on Hook-negative no-op runs, accuracy declined, Hook cost rose sharply. Stop unchanged; revisit only with a design measuring activation-attributed benefit on genuine positives and bounded cost.\", \"applicability\": \"Applies to the semantic-Hook soft-intervention class under the current decision contract and evaluation prefixes. A legitimate revisit needs a redesigned mechanism with measured activation-attributed utility, zero explicit-negative activation, and cost-bounded operation.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 13462,
+        "output_tokens": 6893,
+        "total_tokens": 20355,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 4668,
+            "total_tokens": 8764,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 60
+          },
+          {
+            "completion_tokens": 2797,
+            "prompt_tokens": 8794,
+            "total_tokens": 11591,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2453
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8704
+            },
+            "prompt_cache_hit_tokens": 8704,
+            "prompt_cache_miss_tokens": 90
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_no_attributed_utility",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_no_attributed_utility\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Defer-to-search Hook lacked utility: of eight activations, every follow-up search produced no new correct answer, activation cases regressed or stayed equal, all improvements came from no-op paths, one definitive answer was falsely deferred, and Hook cost added ~271k tokens. Disposition: stop unchanged; revisit only with a selectivity-gated trigger sparing definitive answers plus matched-control proof that deferral improves accuracy net of cost.",
+            "applicability": "Applies to one-shot Hook deferral of evidence-gap final answers to induce targeted follow-up search in comparable ~75-example evaluations. Not applicable to deterministic guards, validated retrieval-augmentation, or settings where the follow-up search is shown to yield new correct answers.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_jSXGWVbztRoHIQYRvJUG5901",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Defer-to-search Hook mechanism lacked utility: across eight activations in the 75-example evaluation, every induced follow-up search produced no new correct answer, activation cases regressed or stayed equal, all accuracy improvements occurred under no-op paths, one definitive answer was falsely deferred, and Hook cost added ~271k input tokens. Disposition: stop unchanged; revisit only with a selectivity-gated trigger that spares definitive answers and a matched-control demonstration that deferral itself (not no-op paths) improves accuracy net of Hook cost.",
+                "applicability": "Applies to one-shot Hook deferral of evidence-gap final answers to induce targeted follow-up search in comparable ~75-example evaluations. Not applicable to deterministic guards, validated retrieval-augmentation, or settings where the follow-up search is shown to yield new correct answers.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_NLrDh4hvwzwtStGOTTmD9854",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies to one-shot Hook deferral of evidence-gap final answers to induce targeted follow-up search in comparable ~75-example evaluations. Not applicable to deterministic guards, validated retrieval-augmentation, or settings where the follow-up search is shown to yield new correct answers.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Defer-to-search Hook lacked utility: of eight activations, every follow-up search produced no new correct answer, activation cases regressed or stayed equal, all improvements came from no-op paths, one definitive answer was falsely deferred, and Hook cost added ~271k tokens. Disposition: stop unchanged; revisit only with a selectivity-gated trigger sparing definitive answers plus matched-control proof that deferral improves accuracy net of cost."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Defer-to-search Hook lacked utility: of eight activations, every follow-up search produced no new correct answer, activation cases regressed or stayed equal, all improvements came from no-op paths, one definitive answer was falsely deferred, and Hook cost added ~271k tokens. Disposition: stop unchanged; revisit only with a selectivity-gated trigger sparing definitive answers plus matched-control proof that deferral improves accuracy net of cost.\", \"applicability\": \"Applies to one-shot Hook deferral of evidence-gap final answers to induce targeted follow-up search in comparable ~75-example evaluations. Not applicable to deterministic guards, validated retrieval-augmentation, or settings where the follow-up search is shown to yield new correct answers.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11386,
+        "output_tokens": 2532,
+        "total_tokens": 13918,
+        "calls": [
+          {
+            "completion_tokens": 2061,
+            "prompt_tokens": 4628,
+            "total_tokens": 6689,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1634
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1428
+          },
+          {
+            "completion_tokens": 471,
+            "prompt_tokens": 6758,
+            "total_tokens": 7229,
+            "completion_tokens_details": {
+              "reasoning_tokens": 232
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 2150
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_selectivity_and_cost",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_reject_selectivity_and_cost\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Second-entity search trigger for count/possession comparisons with one-sided evidence over-fired: Hook classified essentially every search event; one target case improved but an out-of-scope shared-membership false positive regressed a stable-correct case; accuracy flat, consistency/majority-correct declined, regressions exceeded improvements, tokens +93%. Disposition: narrow to proven activation-attributed benefit/selectivity; revisit only with matched-control net accuracy gain at bounded cost.",
+            "applicability": "Count/possession comparisons with one-sided evidence; Hook-mediated semantic triggering of second-entity search; candidate-review evaluation with activation attribution and regression/cost balance.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_4d5ul4A9sugbkytcEo1V5036",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Second-entity search trigger for count/possession comparisons with one-sided evidence over-fired: the Hook classified essentially every search event. One target case improved but an out-of-scope shared-membership false positive regressed a stable-correct case; accuracy flat, consistency/majority-correct declined, regressions exceeded improvements, tokens +93%. Disposition: narrow — restrict triggering to cases with proven activation-attributed benefit and selectivity; revisit only with matched-control evidence of net accuracy gain at bounded cost.",
+                "applicability": "Count/possession comparisons with one-sided evidence; Hook-mediated semantic triggering of second-entity search; candidate-review evaluation with activation attribution and aggregate regression/cost balance.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_xy9dwmms0pf8ebcoftIY8947",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Count/possession comparisons with one-sided evidence; Hook-mediated semantic triggering of second-entity search; candidate-review evaluation with activation attribution and aggregate regression/cost balance.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Second-entity search trigger for count/possession comparisons with one-sided evidence over-fired: Hook classified essentially every search event; one target case improved but an out-of-scope shared-membership false positive regressed a stable-correct case; accuracy flat, consistency/majority-correct declined, regressions exceeded improvements, tokens +93%. Disposition: narrow — restrict to proven activation-attributed benefit and selectivity; revisit only with matched-control net accuracy gain at bounded cost."
+              }
+            ]
+          },
+          "content": "The same fields still fail validation. Preserve the decision and all valid fields; repair only the listed fields, then submit the complete object again.\nStructured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_hhZh0Dje2kPVhqbS6Pj30906",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Count/possession comparisons with one-sided evidence; Hook-mediated semantic triggering of second-entity search; candidate-review evaluation with activation attribution and regression/cost balance.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Second-entity search trigger for count/possession comparisons with one-sided evidence over-fired: Hook classified essentially every search event; one target case improved but an out-of-scope shared-membership false positive regressed a stable-correct case; accuracy flat, consistency/majority-correct declined, regressions exceeded improvements, tokens +93%. Disposition: narrow to proven activation-attributed benefit/selectivity; revisit only with matched-control net accuracy gain at bounded cost."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Second-entity search trigger for count/possession comparisons with one-sided evidence over-fired: Hook classified essentially every search event; one target case improved but an out-of-scope shared-membership false positive regressed a stable-correct case; accuracy flat, consistency/majority-correct declined, regressions exceeded improvements, tokens +93%. Disposition: narrow to proven activation-attributed benefit/selectivity; revisit only with matched-control net accuracy gain at bounded cost.\", \"applicability\": \"Count/possession comparisons with one-sided evidence; Hook-mediated semantic triggering of second-entity search; candidate-review evaluation with activation attribution and regression/cost balance.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 20659,
+        "output_tokens": 3607,
+        "total_tokens": 24266,
+        "calls": [
+          {
+            "completion_tokens": 3157,
+            "prompt_tokens": 4630,
+            "total_tokens": 7787,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2943
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3200
+            },
+            "prompt_cache_hit_tokens": 3200,
+            "prompt_cache_miss_tokens": 1430
+          },
+          {
+            "completion_tokens": 220,
+            "prompt_tokens": 7856,
+            "total_tokens": 8076,
+            "completion_tokens_details": {
+              "reasoning_tokens": 12
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7680
+            },
+            "prompt_cache_hit_tokens": 7680,
+            "prompt_cache_miss_tokens": 176
+          },
+          {
+            "completion_tokens": 230,
+            "prompt_tokens": 8173,
+            "total_tokens": 8403,
+            "completion_tokens_details": {
+              "reasoning_tokens": 24
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8064
+            },
+            "prompt_cache_hit_tokens": 8064,
+            "prompt_cache_miss_tokens": 109
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_validation_unchanged_compiler_work",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v5\\runs\\candidate_validation_unchanged_compiler_work\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Compiler resubmitted the Candidate unchanged, retaining both deterministic defects (first-entity-only query labeled as covering both entities; no exactly-one defer with feedback) despite carrying the prior validation obligations. Consequence: validation rejected the resubmission; the attempt starts anew. Next: implement the query-coverage and one-shot-deferral fixes before resubmitting; completion when validation no longer reports the unchanged rejected candidate.",
+            "applicability": "Applies to Compiler resubmissions in the candidate_validation revision loop: resubmitting an unchanged artifact that carries prior validation obligations is a Compiler work failure, not evidence about the research direction or the frozen Student model, and it exhausts the compile-retry budget.",
+            "evidence_refs": [
+              "validation"
+            ],
+            "experience_type": "teacher_work",
+            "teacher_role_id": "compiler"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_JYGZry7eUz9uiLnrXeUt1886",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "teacher_work",
+                "teacher_role_id": "compiler",
+                "lesson": "Compiler resubmitted the Candidate unchanged, retaining both deterministic defects (first-entity-only query labeled as covering both entities; no exactly-one defer with required feedback) despite carrying the specific prior validation obligations. Consequence: candidate_validation rejected the unchanged resubmission and the attempt starts a new research attempt. Next: actually implement the required query-coverage and one-shot-deferral fixes before resubmitting; completion when validation no longer reports the unchanged rejected candidate.",
+                "applicability": "Applies to Compiler resubmissions in the candidate_validation revision loop: resubmitting an unchanged artifact that carries prior validation obligations is a Compiler work failure, not evidence about the research direction or the frozen Student model, and it exhausts the compile-retry budget.",
+                "evidence_refs": [
+                  "validation"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.teacher_work.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.teacher_work.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_lIVG8Ub3Crf0TzgT3TN66549",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies to Compiler resubmissions in the candidate_validation revision loop: resubmitting an unchanged artifact that carries prior validation obligations is a Compiler work failure, not evidence about the research direction or the frozen Student model, and it exhausts the compile-retry budget.",
+                "evidence_refs": [
+                  "validation"
+                ],
+                "experience_type": "teacher_work",
+                "lesson": "Compiler resubmitted the Candidate unchanged, retaining both deterministic defects (first-entity-only query labeled as covering both entities; no exactly-one defer with feedback) despite carrying the prior validation obligations. Consequence: validation rejected the resubmission; the attempt starts anew. Next: implement the query-coverage and one-shot-deferral fixes before resubmitting; completion when validation no longer reports the unchanged rejected candidate.",
+                "teacher_role_id": "compiler"
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Compiler resubmitted the Candidate unchanged, retaining both deterministic defects (first-entity-only query labeled as covering both entities; no exactly-one defer with feedback) despite carrying the prior validation obligations. Consequence: validation rejected the resubmission; the attempt starts anew. Next: implement the query-coverage and one-shot-deferral fixes before resubmitting; completion when validation no longer reports the unchanged rejected candidate.\", \"applicability\": \"Applies to Compiler resubmissions in the candidate_validation revision loop: resubmitting an unchanged artifact that carries prior validation obligations is a Compiler work failure, not evidence about the research direction or the frozen Student model, and it exhausts the compile-retry budget.\", \"evidence_refs\": [\"validation\"], \"experience_type\": \"teacher_work\", \"teacher_role_id\": \"compiler\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 13177,
+        "output_tokens": 4528,
+        "total_tokens": 17705,
+        "calls": [
+          {
+            "completion_tokens": 3885,
+            "prompt_tokens": 4612,
+            "total_tokens": 8497,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3652
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4608
+            },
+            "prompt_cache_hit_tokens": 4608,
+            "prompt_cache_miss_tokens": 4
+          },
+          {
+            "completion_tokens": 643,
+            "prompt_tokens": 8565,
+            "total_tokens": 9208,
+            "completion_tokens_details": {
+              "reasoning_tokens": 420
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8448
+            },
+            "prompt_cache_hit_tokens": 8448,
+            "prompt_cache_miss_tokens": 117
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

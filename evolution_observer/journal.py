@@ -19,6 +19,8 @@ ROLE_KINDS = {
     "compile_candidate",
     "verify_conformance",
     "review_candidate",
+    "summarize_capability",
+    "summarize_direction",
 }
 
 MECHANISM_KINDS = {

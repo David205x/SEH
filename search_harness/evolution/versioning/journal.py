@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import uuid
 from collections.abc import Iterable, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Iterator, Literal
+
+from search_harness.evolution.identifiers import new_candidate_attempt_id
 
 from .validation import ValidationReport
 from .workspace import CandidateWorkspace, FileEdit, HarnessSnapshot
@@ -32,7 +33,7 @@ class CandidateAttemptEvent:
     event_type: str
     timestamp: str
     payload: Mapping[str, Any]
-    schema_version: int = 2
+    schema_version: int = 3
 
 
 @dataclass(frozen=True)
@@ -219,9 +220,8 @@ class CandidateAttempt:
 class CandidateAttemptJournal:
     """UTF-8 JSONL event store used to reconstruct in-memory candidates."""
 
-    def __init__(self, path: Path, *, legacy_path: Path | None = None) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
-        self.legacy_path = legacy_path
 
     def start(
         self,
@@ -230,7 +230,7 @@ class CandidateAttemptJournal:
         *,
         metadata: Mapping[str, Any] | None = None,
     ) -> CandidateAttempt:
-        candidate_attempt_id = _new_candidate_attempt_id()
+        candidate_attempt_id = new_candidate_attempt_id()
         self.append(
             candidate_attempt_id,
             "started",
@@ -343,39 +343,33 @@ class CandidateAttemptJournal:
         self,
         candidate_attempt_id: str | None = None,
     ) -> tuple[CandidateAttemptEvent, ...]:
-        paths = tuple(
-            path
-            for path in (self.legacy_path, self.path)
-            if path is not None and path.exists()
-        )
-        if not paths:
+        if not self.path.exists():
             return ()
         result: list[CandidateAttemptEvent] = []
-        for path in paths:
-            for line_number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(),
-                start=1,
+        for line_number, line in enumerate(
+            self.path.read_text(encoding="utf-8").splitlines(),
+            start=1,
+        ):
+            if not line.strip():
+                continue
+            try:
+                raw = json.loads(line)
+                event = _event_from_dict(raw)
+            except (
+                KeyError,
+                TypeError,
+                ValueError,
+                json.JSONDecodeError,
+            ) as exc:
+                raise ValueError(
+                    "invalid Candidate Attempt journal event at "
+                    f"{self.path}:{line_number}: {exc}"
+                ) from exc
+            if (
+                candidate_attempt_id is None
+                or event.candidate_attempt_id == candidate_attempt_id
             ):
-                if not line.strip():
-                    continue
-                try:
-                    raw = json.loads(line)
-                    event = _event_from_dict(raw)
-                except (
-                    KeyError,
-                    TypeError,
-                    ValueError,
-                    json.JSONDecodeError,
-                ) as exc:
-                    raise ValueError(
-                        "invalid Candidate Attempt journal event at "
-                        f"{path}:{line_number}: {exc}"
-                    ) from exc
-                if (
-                    candidate_attempt_id is None
-                    or event.candidate_attempt_id == candidate_attempt_id
-                ):
-                    result.append(event)
+                result.append(event)
         return tuple(sorted(result, key=lambda event: event.sequence))
 
     def list_summaries(self) -> tuple[CandidateAttemptState, ...]:
@@ -464,15 +458,12 @@ def _event_to_dict(event: CandidateAttemptEvent) -> dict[str, Any]:
 
 def _event_from_dict(raw: Mapping[str, Any]) -> CandidateAttemptEvent:
     schema_version = raw["schema_version"]
-    if schema_version == 2:
-        candidate_attempt_id = str(raw["candidate_attempt_id"])
-    elif schema_version == 1:
-        candidate_attempt_id = str(raw["iteration_id"])
-    else:
+    if schema_version != 3:
         raise ValueError(
             "unsupported Candidate Attempt schema_version: "
             f"{schema_version}"
         )
+    candidate_attempt_id = str(raw["candidate_attempt_id"])
     payload = raw["payload"]
     if not isinstance(payload, dict):
         raise TypeError("Candidate Attempt event payload must be an object")
@@ -494,8 +485,3 @@ def _file_edit_from_dict(raw: Mapping[str, Any]) -> FileEdit:
     if content is not None and not isinstance(content, str):
         raise TypeError("journal file edit content must be a string or null")
     return FileEdit(operation=operation, path=str(raw["path"]), content=content)
-
-
-def _new_candidate_attempt_id() -> str:
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    return f"candidate_attempt_{timestamp}_{uuid.uuid4().hex[:8]}"

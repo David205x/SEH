@@ -1,0 +1,269 @@
+{
+  "schema_version": "1.1",
+  "artifact_id": "STAGE-001-ROUTE-BASELINE-001",
+  "stage_id": "STAGE-001",
+  "task_id": "TASK-004",
+  "updated_by_task_id": "TASK-005",
+  "evidence_scope": "development_check_only",
+  "source_commit": "72754289913aa0c251aeb559b8ee698862f56150",
+  "static_inventory_expectations": {
+    "work_kind_count": 15,
+    "completed_transition_handler_count": 15,
+    "direct_one_transition_call_count": 29,
+    "transition_complete_reason_count": 4
+  },
+  "route_outcome_taxonomy": {
+    "provisional": "The current route schedules more work or a bounded revision and does not create a trajectory_settled event.",
+    "settled_positive": "A durable positive lifecycle boundary creates a typed trajectory_settled event.",
+    "settled_negative": "A durable negative research outcome ends the current path because evidence, feasibility, implementation, review, or a path-local revision budget cannot support further progress.",
+    "invalid_indeterminate": "Execution or evidence validity is insufficient for a research conclusion, including unrecovered work failure, controller-level pause, or an agenda drain without a typed terminal reason."
+  },
+  "lineage_contract": {
+    "run_id": "Root identity for one Controller Run and optimizer episode.",
+    "generation_id": "Readable run-local generation identity stored in TrajectoryLineage.",
+    "research_attempt_id": "Readable generation-local research attempt identity stored in TrajectoryLineage.",
+    "candidate_attempt_id": "Candidate journal identity bound to run, generation, research attempt, and source logical work metadata.",
+    "work_ids": "logical_work_id is retry-stable; work_id identifies one physical attempt.",
+    "settled_trajectory_contract": "Typed Candidate, Research, and Work settlement scopes bind terminal event sequence, verdict, and artifact provenance."
+  },
+  "role_identity_baseline": {
+    "present": [
+      "role.id",
+      "role.version",
+      "model provenance",
+      "output contract id/version/schema digest",
+      "validated role input",
+      "resource config",
+      "template_root path"
+    ],
+    "missing": [
+      "base prompt/template content digest",
+      "role contract content digest distinct from output schema digest",
+      "rendered input-view digest",
+      "role-scoped base prompt and rendered input-view identity binding"
+    ],
+    "source_refs": [
+      "search_harness/evolution/research/roles/role_execution.py#build_role_artifact",
+      "search_harness/evolution/research/roles/contracts.py#TeacherRoleDefinition"
+    ]
+  },
+  "route_groups": [
+    {
+      "id": "RG-CONTROLLER",
+      "source_work_kind": "controller_lifecycle",
+      "owner": "EvolutionController",
+      "source_ref": "search_harness/evolution/control/controller.py#EvolutionController",
+      "source_markers": ["def initialize(", "def _recover_interrupted_work(", "def _drain_transitions("],
+      "branches": [
+        {"id": "R-C01", "trigger": "initialize", "next": "evaluate_incumbent", "obligation": "evaluate the incumbent before research", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-C02", "trigger": "interrupted_work_with_effect", "next": "work_completed_then_transition", "obligation": "reuse the atomically persisted effect", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-C03", "trigger": "interrupted_work_without_effect", "next": "work_failed_then_retry_or_pause", "obligation": "settle the failed physical work attempt without inferring a research verdict", "outcome_state": "invalid_indeterminate", "terminal_source": false},
+        {"id": "R-C04", "trigger": "failed_work_retry_available", "next": "same_logical_work_new_physical_attempt", "obligation": "retain the invalid work-attempt settlement and retry with a new work_id", "outcome_state": "invalid_indeterminate", "terminal_source": false},
+        {"id": "R-C05", "trigger": "failed_work_retry_exhausted", "next": "run_paused", "obligation": "preserve failure artifact and require explicit recovery", "outcome_state": "invalid_indeterminate", "terminal_source": false},
+        {"id": "R-C06", "trigger": "controller_work_or_token_budget_reached", "next": "run_paused", "obligation": "stop before starting another effect", "outcome_state": "invalid_indeterminate", "terminal_source": false},
+        {"id": "R-C07", "trigger": "agenda_drained_without_typed_terminal", "next": "run_completed", "obligation": "do not infer a research verdict from an empty agenda", "outcome_state": "invalid_indeterminate", "terminal_source": false},
+        {"id": "R-C08", "trigger": "explicit_resume_after_failed_pause", "next": "same_work_kind_retry_then_run_resumed", "obligation": "resume without replaying completed work", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-EVALUATE-INCUMBENT",
+      "source_work_kind": "evaluate_incumbent",
+      "owner": "deterministic_controller",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_evaluate_incumbent",
+      "source_markers": ["def on_evaluate_incumbent("],
+      "branches": [
+        {"id": "R-001", "trigger": "metrics_available", "next": "analyze_failure", "obligation": "analyze the frozen incumbent evidence", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-ANALYZE-FAILURE",
+      "source_work_kind": "analyze_failure",
+      "owner": "failure_analyst",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_analyze_failure",
+      "source_markers": ["def on_analyze_failure("],
+      "branches": [
+        {"id": "R-002", "trigger": "failure_direction_available", "next": "research_hypothesis", "obligation": "propose a bounded evidence-seeking hypothesis", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-RESEARCH-HYPOTHESIS",
+      "source_work_kind": "research_hypothesis",
+      "owner": "hypothesis_researcher",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_research_hypothesis",
+      "source_markers": ["def on_research_hypothesis("],
+      "branches": [
+        {"id": "R-003", "trigger": "hypothesis_available", "next": "select_trial", "obligation": "start with empty per-hypothesis trial accounting", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-SELECT-TRIAL",
+      "source_work_kind": "select_trial",
+      "owner": "deterministic_trial_selector",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_select_trial",
+      "source_markers": ["def on_select_trial(", "No unused rollout prefix matched"],
+      "branches": [
+        {"id": "R-004", "trigger": "status=selected", "next": "execute_trial", "obligation": "execute the ordered batch within trial and assignment budgets", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-005", "trigger": "status=exhausted", "next": "run_completed", "obligation": "record that no unused matching prefix remained", "outcome_state": "settled_negative", "terminal_source": true}
+      ]
+    },
+    {
+      "id": "RG-EXECUTE-TRIAL",
+      "source_work_kind": "execute_trial",
+      "owner": "intervention_worker_and_deterministic_batch_controller",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_execute_trial",
+      "source_markers": ["def on_execute_trial(", "def _on_execute_trial_batch("],
+      "branches": [
+        {"id": "R-006", "trigger": "batch_has_pending_assignment", "next": "execute_trial", "obligation": "preserve assignment order and continue the same batch", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-007", "trigger": "batch_has_executed_trial", "next": "review_evidence", "obligation": "review all completed trial artifacts", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-008", "trigger": "batch_has_no_executed_trial_and_budget_available", "next": "select_trial", "obligation": "select a different unused assignment", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-009", "trigger": "sequential_assignment_budget_exhausted", "next": "run_completed", "obligation": "retain unsuitable-assignment evidence", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-010", "trigger": "sequential_trial_budget_exhausted", "next": "run_completed", "obligation": "retain executed trial evidence", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-011", "trigger": "parallel_assignment_budget_exhausted", "next": "run_completed", "obligation": "retain ordered parallel batch evidence", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-012", "trigger": "parallel_trial_budget_exhausted", "next": "run_completed", "obligation": "retain ordered parallel batch evidence", "outcome_state": "settled_negative", "terminal_source": true}
+      ]
+    },
+    {
+      "id": "RG-REVIEW-EVIDENCE",
+      "source_work_kind": "review_evidence",
+      "owner": "evidence_reviewer",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_review_evidence",
+      "source_markers": ["def on_review_evidence(", "decision in {\"revise\", \"reject\"}"],
+      "branches": [
+        {"id": "R-013", "trigger": "decision=continue_and_budget_available", "next": "select_trial", "obligation": "output.next_obligation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-014", "trigger": "decision=continue_and_trial_budget_exhausted", "next": "run_completed", "obligation": "record unmet next_obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-015", "trigger": "decision=continue_and_assignment_budget_exhausted", "next": "run_completed", "obligation": "record unmet next_obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-016", "trigger": "decision=revise_or_reject", "next": "research_hypothesis_or_revision_budget_terminal", "obligation": "review output as researcher feedback", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-017", "trigger": "decision=ready_to_distill", "next": "distill_mechanism", "obligation": "distill only from reviewed evidence", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-DISTILL-MECHANISM",
+      "source_work_kind": "distill_mechanism",
+      "owner": "mechanism_distiller",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_distill_mechanism",
+      "source_markers": ["def on_distill_mechanism(", "Evidence was judged not distillable."],
+      "branches": [
+        {"id": "R-018", "trigger": "decision=not_distillable", "next": "run_completed", "obligation": "preserve the negative distillation verdict", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-019", "trigger": "decision=needs_evidence_and_budget_available", "next": "select_trial", "obligation": "output.next_obligation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-020", "trigger": "decision=needs_evidence_and_trial_budget_exhausted", "next": "run_completed", "obligation": "record unmet next_obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-021", "trigger": "decision=needs_evidence_and_assignment_budget_exhausted", "next": "run_completed", "obligation": "record unmet next_obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-022", "trigger": "decision=distilled_and_hook_probe_required", "next": "verify_hook_feasibility", "obligation": "test Student-owned responsibilities before compilation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-023", "trigger": "decision=distilled_and_no_hook_probe_required", "next": "compile_candidate", "obligation": "compile the evidence-backed mechanism", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-VERIFY-HOOK-FEASIBILITY",
+      "source_work_kind": "verify_hook_feasibility",
+      "owner": "hook_feasibility_reviewer",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_verify_hook_feasibility",
+      "source_markers": ["def on_verify_hook_feasibility(", "needs_spec_revision", "needs_research_revision"],
+      "branches": [
+        {"id": "R-024", "trigger": "decision=feasible", "next": "compile_candidate", "obligation": "apply compiler_guidance as implementation constraints", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-025", "trigger": "decision=needs_spec_revision_and_budget_available", "next": "distill_mechanism", "obligation": "revision_feedback as capability constraint", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-026", "trigger": "decision=needs_spec_revision_and_budget_exhausted", "next": "run_completed", "obligation": "preserve unsupported responsibility evidence", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-027", "trigger": "decision=needs_research_revision", "next": "research_hypothesis_or_revision_budget_terminal", "obligation": "review output as researcher feedback", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-COMPILE-CANDIDATE",
+      "source_work_kind": "compile_candidate",
+      "owner": "compiler",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_compile_candidate",
+      "source_markers": ["def on_compile_candidate(", "implementation_blocked"],
+      "branches": [
+        {"id": "R-028", "trigger": "decision=needs_evidence_and_budget_available", "next": "select_trial", "obligation": "output.next_obligation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-029", "trigger": "decision=needs_evidence_and_trial_budget_exhausted", "next": "run_completed", "obligation": "record unmet compiler evidence obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-030", "trigger": "decision=needs_evidence_and_assignment_budget_exhausted", "next": "run_completed", "obligation": "record unmet compiler evidence obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-031", "trigger": "decision=needs_mechanism_revision_or_implementation_blocked_and_budget_available", "next": "distill_mechanism", "obligation": "output.next_obligation as capability constraint", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-032", "trigger": "mechanism_revision_budget_exhausted", "next": "run_completed", "obligation": "preserve compiler blockage", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-033", "trigger": "decision=submitted", "next": "stage_candidate", "obligation": "validate and stage the submitted workspace", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-STAGE-CANDIDATE",
+      "source_work_kind": "stage_candidate",
+      "owner": "candidate_version_effects",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_stage_candidate",
+      "source_markers": ["def on_stage_candidate(", "unchanged_rejected_candidate"],
+      "branches": [
+        {"id": "R-034", "trigger": "status=validation_failed_and_budget_available", "next": "compile_candidate", "obligation": "settle the rejected Candidate Attempt and route validation errors to Compiler", "outcome_state": "settled_negative", "terminal_source": false},
+        {"id": "R-035", "trigger": "status=validation_failed_and_budget_exhausted", "next": "run_completed", "obligation": "preserve invalid Candidate Attempt and validation errors", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-036", "trigger": "status=unchanged_rejected_candidate", "next": "analyze_failure_for_new_research_attempt", "obligation": "reuse the Candidate settlement identity and do not reopen the rejected attempt", "outcome_state": "settled_negative", "terminal_source": false},
+        {"id": "R-037", "trigger": "status=valid", "next": "verify_conformance", "obligation": "bind durable candidate_attempt_id before conformance", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-VERIFY-CONFORMANCE",
+      "source_work_kind": "verify_conformance",
+      "owner": "deterministic_aggregation_and_conformance_reviewer",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_verify_conformance",
+      "source_markers": ["def on_verify_conformance(", "conformance_failed"],
+      "branches": [
+        {"id": "R-038", "trigger": "decision=pass", "next": "evaluate_candidate", "obligation": "run the full Candidate evaluation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-039", "trigger": "decision=revise_or_revise_implementation", "next": "reject_candidate_then_targeted_revision_or_terminal", "obligation": "route_feedback for evidence, mechanism, or implementation owner", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-EVALUATE-CANDIDATE",
+      "source_work_kind": "evaluate_candidate",
+      "owner": "evaluation_backend",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_evaluate_candidate",
+      "source_markers": ["def on_evaluate_candidate("],
+      "branches": [
+        {"id": "R-040", "trigger": "metrics_available", "next": "review_candidate", "obligation": "review paired outcome and deterministic gates", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-REVIEW-CANDIDATE",
+      "source_work_kind": "review_candidate",
+      "owner": "candidate_reviewer_and_deterministic_promotion_gate",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_review_candidate",
+      "source_markers": ["def on_review_candidate(", "evaluate_promotion("],
+      "branches": [
+        {"id": "R-041", "trigger": "reviewer=accept_and_safety_effect_gate_passes", "next": "promote_candidate", "obligation": "persist promotion receipt and version advance", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-042", "trigger": "reviewer=revise_and_candidate_revision_budget_available", "next": "reject_candidate_then_targeted_revision", "obligation": "review.next_obligation for review.revision_target", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-043", "trigger": "reviewer=revise_and_candidate_revision_budget_exhausted", "next": "reject_candidate_then_run_completed", "obligation": "preserve rejected Candidate and exhausted obligation", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-044", "trigger": "reviewer=reject_or_accept_with_safety_gate_failure", "next": "reject_candidate_then_new_research_attempt", "obligation": "reanalyze incumbent evidence without treating one solution as the whole problem direction", "outcome_state": "provisional", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-PROMOTE-CANDIDATE",
+      "source_work_kind": "promote_candidate",
+      "owner": "candidate_version_effects_and_controller",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_promote_candidate",
+      "source_markers": ["def on_promote_candidate(", "generation budget completed"],
+      "branches": [
+        {"id": "R-045", "trigger": "generation_budget_remaining", "next": "evaluate_incumbent_for_next_generation", "obligation": "advance version and start a clean generation", "outcome_state": "settled_positive", "terminal_source": false},
+        {"id": "R-046", "trigger": "generation_budget_completed", "next": "run_completed_with_version_advance", "obligation": "preserve accepted Candidate receipt", "outcome_state": "settled_positive", "terminal_source": true}
+      ]
+    },
+    {
+      "id": "RG-REJECT-CANDIDATE",
+      "source_work_kind": "reject_candidate",
+      "owner": "candidate_version_effects_and_controller",
+      "source_ref": "search_harness/evolution/control/transitions.py#on_reject_candidate",
+      "source_markers": ["def on_reject_candidate(", "Candidate was rejected by review or promotion gate."],
+      "branches": [
+        {"id": "R-047", "trigger": "no_revision_and_start_new_research_attempt", "next": "analyze_failure", "obligation": "candidate rejection reason becomes bounded analysis focus", "outcome_state": "settled_negative", "terminal_source": false},
+        {"id": "R-048", "trigger": "no_revision_and_no_new_research_attempt", "next": "run_completed", "obligation": "preserve Candidate rejection receipt", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-049", "trigger": "target=evidence_and_budget_available", "next": "select_trial", "obligation": "settle the rejected Candidate and route after_rejection.obligation", "outcome_state": "settled_negative", "terminal_source": false},
+        {"id": "R-050", "trigger": "target=evidence_and_trial_budget_exhausted", "next": "run_completed", "obligation": "preserve unmet Candidate evidence obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-051", "trigger": "target=evidence_and_assignment_budget_exhausted", "next": "run_completed", "obligation": "preserve unmet Candidate evidence obligation", "outcome_state": "settled_negative", "terminal_source": true},
+        {"id": "R-052", "trigger": "target=mechanism", "next": "distill_mechanism", "obligation": "settle the rejected Candidate and append its obligation to capability constraints", "outcome_state": "settled_negative", "terminal_source": false},
+        {"id": "R-053", "trigger": "target=implementation", "next": "compile_candidate", "obligation": "settle the rejected Candidate and append its obligation to implementation constraints", "outcome_state": "settled_negative", "terminal_source": false}
+      ]
+    },
+    {
+      "id": "RG-RESEARCH-REVISION-HELPER",
+      "source_work_kind": "research_revision_helper",
+      "owner": "hypothesis_researcher",
+      "source_ref": "search_harness/evolution/control/transitions.py#_research_revision",
+      "source_markers": ["def _research_revision(", "Hypothesis revision budget was exhausted"],
+      "branches": [
+        {"id": "R-054", "trigger": "hypothesis_revision_budget_available", "next": "research_hypothesis", "obligation": "feedback_source plus typed reviewer output", "outcome_state": "provisional", "terminal_source": false},
+        {"id": "R-055", "trigger": "hypothesis_revision_budget_exhausted", "next": "run_completed", "obligation": "preserve the final unmet review obligation", "outcome_state": "settled_negative", "terminal_source": true}
+      ]
+    }
+  ],
+  "semantic_audit_ref": "cvpr_workspace/analysis/stage_001_h1_h2_semantic_diff_audit.md"
+}

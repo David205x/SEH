@@ -13,6 +13,7 @@ from search_harness.evolution.research.roles.contracts import (
     EvidenceReview,
     FailureAnalystInput,
     FailureDirection,
+    HypothesisResearcherResult,
     HypothesisResearcherInput,
     HypothesisEvidenceObligation,
     InterventionHypothesis,
@@ -26,6 +27,45 @@ from search_harness.evolution.research.roles.contracts import (
 
 
 class TeacherContractTest(unittest.TestCase):
+    def test_researcher_result_requires_action_consistent_payload(self) -> None:
+        hypothesis = InterventionHypothesis.model_validate(
+            {
+                "fork_phase": "pre_final",
+                "phase_plan": [
+                    {
+                        "phase": "pre_final",
+                        "activation_condition": "Evidence is incomplete.",
+                        "instruction": "Defer the answer once.",
+                        "expected_effect": "The Student continues.",
+                    }
+                ],
+                "evaluation": {
+                    "primary_signal": "next action",
+                    "success_condition": "The Student continues.",
+                    "falsifier": "The Student stops.",
+                },
+                "applicability": "Incomplete-evidence final answers.",
+            }
+        )
+        HypothesisResearcherResult(
+            scheme_action="start_new",
+            hypothesis=hypothesis,
+        )
+        HypothesisResearcherResult(
+            scheme_action="reanalyse_failure",
+            hypothesis=None,
+        )
+        with self.assertRaises(ValidationError):
+            HypothesisResearcherResult(
+                scheme_action="reanalyse_failure",
+                hypothesis=hypothesis,
+            )
+        with self.assertRaises(ValidationError):
+            HypothesisResearcherResult(
+                scheme_action="revise_current",
+                hypothesis=None,
+            )
+
     def test_failure_analyst_input_has_no_solution_biased_history(self) -> None:
         """验证首轮失败诊断输入只保留可选分析焦点。"""
 
@@ -134,7 +174,7 @@ class TeacherContractTest(unittest.TestCase):
         )
         self.assertEqual(
             hypothesis_schema["properties"]["applicability"]["maxLength"],
-            500,
+            600,
         )
 
     def test_role_registry_binds_output_contract(self) -> None:
@@ -148,9 +188,9 @@ class TeacherContractTest(unittest.TestCase):
         self.assertEqual(
             get_teacher_role(
                 "hypothesis_researcher",
-                1,
+                2,
             ).output_contract_version,
-            5,
+            1,
         )
         self.assertEqual(
             get_teacher_role(
@@ -193,6 +233,13 @@ class TeacherContractTest(unittest.TestCase):
                 1,
             ).output_contract_version,
             5,
+        )
+        self.assertEqual(
+            get_teacher_role(
+                "shadow_conformance_reviewer",
+                1,
+            ).output_contract_id,
+            "conformance_review_batch",
         )
         self.assertEqual(
             get_teacher_role(

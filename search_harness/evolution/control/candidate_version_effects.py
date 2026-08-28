@@ -14,7 +14,7 @@ from search_harness.evolution.versioning import (
     ValidationReport,
 )
 
-from .domain import EffectResult
+from .domain import EffectResult, WorkItem
 
 
 class CandidateVersionEffects:
@@ -34,6 +34,7 @@ class CandidateVersionEffects:
         *,
         candidate: dict[str, Any],
         parent_version: str,
+        work: WorkItem,
         work_dir: Path,
     ) -> EffectResult:
         """Materialize and validate one idempotent Candidate transaction."""
@@ -42,6 +43,7 @@ class CandidateVersionEffects:
         existing = self._find_candidate_attempt(
             parent_version=parent_version,
             candidate_digest=candidate_digest,
+            source_logical_work_id=work.logical_work_id,
         )
         if existing is not None and existing.status == "rejected":
             return EffectResult(
@@ -61,6 +63,12 @@ class CandidateVersionEffects:
                 parent_version=parent_version,
                 metadata={
                     "controller_candidate_digest": candidate_digest,
+                    "run_id": work.lineage.run_id,
+                    "generation_id": work.lineage.generation_id,
+                    "research_attempt_id": (
+                        work.lineage.research_attempt_id
+                    ),
+                    "source_logical_work_id": work.logical_work_id,
                 },
             )
             if existing is None
@@ -283,6 +291,7 @@ class CandidateVersionEffects:
         *,
         parent_version: str,
         candidate_digest: str,
+        source_logical_work_id: str,
     ) -> CandidateAttemptState | None:
         matches: list[CandidateAttemptState] = []
         for summary in self.store.list_candidate_attempts():
@@ -296,6 +305,8 @@ class CandidateVersionEffects:
                 and isinstance(metadata, dict)
                 and metadata.get("controller_candidate_digest")
                 == candidate_digest
+                and metadata.get("source_logical_work_id")
+                == source_logical_work_id
             ):
                 matches.append(summary)
         if not matches:

@@ -1,0 +1,947 @@
+{
+  "schema_version": 1,
+  "suite_id": "TASK-007-ATTRIBUTION-V3",
+  "role_id": "experience_summarizer",
+  "role_version": 2,
+  "template_root": "harness_templates/teacher/experience_summarizer",
+  "cases": [
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/review_evidence-054cca1b11f4a49c/effect.json",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/research_hypothesis-db42024d85a0598b/role.json",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/intervention_trial_checkpoints/4d7a7deb231b9fafc0bea198/trials/trial_4d7a7deb231b_004/trial.json"
+      ],
+      "trigger": "evidence_reviewer.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "revise",
+        "next_work_kinds": ["research_hypothesis"],
+        "causal_neighbors": ["hypothesis_researcher", "evidence_reviewer", "data_environment"]
+      },
+      "direction": "Test whether one-sided retrieval causes absence-based comparison errors.",
+      "attempt": "A one-shot pre-final deferral asked the Student to search for the second named entity before finalizing.",
+      "evidence": {
+        "review": {
+          "outcome": "Full success was 1/2; trial_004 searched for Cia Berg but retrieved no title-count evidence and again concluded from absence.",
+          "comparison": "The intervention triggered the intended search, but the corpus did not return the evidence required by the success condition.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The reviewed success condition and trial outcome are authoritative for this decision."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The trial faithfully issued the required second-entity query."},
+            {"kind": "data_sufficiency", "status": "failed", "statement": "Returned passages did not contain the second entity evidence required to judge the causal effect."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "review": {
+          "upstream_contract": [
+            {
+              "selector": "hypothesis",
+              "content": "The success condition required the revised answer to cite retrieved evidence for both named entities, while a special obligation stated that corpus sufficiency for the unqueried entity was unverified."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "trial_004",
+              "content": "The deferral faithfully triggered a follow-up query for Cia Berg. Five returned passages contained no title-count or induction evidence about her; the revised final again used absence reasoning. No runtime failure occurred."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["upstream_design", "data_environment"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["condition success on retrievable evidence", "corpus sufficiency confound"],
+        "forbidden_attributions": ["Evidence Reviewer caused the failure", "Student capability failure is established"]
+      }
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "source_artifacts": [
+        "runs/evolution/20260807_debug/artifacts/review_evidence-16d9acb8dae5874e/effect.json"
+      ],
+      "trigger": "evidence_reviewer.reject",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["research_hypothesis"],
+        "causal_neighbors": ["hypothesis_researcher", "evidence_reviewer"]
+      },
+      "direction": "Make inserted verification context cause a follow-up search before finalization.",
+      "attempt": "A generic verification block was inserted on four faithful positive activations.",
+      "evidence": {
+        "review": {
+          "outcome": "Three of four positive activations finalized without a follow-up search; the only search success also occurred in its untreated source control.",
+          "comparison": "The treated branch produced no differential action-type effect against its source control, and the declared falsifier occurred in most faithful positive activations.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Positive cases and their source controls use the declared causal comparison."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The generic verification block was faithfully inserted in the positive activations."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "The rejection is supported by positive cases and controls; missing negative-stratum coverage is not causal."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "review": {
+          "decision_trace": [
+            {
+              "selector": "positive_trials",
+              "content": "The exact falsifier occurred in 3/4 faithful positive activations. The fourth changed to search, but its source control also searched, so there was no differential action-type effect."
+            },
+            {
+              "selector": "confound_trial",
+              "content": "The required entity-identity-confound trial also finalized without verification. Coverage was incomplete only for a negative stratum, but rejection rested on the contradicted positive causal effect."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["upstream_design"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["decision_trace"],
+        "required_concepts": ["require a differential effect against control", "reject contradicted causal direction"],
+        "forbidden_attributions": ["Evidence Reviewer error", "missing negative coverage caused rejection"]
+      }
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "source_artifacts": [
+        "runs/evolution/20260808_slice01/artifacts/review_evidence-d7e874f6ee0f6abd/effect.json"
+      ],
+      "trigger": "evidence_reviewer.reject",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["research_hypothesis"],
+        "causal_neighbors": ["hypothesis_researcher", "evidence_reviewer"]
+      },
+      "direction": "Use a generic evidence-gap patch to induce a needed follow-up search.",
+      "attempt": "Two faithful positive activations tested the expected search behavior with complete default coverage.",
+      "evidence": {
+        "review": {
+          "outcome": "Only one of two faithful activations searched again; the clean falsifier immediately finalized wrong. Another trial over-triggered on complete evidence and changed a correct answer to wrong.",
+          "comparison": "The generic patch both missed an intended positive and harmed a complete-evidence case, contradicting the proposed direction's selectivity.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The positive and complete-evidence cases match the declared falsifier and harm checks."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The generic patch was faithfully applied in both decisive trials."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "The paired miss and harmful over-trigger are sufficient to reject this generic direction unchanged."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "review": {
+          "decision_trace": [
+            {
+              "selector": "trial_002",
+              "content": "The condition held and the generic patch was faithfully applied, yet the Student immediately finalized 'Earl Bakken' with no tool call and received score 0."
+            },
+            {
+              "selector": "trial_003",
+              "content": "The patch fired although the first retrieval already stated the requested attribute; the branch replaced a correct answer with the wrong answer 'Pirna'."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["upstream_design"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["decision_trace"],
+        "required_concepts": ["falsifier and harmful over-trigger", "do not continue this direction unchanged"],
+        "forbidden_attributions": ["Evidence Reviewer error"]
+      }
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/verify_hook_feasibility-64ddfe9a2a85e492/effect.json",
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/verify_hook_feasibility-64ddfe9a2a85e492/probe.json"
+      ],
+      "trigger": "hook_feasibility.needs_research_revision",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "hook_feasibility_reviewer",
+        "decision": "needs_research_revision",
+        "next_work_kinds": ["research_hypothesis"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "hook_feasibility_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Realize a three-label evaluator for one-sided two-entity evidence gaps.",
+      "attempt": "The frozen evaluator was probed across thinking modes and repeated identical real-prefix cases.",
+      "evidence": {
+        "hook_review": {
+          "outcome": "With thinking enabled, one identical single-entity negative flipped across repetitions; with thinking disabled, both negative cases were repeatedly labeled positive.",
+          "comparison": "Positive cases were stable and parse-clean, isolating the failure to the explicit negative boundary under the frozen Hook model.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The probe labels are checked against the frozen three-way decision contract."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "Repeated probes used valid real-prefix cases, including identical repetitions."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "Probe execution and parsing were faithful and parse-clean."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Repeated equivalent negative cases establish the narrow boundary instability."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "hook_review": {
+          "upstream_contract": [
+            {
+              "selector": "decision_contract",
+              "content": "Positive means a two-entity comparison finalized after first-entity-only evidence. Single-entity factoids and queries covering both entities are negative. Uncertain is a conservative no-op."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "label_matrix",
+              "content": "thinking_mode enabled: 7/8 reference-correct; the identical single-entity trial_002 labels negative then positive. thinking_mode disabled: both repetitions of negative trials_002 and _003 are positive. Positive trials agree. Outputs are parse-clean."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["student_capability"],
+        "expected_types": ["student_capability"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["single-entity negative boundary is unstable", "revalidate or restrict supported scope"],
+        "forbidden_attributions": ["Hook Feasibility Reviewer error", "parser failure"]
+      }
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/distill_mechanism-8b67fa0ec40359af/effect.json"
+      ],
+      "trigger": "mechanism_distiller.not_distillable",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "mechanism_distiller",
+        "decision": "not_distillable",
+        "next_work_kinds": [],
+        "terminal_reason": "Evidence was judged not distillable.",
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "student_or_hook_model"]
+      },
+      "direction": "Distill a validated one-sided-search intervention into a deployable Hook evaluator.",
+      "attempt": "Intervention coverage passed, but production-model probes tested whether the semantic boundary was realizable.",
+      "evidence": {
+        "distillation": {
+          "outcome": "The only permitted Hook model mislabeled the both-entities-queried negative in 4/4 probes and also mislabeled a single-entity negative.",
+          "comparison": "The upstream intervention passed two positive and two negative controls, but the deployable model could not realize a required negative boundary.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The required negative boundary comes from the validated activation contract."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "The probes cover valid both-entity and single-entity negatives."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "Two contract wordings and parse-clean probe execution rule out a parser or wiring defect."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Four repeated failures on the required both-entity negative establish the narrow model boundary."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "distillation": {
+          "upstream_contract": [
+            {
+              "selector": "activation_boundary",
+              "content": "Correct non-intervention when both entities were already queried is required by the activation condition and validated negative control; it cannot be waived as a known limit."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "model_probes",
+              "content": "Across two contract wordings, the production model asserted that a query naming both entities named only the first and returned positive in 4/4 generations; one wording also labeled the single-entity negative positive in 2/2."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability"],
+        "expected_types": ["student_capability"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["intervention evidence does not imply deployable evaluator", "required negative boundary is unrealizable"],
+        "forbidden_attributions": ["Mechanism Distiller error", "Compiler implementation defect"]
+      }
+    },
+    {
+      "case_id": "conformance_activation_budget_implementation",
+      "source_artifacts": [
+        "runs/evolution/20260806_qwen3-8b/artifacts/verify_conformance-112c1011c5657e1c/effect.json",
+        "runs/evolution/20260806_qwen3-8b/artifacts/conformance_checkpoints/45d79a728f621c9b3614d466/findings/finding_002.json"
+      ],
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer"]
+      },
+      "direction": "Compile a one-shot pre-final deferral with a strict activation budget.",
+      "attempt": "The Candidate relied on runtime phase activation budget instead of enforcing the declared rollout-local limit.",
+      "evidence": {
+        "conformance": {
+          "outcome": "Finding_002 observed continued deferrals after the declared pre_final activation budget was exhausted.",
+          "comparison": "The Compiler relied on a runtime phase budget and kept no rollout-local counter, while the conformance trace exceeded the declared four activations.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The finding directly checks the frozen activation-budget obligation."},
+            {"kind": "role_input_sufficiency", "status": "confirmed", "statement": "The Compiler received the strict rollout-local activation limit."},
+            {"kind": "implementation_fidelity", "status": "failed", "statement": "The Candidate did not enforce the declared rollout-local limit."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "decision_trace": [
+            {
+              "selector": "finding_002",
+              "content": "The contract allowed four pre_final activations, but the Candidate continued to defer on later distinct steps. Repair obligation: after budget exhaustion, leave final_decision unchanged and append no feedback."
+            }
+          ],
+          "upstream_contract": [
+            {
+              "selector": "compiler_claim",
+              "content": "The Compiler stated that runtime phase activation budget would enforce the limit and the Hook kept no local counter. The conformance trace disproved that implementation assumption."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["implementation"],
+        "expected_types": ["teacher_work"],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": ["decision_trace", "upstream_contract"],
+        "required_concepts": ["enforce rollout-local activation budget", "Compiler implementation assumption failed"],
+        "forbidden_attributions": ["Conformance Reviewer error", "Student capability failure"]
+      }
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "source_artifacts": [
+        "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-8354b9e78a9969a9/effect.json"
+      ],
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer"]
+      },
+      "direction": "Classify whether retrieved passages explicitly ground the requested relation.",
+      "attempt": "The Candidate invoked its semantic classifier without projecting the actual retrieved passages.",
+      "evidence": {
+        "conformance": {
+          "outcome": "Four implementation mismatches showed the classifier received an empty passage list while retrieved passages existed in the trajectory.",
+          "comparison": "The semantic decision therefore ignored the contract's declared retrieved-passage input.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The mismatches compare actual trajectory passages with the Candidate classifier input."},
+            {"kind": "role_input_sufficiency", "status": "confirmed", "statement": "The Compiler contract required projection of the actual retrieved passages."},
+            {"kind": "implementation_fidelity", "status": "failed", "statement": "The Candidate passed an empty placeholder instead of the available passages."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "decision_trace": [
+            {
+              "selector": "mismatches",
+              "content": "At post_tool and pre_final, actual retrieved passages were present in the trajectory but absent from the classifier input. Decisions were therefore made from an unpopulated placeholder."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["implementation"],
+        "expected_types": ["teacher_work"],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": ["decision_trace"],
+        "required_concepts": ["project actual retrieved passages into classifier", "do not classify on empty evidence"],
+        "forbidden_attributions": ["Student semantic capability is established as the cause"]
+      }
+    },
+    {
+      "case_id": "conformance_positive_action_not_applied",
+      "source_artifacts": [
+        "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-031f34337e60e076/effect.json"
+      ],
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer"]
+      },
+      "direction": "Defer an unsupported final candidate after the verification note is inserted.",
+      "attempt": "The Candidate reached the positive pre-final condition but passed the candidate through with no Hook changes.",
+      "evidence": {
+        "conformance": {
+          "outcome": "The required defer action, feedback append, and consumed flag were not applied when the positive condition held.",
+          "comparison": "The verification note and unsupported committed value were present, but the Hook returned an empty change set.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The finding directly observes the positive contract and resulting Hook action."},
+            {"kind": "role_input_sufficiency", "status": "confirmed", "statement": "The Compiler contract specified the defer, feedback, and state-update obligations."},
+            {"kind": "implementation_fidelity", "status": "failed", "statement": "The Candidate failed to wire a positive decision to its required deterministic action."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "decision_trace": [
+            {
+              "selector": "action_mismatch",
+              "content": "The verification note was present and the value-asserting candidate lacked explicit passage grounding, but the Hook returned an empty change set instead of defer_final_answer with feedback and state update."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["implementation"],
+        "expected_types": ["teacher_work"],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": ["decision_trace"],
+        "required_concepts": ["wire positive decision to required defer action", "update feedback and consumed state"],
+        "forbidden_attributions": ["upstream evidence design failure"]
+      }
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "source_artifacts": [
+        "runs/evolution/20260807_debug/artifacts/verify_conformance-80c518e2701a5fe4/effect.json"
+      ],
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Use a Hook-model evaluator to defer only unsupported committed values.",
+      "attempt": "The evaluator repeatedly violated explicit negative and uncertain rules despite a structurally faithful Hook.",
+      "evidence": {
+        "conformance": {
+          "outcome": "Across four mismatches, the evaluator treated explicitly grounded values as positive and treated refusals or bare mentions as committed unsupported values.",
+          "comparison": "The deterministic action wiring was present; failures crossed both the explicit-link negative and no-committed-value uncertain boundaries.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Each mismatch is labeled against explicit negative or uncertain contract clauses."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "The evaluator received valid committed-answer and evidence-gap examples."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The structural Hook and deterministic action wiring were faithful."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Multiple valid cases cross two distinct required boundaries."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "upstream_contract": [
+            {
+              "selector": "decision_contract",
+              "content": "Negative: passages explicitly link the committed entity/value to the requested relation, so pass through. Uncertain: refusal, evidence-gap statement or no committed value, so no-op. Positive: a specific committed value lacks the required passage link."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "mismatches",
+              "content": "Across four mismatches, the Hook-model crossed both explicit-link negative and no-committed-value uncertain boundaries, causing inappropriate deferral. The deterministic action wiring itself was present."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["student_capability"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["semantic evaluator crosses negative and uncertain boundaries", "simplify or revalidate evaluator contract"],
+        "forbidden_attributions": ["Conformance Reviewer error", "deterministic action wiring is the demonstrated cause"]
+      }
+    },
+    {
+      "case_id": "conformance_query_coverage_projection",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/verify_conformance-55d2ab7d1a17f315/effect.json"
+      ],
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer"]
+      },
+      "direction": "Defer only when exactly one search covers the first entity and no search covers the second.",
+      "attempt": "The Candidate projected a first-entity-only query as covering both entities and suppressed the required positive action.",
+      "evidence": {
+        "conformance": {
+          "outcome": "The query-coverage projection labeled a first-entity-only query as covering both entities, so the pending final was not replaced by the required one-shot defer.",
+          "comparison": "The trace-visible query named only the first entity, but the Candidate-derived coverage value was 'both'.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The trace query and frozen coverage rule directly establish the expected classification."},
+            {"kind": "role_input_sufficiency", "status": "confirmed", "statement": "The Compiler received the exact one-sided query-coverage and defer obligations."},
+            {"kind": "implementation_fidelity", "status": "failed", "statement": "The Candidate computed the wrong deterministic coverage value and suppressed the positive action."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "decision_trace": [
+            {
+              "selector": "coverage_mismatch",
+              "content": "Trace-visible query text named only the first compared entity. The implementation-derived coverage value was 'both', so the positive contract was never passed to the defer action."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["implementation"],
+        "expected_types": ["teacher_work"],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": ["decision_trace"],
+        "required_concepts": ["correct query-coverage projection", "positive condition must trigger defer"],
+        "forbidden_attributions": ["Student model instability"]
+      }
+    },
+    {
+      "case_id": "conformance_missing_fact_model_misclassification",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/verify_conformance-35607b7de6975c93/effect.json"
+      ],
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["mechanism_distiller", "compiler", "conformance_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Detect definitive answers whose decisive supporting fact is absent from all retrieved passages.",
+      "attempt": "A Hook-model evaluator saw real passages but suppressed the positive decision when only one of two required records was present.",
+      "evidence": {
+        "conformance": {
+          "outcome": "Five mismatches labeled definitive comparison answers non-positive although the other entity's decisive record was absent from every retrieved passage.",
+          "comparison": "The model repeatedly treated partial topic relevance as if it contained the decisive cross-entity fact.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The expected positive rule is explicit and each mismatch checks absence of the decisive fact."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "The evaluator received the actual passages and definitive comparison answers."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The Hook invocation and action wiring followed the frozen Mechanism Spec."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Five equivalent valid mismatches establish the narrow semantic boundary failure."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "conformance": {
+          "upstream_contract": [
+            {
+              "selector": "positive_rule",
+              "content": "A definitive answer is positive when its decisive referent-to-answer fact is absent from all retrieved passages, including when only one of two required entity records is present."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "mismatches",
+              "content": "The passages established the featured entity's identity or profile but not the requested cross-entity fact. The model repeatedly treated partial relevance as sufficient and returned no positive deferral."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["student_capability"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["partial relevance is not the decisive fact", "revalidate or simplify the semantic boundary"],
+        "forbidden_attributions": ["Conformance Reviewer error"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "source_artifacts": [
+        "runs/evolution/20260806_qwen3-8b/artifacts/review_candidate-9c4407ec7edef219/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Require a single passage to explicitly state the relation before committing an answer.",
+      "attempt": "A faithful two-phase withhold/defer mechanism was evaluated against the incumbent on 225 records.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "Accuracy changed only +0.6pp while stable-correct decreased, instability and cost increased; correct retrieval-supported answers were repeatedly deferred.",
+          "comparison": "Conformance passed, but the single-passage grounding predicate created 14 regressions against 15 improvements and raised tokens about 5.6x.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Candidate and incumbent were compared on the same 225 records."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "Conformance passed the Candidate against the frozen Mechanism Spec."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Aggregate deltas and representative regressions support a direction-level conclusion."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "upstream_contract": [
+            {
+              "selector": "mechanism_rule",
+              "content": "The Mechanism required one passage to explicitly state the relation; prior knowledge and cross-passage entailment did not count as grounding, with conservative uncertain fallback. Conformance passed."
+            }
+          ],
+          "candidate_comparison": [
+            {
+              "selector": "aggregate",
+              "content": "Accuracy 158 to 160 of 225, stable_correct 45 to 42, unstable 16 to 20, consistency 0.653 to 0.613; 15 improved versus 14 regressed; total tokens rose about 5.6x."
+            },
+            {
+              "selector": "human_error_fox",
+              "content": "A passage said House ran on Fox and the Student correctly answered Fox, but the Hook rejected it four times because no single passage literally said 'Human Error aired on Fox', ending in cannot-determine at much higher cost."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["upstream_design"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "candidate_comparison"],
+        "required_concepts": ["single-passage predicate is intrinsically over-restrictive", "evaluate broader grounding without repeated over-withhold"],
+        "forbidden_attributions": ["Candidate Reviewer error", "Compiler implementation defect"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/review_candidate-0ba9eeccbef364ea/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Use a semantic Hook to detect genuine one-sided two-candidate evidence gaps.",
+      "attempt": "The faithful Candidate evaluated every pre-final state and deferred on Hook positive.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "Positive activations occurred only on explicit contract-negative joint and single-entity questions; one caused a direct regression and no intended positive behavior was observed.",
+          "comparison": "Improvements occurred only on Hook-negative no-op runs, while accuracy declined and Hook cost rose sharply.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The observed activations are labeled against explicit negative rules."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "Both activation cases are valid real evaluation prefixes."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The Candidate was faithful to its semantic Hook decision and action wiring."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Two different explicit-negative activations establish a narrow selectivity boundary; the full comparison establishes no attributed utility."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "upstream_contract": [
+            {
+              "selector": "negative_rules",
+              "content": "Joint A-and-B questions and single-entity factoids are explicit negatives. Positive requires a genuine one-sided two-candidate comparison prefix."
+            }
+          ],
+          "candidate_comparison": [
+            {
+              "selector": "activations",
+              "content": "The Hook fired on a joint magazine question and a single-entity question. One firing changed a correct 1.0 answer to 0.0; the other added work without score benefit. No applicable positive case fired."
+            },
+            {
+              "selector": "aggregate",
+              "content": "Accuracy and pass@N declined; total tokens rose about 48% with roughly 430k Hook tokens. Improvements occurred on Hook-negative no-op runs and are not attributable to the mechanism."
+            }
+          ]
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["student_capability", "experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "candidate_comparison"],
+        "required_concepts": ["semantic classifier fires on explicit negatives", "no activation-attributed benefit"],
+        "forbidden_attributions": ["Candidate Reviewer error", "Compiler implementation defect"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_no_attributed_utility",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/review_candidate-ad7941bcef6be17f/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Defer evidence-gap final answers to induce a targeted follow-up search.",
+      "attempt": "A conformant one-shot Hook activated across four cases in a 75-example evaluation.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "All activation cases regressed or stayed equal; all improvements occurred under no-op paths. One definitive answer was falsely deferred.",
+          "comparison": "Eight activations induced follow-up searches but produced no new correct answer; accuracy fell and Hook cost added about 271k input tokens.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Activation outcomes are separated from negative and guard-exit paths in the comparison."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The one-shot Hook passed conformance before evaluation."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Eight activations and their outcome attribution support a direction-level utility conclusion; one false positive alone does not establish capability."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "candidate_comparison": [
+            {
+              "selector": "attribution",
+              "content": "Eight activations induced follow-up searches, but none converted a wrong or uncertain answer into a new correct answer. Improvements occurred when the Hook was negative or guards exited."
+            },
+            {
+              "selector": "harm",
+              "content": "A definitive Aixam answer was mislabeled positive and deferred, contradicting the negative rule and contributing to a 1.0-to-0.0 regression. Accuracy and pass@N fell while total tokens increased."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["candidate_comparison"],
+        "required_concepts": ["separate activation-attributed utility from no-op variance", "classifier false positive and cost"],
+        "forbidden_attributions": ["aggregate improvements prove mechanism benefit"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_low_precision_retrieval",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/review_candidate-71fa2ca57fec5f9b/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Defer when the first retrieval lacks the decisive fact, then target the omitted link.",
+      "attempt": "The Hook implementation passed structural conformance; its semantic evaluator fired seven times during a 75-example evaluation.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "Only 1/7 semantic activations was appropriate and beneficial; 3/7 violated the negative rule and 4/7 still ended wrong.",
+          "comparison": "Most aggregate changes occurred on no-op runs, accuracy declined, and Hook cost nearly doubled total tokens.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Activation appropriateness is checked against the frozen negative rule and outcome comparison."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "The seven activations are valid evaluation prefixes with traceable outcomes."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "Structural conformance passed before candidate evaluation."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Three explicit-negative violations establish low classifier precision; seven activation outcomes establish low post-deferral efficacy."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "candidate_comparison": [
+            {
+              "selector": "activations",
+              "content": "One Southern Railway activation repaired the answer. Three Dennis Publishing activations fired despite decisive evidence already being present; three further activations failed to retrieve a useful fact and stayed wrong."
+            },
+            {
+              "selector": "aggregate",
+              "content": "Accuracy, majority-correct and pass@N declined. Most improvements and regressions occurred under negative/no-op Hook decisions, indicating Student variation. Hook tokens were about 550k."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["student_capability", "experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["candidate_comparison"],
+        "required_concepts": ["low activation precision and low post-deferral efficacy", "separate no-op variance from mechanism effect"],
+        "forbidden_attributions": ["Compiler fidelity failure"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_two_false_positive_activations",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/review_candidate-281a003cf81541bf/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Gate final answers justified by absence after a first-entity-only search.",
+      "attempt": "A conformant one-shot absence gate evaluated a 75-case landscape.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "The only two positive activations were explicit contract negatives: a grounded single-entity lookup and a both-entity question; one flipped a correct answer to wrong.",
+          "comparison": "All improvements followed negative or guard-exit paths; aggregate quality declined while Hook-model cost rose substantially.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Both positive activations are checked against explicit negative clauses."},
+            {"kind": "input_validity", "status": "confirmed", "statement": "The two distinct activation cases are valid real evaluation prefixes."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The one-shot absence gate was conformant before evaluation."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "Two distinct explicit-negative violations establish a narrow classifier boundary; activation attribution establishes no utility."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "upstream_contract": [
+            {
+              "selector": "negative_rules",
+              "content": "Grounded single-entity answers and questions whose query names both entities are negative and must not be deferred."
+            }
+          ],
+          "candidate_comparison": [
+            {
+              "selector": "activations",
+              "content": "The single-entity activation added cost without benefit. The both-entity activation changed a correct answer to wrong. All ten improved replicates followed negative or guard-exit paths."
+            },
+            {
+              "selector": "cost",
+              "content": "Accuracy, majority-correct and pass@N declined; Hook-model cost was about 522k tokens and raised total tokens about 57%."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["student_capability", "experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["upstream_contract", "candidate_comparison"],
+        "required_concepts": ["all observed positive activations violate negative rules", "no activation-attributed improvement"],
+        "forbidden_attributions": ["Candidate Reviewer caused rejection"]
+      }
+    },
+    {
+      "case_id": "candidate_reject_selectivity_and_cost",
+      "source_artifacts": [
+        "runs/evolution/20260809_base/artifacts/review_candidate-44975b9f03d18331/effect.json"
+      ],
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": ["reject_candidate"],
+        "causal_neighbors": ["hypothesis_researcher", "mechanism_distiller", "candidate_reviewer", "student_or_hook_model"]
+      },
+      "direction": "Trigger a second-entity search only for count or possession comparisons with one-sided evidence.",
+      "attempt": "The Hook achieved its target behavior on two cases but classified essentially every search event.",
+      "evidence": {
+        "candidate_review": {
+          "outcome": "One target case improved, but an out-of-scope shared-membership false positive caused a stable-correct regression.",
+          "comparison": "Aggregate accuracy was flat, consistency and majority-correct declined, regressions exceeded improvements, and total tokens rose about 93%.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "The target and out-of-scope cases have traceable activation-attributed outcomes."},
+            {"kind": "implementation_fidelity", "status": "confirmed", "statement": "The Candidate applied its semantic classification and deferral behavior as evaluated."},
+            {"kind": "data_sufficiency", "status": "confirmed", "statement": "The attributed benefit, selectivity harm, aggregate regression balance, and cost support a direction-level disposition."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "candidate_review": {
+          "candidate_comparison": [
+            {
+              "selector": "attributed_cases",
+              "content": "Leconte/Stark improved after a correct positive activation. D.C. Cab/Barney Miller was out of scope but activated; the second search lacked the answer and degraded a stable-correct Max Gail example."
+            },
+            {
+              "selector": "aggregate",
+              "content": "Accuracy was unchanged, consistency and majority-correct declined, and 10 examples regressed versus 7 improved. Roughly 497k Hook tokens nearly doubled total token cost."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["student_capability", "upstream_design"],
+        "expected_types": ["experiment_direction"],
+        "tool_expectation": "optional",
+        "acceptable_views": ["candidate_comparison"],
+        "required_concepts": ["selectivity harm offsets target benefit", "avoid per-event semantic classification cost"],
+        "forbidden_attributions": ["one successful case justifies adoption"]
+      }
+    },
+    {
+      "case_id": "candidate_validation_unchanged_compiler_work",
+      "source_artifacts": [
+        "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/stage_candidate-40d305dfbf411f98/effect.json",
+        "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/compile_candidate-42333f4f85dc474b/role.json"
+      ],
+      "trigger": "candidate_validation.unchanged_rejected_candidate",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_validation",
+        "decision": "unchanged_rejected_candidate",
+        "next_work_kinds": ["analyze_failure"],
+        "causal_neighbors": ["compiler", "candidate_validation", "failure_analyst"]
+      },
+      "direction": "Implement query coverage and one-shot deferral for a second-entity search obligation.",
+      "attempt": "Candidate validation rejected an unchanged resubmission with repeated repair obligations.",
+      "evidence": {
+        "validation": {
+          "outcome": "The unchanged resubmission still labeled a first-entity-only query as covering both entities and failed to produce exactly one defer with required feedback.",
+          "comparison": "The Candidate repeated the same rejected implementation despite specific coverage and action obligations.",
+          "boundary_facts": [
+            {"kind": "reference_validity", "status": "confirmed", "statement": "Candidate validation reports the unchanged rejected artifact and its repeated obligations."},
+            {"kind": "role_input_sufficiency", "status": "confirmed", "statement": "The Compiler resubmission carried the specific prior validation obligations."},
+            {"kind": "implementation_fidelity", "status": "failed", "statement": "The Candidate remained unchanged and retained both deterministic defects."}
+          ]
+        }
+      },
+      "evidence_views": {
+        "validation": {
+          "upstream_contract": [
+            {
+              "selector": "repair_contract",
+              "content": "When only the first entity is covered and no second-entity passage exists, the pending final must be replaced by one defer whose feedback requires a search naming the second entity."
+            }
+          ],
+          "decision_trace": [
+            {
+              "selector": "validation_failure",
+              "content": "The resubmitted Candidate was unchanged from a rejected revision and retained the same query-coverage and positive-action defects."
+            }
+          ]
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": ["implementation"],
+        "expected_types": ["teacher_work"],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": ["upstream_contract", "decision_trace"],
+        "required_concepts": ["change the implementation before resubmission", "fix coverage and defer action together"],
+        "forbidden_attributions": ["Candidate Validator error", "Student capability failure"]
+      }
+    }
+  ]
+}

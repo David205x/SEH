@@ -174,6 +174,23 @@ def render_hook_api_result(result: dict[str, Any]) -> str:
 def _packet_selection_view(selection: dict[str, Any]) -> dict[str, Any]:
     """Keep API selection facts while dropping Mechanism fields repeated in input."""
 
+    managed = selection.get("managed_hook_prompts")
+    if isinstance(managed, dict):
+        phases = selection.get("phases")
+        phases = phases if isinstance(phases, list) else []
+        return {
+            "strategy": selection.get("strategy"),
+            "managed_hook_prompts": managed,
+            "phase_prompt_bindings": [
+                {
+                    "phase": item.get("phase"),
+                    "prompt_product_ref": item.get("prompt_product_ref"),
+                }
+                for item in phases
+                if isinstance(item, dict)
+            ],
+            "unresolved_symbols": selection.get("unresolved_symbols"),
+        }
     phase_rules = selection.get("phase_rules")
     phase_rules = phase_rules if isinstance(phase_rules, list) else []
     return {

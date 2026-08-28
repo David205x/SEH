@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "task_id": "TASK-005",
+  "stage_id": "STAGE-001",
+  "status": "passed",
+  "environment": "D:/ProgramData/miniconda3/envs/env_search_harness/python.exe",
+  "runs": [
+    {
+      "name": "settled_trajectory_contract_check",
+      "command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_001_settled_trajectory.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_001_settled_trajectory_check.json"
+      ],
+      "status": "passed",
+      "evidence": "cvpr_workspace/analysis/stage_001_settled_trajectory_check.json"
+    },
+    {
+      "name": "route_inventory_regression",
+      "command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_001_route_inventory.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_001_route_inventory_check.json"
+      ],
+      "status": "passed",
+      "evidence": "cvpr_workspace/analysis/stage_001_route_inventory_check.json"
+    },
+    {
+      "name": "evolution_unittest_discovery",
+      "command": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests/evolution",
+        "-t",
+        ".",
+        "-q"
+      ],
+      "status": "passed",
+      "tests_run": 220
+    },
+    {
+      "name": "evolution_observer_unittest_discovery",
+      "command": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests/evolution_observer",
+        "-t",
+        ".",
+        "-q"
+      ],
+      "status": "passed",
+      "tests_run": 17
+    },
+    {
+      "name": "python_compileall",
+      "command": [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "search_harness/evolution/control",
+        "search_harness/evolution/versioning"
+      ],
+      "status": "passed"
+    }
+  ]
+}

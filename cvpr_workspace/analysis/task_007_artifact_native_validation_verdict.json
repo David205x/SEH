@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "task_id": "TASK-007",
+  "status": "passed_for_user_review",
+  "scope": "development_check_only",
+  "artifact_projection": {
+    "case_count": 18,
+    "audit_row_count": 150,
+    "hand_authored_business_input_fields": 0,
+    "silent_truncation": false,
+    "hash_or_digest_validation": false
+  },
+  "real_api_runs": {
+    "initial_full_batch": {
+      "run_ref": "RUN-007-016",
+      "directory": "cvpr_workspace/analysis/task_007_attribution_validation_v6",
+      "planned": 28,
+      "completed": 28,
+      "failed": 0
+    },
+    "corrected_recheck": {
+      "run_ref": "RUN-007-017",
+      "directory": "cvpr_workspace/analysis/task_007_attribution_validation_v7",
+      "planned": 15,
+      "completed": 15,
+      "failed": 0,
+      "capability_shape_pass": 15,
+      "projection_pass": 15,
+      "teacher_subject_pass": 15,
+      "tool_protocol_pass": 15
+    },
+    "final_overlap_recheck": {
+      "run_ref": "RUN-007-018",
+      "directory": "cvpr_workspace/analysis/task_007_attribution_validation_v8_overlap_final",
+      "planned": 3,
+      "completed": 3,
+      "failed": 0,
+      "exact_type_pass": 3,
+      "capability_shape_pass": 3,
+      "projection_pass": 3,
+      "tool_protocol_pass": 3
+    }
+  },
+  "final_checks": {
+    "artifact_native_projection": "passed",
+    "conditional_student_capability_contract": "passed",
+    "capability_only_stability": "passed_3_of_3",
+    "capability_direction_overlap_stability": "passed_3_of_3",
+    "implementation_teacher_work_stability": "passed_3_of_3",
+    "direction_only_false_capability_control": "passed",
+    "evolution_regression_tests": "passed_233_of_233"
+  },
+  "formal_claim_evidence": false,
+  "task_acceptance_requires_user_confirmation": true,
+  "evidence_refs": [
+    "cvpr_workspace/analysis/TASK-007_artifact_native_api_validation_v1.md",
+    "cvpr_workspace/analysis/task_007_artifact_input_projection_check.json",
+    "cvpr_workspace/analysis/stage_002_experience_summary_check_v5.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v7/structural_audit.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v8_overlap_final/structural_audit.json"
+  ]
+}

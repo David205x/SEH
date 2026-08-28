@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "repetitions": {
+    "candidate_reject_hook_false_positive_scope": 3
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "TASK-007-ATTRIBUTION-V1",
+  "validation_version": "v2",
+  "status": "completed",
+  "task_acceptance": "not_accepted",
+  "case_results": {
+    "pass": 14,
+    "partial": 3,
+    "fail": 1
+  },
+  "api_execution": {
+    "case_count": 18,
+    "run_count": 30,
+    "completed_runs": 29,
+    "failed_runs": 1,
+    "provider_requests": 70,
+    "input_tokens": 301266,
+    "output_tokens": 127186,
+    "total_tokens": 428452
+  },
+  "structural_results": {
+    "type_contract_pass_runs": 29,
+    "tool_expectation_pass_runs": 29,
+    "tool_view_pass_runs": 30,
+    "tool_protocol_pass_runs": 30,
+    "evidence_tool_attempts": 33,
+    "successful_evidence_tool_calls": 33,
+    "failed_evidence_tool_calls": 0,
+    "terminal_submit_attempts": 45,
+    "terminal_submit_validation_failures": 16
+  },
+  "confirmed_improvements": [
+    "evidence ref/view/selector directory reduced evidence-tool failures from 28 to 0",
+    "no evidence-tool invocation hard cap was enforced",
+    "isolated implementation defects consistently produced route-target teacher_work without student_capability",
+    "thinking_mode and prior-knowledge terminology remained faithful",
+    "experience type generation became materially more selective"
+  ],
+  "remaining_issues": [
+    "prompt does not state the schema character limits, causing 15 overlong lesson submissions",
+    "one run exhausted all six turns after repetitive causal reconsideration and truncated JSON",
+    "no-differential and harmful-overtrigger interventions can still be misclassified as student capability"
+  ],
+  "evidence_refs": [
+    "cvpr_workspace/analysis/task_007_attribution_validation_v2/summary.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v2/structural_audit.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v2/quality_audit.md"
+  ]
+}

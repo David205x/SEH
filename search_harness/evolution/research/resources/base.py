@@ -18,15 +18,27 @@ from search_harness.integrations.openai_compatible import (
 
 from ..intervention.prefix import load_rollout_record
 
+from ..experience_summary import (
+    ExperienceDetailStore,
+    ExperienceSummaryResourceConfig,
+)
 from ..mechanism.capabilities import build_compiler_capability_packet
 from ..student_model_experiment import (
     StudentModelExperimentCase,
     experiment_signature,
     run_student_model_experiment,
 )
+from ..shadow_prompt_research import (
+    ShadowPromptResearchResourceConfig,
+    ShadowPromptResearchStore,
+)
 from ..roles.contracts import (
+    CapabilityExperienceSummary,
     CompilerInput,
+    CapabilitySummarizerInput,
     DecisionEvaluator,
+    DirectionSummarizerInput,
+    DirectionSummary,
     EvidenceReview,
     EvidenceReviewerInput,
     FailureAnalystInput,
@@ -35,6 +47,16 @@ from ..roles.contracts import (
     MechanismDistillation,
     MechanismDistillerInput,
     MechanismSpec,
+    ShadowDistillationSubmission,
+    ShadowDistillationResult,
+    ShadowCompilerInput,
+    ShadowEffectSpec,
+    ShadowMechanismSpec,
+    ShadowPhaseSpec,
+    ShadowPromptResearcherInput,
+    ShadowPromptResearchResult,
+    ShadowPromptResearchSubmission,
+    ShadowStateSpec,
     TeacherPayload,
     TrialReview,
     TrialReviewerInput,
@@ -46,6 +68,10 @@ from .stores import (
     CompilerWorkspaceStore,
     InterventionBranchStore,
     InterventionResourceConfig,
+)
+from ..shadow_compiler import (
+    build_managed_prompt_products,
+    build_shadow_compiler_capability_packet,
 )
 
 
@@ -61,6 +87,8 @@ class TeacherResourceConfig(BaseModel):
     intervention: InterventionResourceConfig | None = None
     compiler: CompilerResourceConfig | None = None
     candidate_review: CandidateReviewResourceConfig | None = None
+    experience_summary: ExperienceSummaryResourceConfig | None = None
+    shadow_prompt_research: ShadowPromptResearchResourceConfig | None = None
     hook_probe_env_file: Path | None = None
 
 
@@ -73,9 +101,14 @@ class TeacherResources:
     mechanisms: "MechanismDraftStore" = field(
         default_factory=lambda: MechanismDraftStore()
     )
+    shadow_mechanisms: "ShadowMechanismDraftStore" = field(
+        default_factory=lambda: ShadowMechanismDraftStore()
+    )
     intervention: InterventionBranchStore | None = None
     compiler: CompilerWorkspaceStore | None = None
     candidate_review: CandidateComparisonStore | None = None
+    experience_summary: ExperienceDetailStore | None = None
+    shadow_prompt_research: ShadowPromptResearchStore | None = None
     intervention_capabilities_inspected: bool = False
     compiler_capability_packet: dict[str, Any] | None = None
     evidence_review_phases: tuple[str, ...] = ()
@@ -126,12 +159,27 @@ class TeacherResources:
             if config.candidate_review is not None
             else None
         )
+        experience_summary = (
+            ExperienceDetailStore(config.experience_summary)
+            if config.experience_summary is not None
+            else None
+        )
+        shadow_prompt_research = (
+            ShadowPromptResearchStore(
+                config=config.shadow_prompt_research,
+                trial_files=config.trial_files,
+            )
+            if config.shadow_prompt_research is not None
+            else None
+        )
         return cls(
             evaluation=evaluation,
             trials=trials,
             intervention=intervention,
             compiler=compiler,
             candidate_review=candidate_review,
+            experience_summary=experience_summary,
+            shadow_prompt_research=shadow_prompt_research,
             hook_probe_env_file=config.hook_probe_env_file,
         )
 
@@ -192,10 +240,45 @@ class TeacherResources:
             self.student_model_experiments = [
                 dict(item) for item in role_input.student_model_experiments
             ]
+        if isinstance(role_input, ShadowCompilerInput):
+            if self.compiler is None:
+                raise ValueError("Shadow Compiler requires compiler resources")
+            managed_products = build_managed_prompt_products(role_input)
+            packet = build_shadow_compiler_capability_packet(role_input)
+            self.compiler.bind_managed_prompt_products(managed_products)
+            self.compiler.bind_capability_packet(packet)
+            self.compiler_capability_packet = packet
+        if isinstance(
+            role_input,
+            (CapabilitySummarizerInput, DirectionSummarizerInput),
+        ):
+            if self.experience_summary is None:
+                raise ValueError(
+                    "Experience Summarizer requires experience resources"
+                )
+            self.experience_summary.bind(role_input)
+        if isinstance(role_input, ShadowPromptResearcherInput):
+            if self.shadow_prompt_research is None:
+                raise ValueError(
+                    "Shadow Prompt Researcher requires probe resources"
+                )
+            self.shadow_prompt_research.bind(role_input)
 
     def model_context(self, role_id: str) -> dict[str, Any]:
         """返回只适合直接进入 Prompt 的紧凑程序上下文。"""
 
+        if role_id in {"capability_summarizer", "direction_summarizer"}:
+            if self.experience_summary is None:
+                raise ValueError(
+                    "Experience Summarizer requires experience resources"
+                )
+            return self.experience_summary.model_context()
+        if role_id == "shadow_prompt_researcher":
+            if self.shadow_prompt_research is None:
+                raise ValueError(
+                    "Shadow Prompt Researcher requires probe resources"
+                )
+            return self.shadow_prompt_research.model_context()
         if role_id == "failure_analyst":
             if self.evaluation is None:
                 raise ValueError("Failure Analyst requires evaluation resources")
@@ -231,7 +314,11 @@ class TeacherResources:
             "trials": (
                 self.trials.initial_context() if self.trials is not None else None
             ),
-            "mechanism_drafts": self.mechanisms.summary(),
+            "mechanism_drafts": (
+                self.shadow_mechanisms.summary()
+                if role_id == "shadow_mechanism_distiller"
+                else self.mechanisms.summary()
+            ),
             "intervention": (
                 self.intervention.initial_context()
                 if self.intervention is not None
@@ -268,6 +355,16 @@ class TeacherResources:
             ),
             "student_model_experiments": list(
                 self.student_model_experiments
+            ),
+            **(
+                self.experience_summary.artifacts()
+                if self.experience_summary is not None
+                else {}
+            ),
+            **(
+                self.shadow_prompt_research.artifacts()
+                if self.shadow_prompt_research is not None
+                else {}
             ),
         }
 
@@ -388,19 +485,76 @@ class TeacherResources:
 
     def validate_mechanism_distillation(
         self,
-        result: MechanismDistillation,
+        result: MechanismDistillation | ShadowDistillationResult,
     ) -> None:
         """Prevent an exhausted trial loop from requesting more evidence."""
 
+        decision = (
+            result.decision
+            if isinstance(result, MechanismDistillation)
+            else result.outcome
+        )
         if (
             self.mechanism_distillation_conclusion_required
-            and result.decision == "needs_evidence"
+            and decision == "needs_evidence"
         ):
             raise ValueError(
                 "Mechanism Distiller cannot request more evidence when no "
                 "further trial can be scheduled; choose distilled or "
                 "not_distillable"
             )
+
+    def materialize_shadow_distillation(
+        self,
+        submission: ShadowDistillationSubmission,
+    ) -> ShadowDistillationResult:
+        """Resolve one shallow model submission into the public product."""
+
+        mechanism = (
+            self.shadow_mechanisms.resolve(submission.mechanism_ref)
+            if submission.mechanism_ref is not None
+            else None
+        )
+        return ShadowDistillationResult(
+            outcome=submission.outcome,
+            mechanism=mechanism,
+            obligation=submission.obligation,
+        )
+
+    def materialize_shadow_prompt_research(
+        self,
+        submission: ShadowPromptResearchSubmission,
+    ) -> ShadowPromptResearchResult:
+        """Materialize a reviewed Prompt selection into its public product."""
+
+        if self.shadow_prompt_research is None:
+            raise ValueError("Shadow Prompt Research resources are unavailable")
+        return self.shadow_prompt_research.materialize(submission)
+
+    def validated_mechanism_payloads(self) -> dict[str, dict[str, Any]]:
+        """Return validated legacy and Shadow mechanisms for one artifact."""
+
+        return {
+            **self.mechanisms.validated_payloads(),
+            **self.shadow_mechanisms.validated_payloads(),
+        }
+
+    def validate_capability_summary(
+        self,
+        output: CapabilityExperienceSummary,
+    ) -> None:
+        """校验 Capability Proposal 只引用当前 Packet Observation。"""
+
+        if self.experience_summary is None:
+            raise ValueError("Capability Summarizer resources are unavailable")
+        self.experience_summary.validate_capability_output(output)
+
+    def validate_direction_summary(self, output: DirectionSummary) -> None:
+        """校验 Direction Draft 只引用当前 Packet Observation。"""
+
+        if self.experience_summary is None:
+            raise ValueError("Direction Summarizer resources are unavailable")
+        self.experience_summary.validate_direction_output(output)
 
     def role_session_state(self) -> dict[str, Any]:
         """导出恢复同一角色会话所需的最小程序状态。"""
@@ -1643,6 +1797,99 @@ def _project_behavior_event(event: dict[str, Any]) -> dict[str, Any] | None:
         "event_type": event_type,
         "payload": projected_payload,
     }
+
+
+class ShadowMechanismDraftStore:
+    """Incrementally assemble the minimal Shadow Mechanism product."""
+
+    def __init__(self) -> None:
+        self._drafts: dict[str, dict[str, Any]] = {}
+        self._validated: dict[str, ShadowMechanismSpec] = {}
+
+    def create(self, *, effect_kind: str, effect_success: str) -> str:
+        """Create one draft after validating its observable effect."""
+
+        effect = ShadowEffectSpec.model_validate(
+            {"kind": effect_kind, "success": effect_success}
+        )
+        draft_id = f"shadow_draft_{len(self._drafts) + 1:03d}"
+        self._drafts[draft_id] = {
+            "effect": effect.model_dump(mode="json"),
+            "phases": [],
+        }
+        return draft_id
+
+    def add_phase(
+        self,
+        *,
+        draft_id: str,
+        phase_payload: dict[str, Any],
+    ) -> None:
+        """Validate and append one complete phase-local specification."""
+
+        draft = self._require_draft(draft_id)
+        phase = ShadowPhaseSpec.model_validate(phase_payload)
+        phases = draft["phases"]
+        if not isinstance(phases, list):
+            raise TypeError("shadow mechanism phases must be a list")
+        if any(
+            isinstance(item, dict) and item.get("phase") == phase.phase
+            for item in phases
+        ):
+            raise ValueError(f"shadow mechanism phase already exists: {phase.phase}")
+        phases.append(phase.model_dump(mode="json"))
+
+    def validate(
+        self,
+        *,
+        draft_id: str,
+        state: list[dict[str, object]],
+        constraints: list[str],
+    ) -> str:
+        """Validate the assembled product and return a stable run-local ref."""
+
+        draft = dict(self._require_draft(draft_id))
+        draft["state"] = [
+            ShadowStateSpec.model_validate(item).model_dump(mode="json")
+            for item in state
+        ]
+        draft["constraints"] = list(constraints)
+        mechanism = ShadowMechanismSpec.model_validate(draft)
+        mechanism_ref = f"shadow_mechanism_{len(self._validated) + 1:03d}"
+        self._validated[mechanism_ref] = mechanism
+        return mechanism_ref
+
+    def resolve(self, mechanism_ref: str) -> ShadowMechanismSpec:
+        """Resolve a previously validated Shadow Mechanism."""
+
+        try:
+            return self._validated[mechanism_ref]
+        except KeyError as exc:
+            raise KeyError(
+                f"unknown validated shadow mechanism: {mechanism_ref}"
+            ) from exc
+
+    def summary(self) -> dict[str, int]:
+        """Expose only counts, never unfinished draft content."""
+
+        return {
+            "draft_count": len(self._drafts),
+            "validated_count": len(self._validated),
+        }
+
+    def validated_payloads(self) -> dict[str, dict[str, Any]]:
+        """Return complete validated products for role artifact persistence."""
+
+        return {
+            key: value.model_dump(mode="json")
+            for key, value in self._validated.items()
+        }
+
+    def _require_draft(self, draft_id: str) -> dict[str, Any]:
+        try:
+            return self._drafts[draft_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown shadow mechanism draft: {draft_id}") from exc
 
 
 class MechanismDraftStore:

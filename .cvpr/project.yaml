@@ -100,7 +100,7 @@
       "0820_report.md 所列近期论文的稳定身份、版本和逐项 claim 支持关系。",
       "核心方法相对 Direct Compile 的前瞻性成本与 Candidate Yield 增益。",
       "方法跨 Student 尺度、任务和机制复杂度的泛化边界。",
-      "当前未提交工作树在完整测试套件上的最新状态。",
+      "development base main@72754289913aa0c251aeb559b8ee698862f56150 在后续完整测试套件上的基线状态。",
       "最终代码、Student、Teacher、Evaluator、Retriever、数据、预算与统计协议的冻结版本。"
     ],
     "conflicts": [

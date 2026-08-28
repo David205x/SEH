@@ -1,0 +1,348 @@
+{
+  "schema_version": "1.0",
+  "manifest_id": "EXEC-001",
+  "status": "active",
+  "project_root": ".",
+  "workspace_root": "cvpr_workspace",
+  "goal_ref": {
+    "goal_id": "G-001",
+    "goal_version": 1,
+    "goal_file": ".cvpr/goal.yaml"
+  },
+  "plan_ref": {
+    "plan_id": "PLAN-001",
+    "plan_version": 1,
+    "plan_file": ".cvpr/plan.yaml"
+  },
+  "research_profile": {
+    "kind": "non_model",
+    "required_entry_roles": []
+  },
+  "directory_contract": {
+    "checks": "cvpr_workspace/checks",
+    "entrypoints": "cvpr_workspace/entrypoints",
+    "goal_evaluation": "cvpr_workspace/goal_evaluation",
+    "configs": "cvpr_workspace/configs",
+    "analysis": "cvpr_workspace/analysis"
+  },
+  "entries": [
+    {
+      "id": "ENTRY-STAGE-001-ROUTE-INVENTORY",
+      "role": "stage_check",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-001"
+      ],
+      "task_refs": [
+        "TASK-004",
+        "TASK-005"
+      ],
+      "purpose": "静态核对 Controller route inventory、显式终止点、replay/retry 边界与 H1/H2 语义审计基线。",
+      "code_path": "cvpr_workspace/checks/check_stage_001_route_inventory.py",
+      "config_paths": [],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_001_route_inventory.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_001_route_inventory_check.json"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/controller.py",
+        "search_harness/evolution/control/journal.py",
+        "search_harness/evolution/control/transitions.py",
+        "search_harness/evolution/control/policies.py",
+        "search_harness/evolution/control/candidate_version_effects.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/research/roles/role_execution.py",
+        "cvpr_workspace/analysis/stage_001_route_coverage_matrix.json",
+        "cvpr_workspace/analysis/stage_001_h1_h2_semantic_diff_audit.md"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/stage_001_route_inventory_check.json",
+        "cvpr_workspace/analysis/stage_001_test_execution_summary.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/checks/check_stage_001_route_inventory.py",
+        "cvpr_workspace/analysis/stage_001_route_coverage_matrix.json"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-001-SETTLED-TRAJECTORY",
+      "role": "stage_check",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-001"
+      ],
+      "task_refs": [
+        "TASK-005"
+      ],
+      "purpose": "核对可读生命周期 ID、typed settlement scope、source event provenance、retry/replay 幂等和旧 ID/schema 清理。",
+      "code_path": "cvpr_workspace/checks/check_stage_001_settled_trajectory.py",
+      "config_paths": [],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_001_settled_trajectory.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_001_settled_trajectory_check.json"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "search_harness/evolution/identifiers.py",
+        "search_harness/evolution/control/domain.py",
+        "search_harness/evolution/control/controller.py",
+        "search_harness/evolution/control/journal.py",
+        "search_harness/evolution/control/transitions.py",
+        "search_harness/evolution/control/candidate_version_effects.py",
+        "search_harness/evolution/versioning/journal.py",
+        "search_harness/evolution/versioning/store.py"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/stage_001_settled_trajectory_check.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/checks/check_stage_001_settled_trajectory.py"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-001-ROLE-IDENTITY",
+      "role": "stage_check",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-001"
+      ],
+      "task_refs": [
+        "TASK-006"
+      ],
+      "purpose": "核对最小 Teacher Role hard scope、base Prompt provenance 与真实 compact Model Input provenance，且 digest 不成为 Gate 或 exact-match 消费键。",
+      "code_path": "cvpr_workspace/checks/check_stage_001_role_identity.py",
+      "config_paths": [],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_001_role_identity.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_001_role_identity_check.json"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "search_harness/evolution/research/roles/provenance.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/research/roles/role_execution.py",
+        "search_harness/evolution/research/roles/native_chat_runner.py",
+        "search_harness/evolution/research/roles/agents_sdk_runner.py",
+        "search_harness/evolution/research/intervention/role_runner.py",
+        "harness_templates/teacher/"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/stage_001_role_identity_check.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/checks/check_stage_001_role_identity.py"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-002-EXPERIENCE-SUMMARY",
+      "role": "stage_check",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-002"
+      ],
+      "task_refs": [
+        "TASK-007"
+      ],
+      "purpose": "核对 Experience Summarizer v2 的结构化紧凑输入、实际 Transition 路由、全局与局部归因上下文、三类优先级、20 次工具硬熔断、输出证据边界与空总结。",
+      "code_path": "cvpr_workspace/checks/check_stage_002_experience_summary.py",
+      "config_paths": [],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/checks/check_stage_002_experience_summary.py",
+        "--output",
+        "cvpr_workspace/analysis/stage_002_experience_summary_check_v5.json"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "search_harness/evolution/research/experience_summary.py",
+        "search_harness/evolution/experience_attribution.py",
+        "search_harness/evolution/research/roles/contracts.py",
+        "search_harness/evolution/research/resources/base.py",
+        "search_harness/evolution/research/tools.py",
+        "harness_templates/teacher/experience_summarizer/"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/stage_002_experience_summary_check.json",
+        "cvpr_workspace/analysis/stage_002_experience_summary_check_v2.json",
+        "cvpr_workspace/analysis/stage_002_experience_summary_check_v3.json",
+        "cvpr_workspace/analysis/stage_002_experience_summary_check_v4.json",
+        "cvpr_workspace/analysis/stage_002_experience_summary_check_v5.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/checks/check_stage_002_experience_summary.py"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-002-EXPERIENCE-ATTRIBUTION-API",
+      "role": "validation",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-002"
+      ],
+      "task_refs": [
+        "TASK-007"
+      ],
+      "purpose": "使用真实历史负向 artifact 和真实 Teacher API 验证 Experience Summarizer 的归因质量、工具克制与重复稳定性。",
+      "code_path": "cvpr_workspace/entrypoints/run_task_007_attribution_validation.py",
+      "config_paths": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "cvpr_workspace/configs/task_007_attribution_selection_v3.json",
+        "cvpr_workspace/configs/task_007_attribution_selection_v5_artifact_native_recheck.json",
+        "cvpr_workspace/configs/task_007_attribution_selection_v6_overlap_final.json",
+        "config/runtime.yaml"
+      ],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/entrypoints/run_task_007_attribution_validation.py",
+        "--cases",
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "--selection",
+        "cvpr_workspace/configs/task_007_attribution_selection_v3.json",
+        "--output-dir",
+        "cvpr_workspace/analysis/task_007_attribution_validation_manual_next",
+        "--env-file",
+        ".env",
+        "--concurrency",
+        "2"
+      ],
+      "runtime_parameters": [
+        "--output-dir selects a new non-existing evidence directory",
+        "--selection sets the frozen directed repetition plan without duplicating cases",
+        "--concurrency may be set from 1 to 4 without changing case content"
+      ],
+      "input_refs": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "cvpr_workspace/configs/task_007_attribution_selection_v3.json",
+        "runs/evolution/",
+        "harness_templates/teacher/experience_summarizer/"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/task_007_attribution_validation_v1/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v2/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v3/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v4/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v5/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v6/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v7/",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v8_overlap_final/"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/entrypoints/run_task_007_attribution_validation.py",
+        "cvpr_workspace/analysis/analyze_task_007_attribution_validation.py"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-002-EXPERIENCE-ATTRIBUTION-ANALYSIS",
+      "role": "analysis",
+      "scope": "evidence_analysis",
+      "stage_refs": [
+        "STAGE-002"
+      ],
+      "task_refs": [
+        "TASK-007"
+      ],
+      "purpose": "对 TASK-007 真实 API 输出执行结构、工具、类型和人工语义归因审计。",
+      "code_path": "cvpr_workspace/analysis/analyze_task_007_attribution_validation.py",
+      "config_paths": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json"
+      ],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/analysis/analyze_task_007_attribution_validation.py",
+        "--cases",
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "--run-dir",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v8_overlap_final"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v6/summary.json",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v7/summary.json",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v8_overlap_final/summary.json"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/task_007_attribution_validation_v5/structural_audit.json",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v5/quality_review_template.md",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v5/quality_audit.md",
+        "cvpr_workspace/analysis/task_007_attribution_validation_v5/quality_verdict.json",
+        "cvpr_workspace/analysis/TASK-007_artifact_native_api_validation_v1.md",
+        "cvpr_workspace/analysis/task_007_artifact_native_validation_verdict.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/analysis/analyze_task_007_attribution_validation.py"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "ENTRY-STAGE-002-ARTIFACT-INPUT-PROJECTION",
+      "role": "stage_check",
+      "scope": "development_check",
+      "stage_refs": [
+        "STAGE-002"
+      ],
+      "task_refs": [
+        "TASK-007"
+      ],
+      "purpose": "核对 18 个真实历史 case 的模型业务输入均由 Artifact 原字段投影，并保存路径、JSON pointer、操作和原始值审计。",
+      "code_path": "cvpr_workspace/checks/check_task_007_artifact_input_projection.py",
+      "config_paths": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json"
+      ],
+      "working_directory": ".",
+      "manual_command": [
+        "python",
+        "cvpr_workspace/checks/check_task_007_artifact_input_projection.py",
+        "--output",
+        "cvpr_workspace/analysis/task_007_artifact_input_projection_check.json"
+      ],
+      "runtime_parameters": [],
+      "input_refs": [
+        "cvpr_workspace/configs/task_007_attribution_cases_v2.json",
+        "runs/evolution/"
+      ],
+      "output_refs": [
+        "cvpr_workspace/analysis/task_007_artifact_input_projection_check.json"
+      ],
+      "goal_protocol_refs": [],
+      "goal_criterion_refs": [],
+      "result_logic_refs": [
+        "cvpr_workspace/analysis/task_007_artifact_input_projection.py",
+        "cvpr_workspace/checks/check_task_007_artifact_input_projection.py"
+      ],
+      "status": "active"
+    }
+  ],
+  "updated_at": "2026-08-23T20:23:26+08:00"
+}

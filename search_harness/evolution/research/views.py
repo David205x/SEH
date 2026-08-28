@@ -1236,6 +1236,8 @@ def render_mechanism_distiller_input(
     value: dict[str, Any],
     trial_payloads: dict[str, dict[str, Any]],
     resource_context: dict[str, Any],
+    *,
+    closing_instruction: str | None = None,
 ) -> str:
     """Render all evidence needed for distillation as one coherent dossier."""
 
@@ -1312,7 +1314,8 @@ def render_mechanism_distiller_input(
             "## Capability constraints\n"
             + _jsonl([value.get("capability_constraints")]),
             "## Draft workspace\n" + _jsonl([mechanism_context]),
-            (
+            closing_instruction
+            or (
                 "Distill the smallest supported no-Teacher control path. Do not "
                 "re-adjudicate settled evidence or read Trial details by default. "
                 "Use the mechanism draft tools, run bounded Student model "

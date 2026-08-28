@@ -20,6 +20,9 @@ from search_harness.evolution.control.domain import (
     ControlState,
     EffectResult,
     EvolutionControlConfig,
+    SettlementClass,
+    SettlementScope,
+    TrajectoryLineage,
     WorkItem,
     WorkKind,
     project_events,
@@ -39,6 +42,12 @@ from search_harness.evolution.control.transitions import (
     transition_completed,
 )
 from search_harness.evolution.control.evaluation import CandidateArtifact
+from search_harness.evolution.identifiers import (
+    make_generation_id,
+    make_logical_work_id,
+    make_research_attempt_id,
+    make_work_id,
+)
 from search_harness.evolution.research.roles.contracts import MechanismSpec
 from search_harness.evolution.versioning import (
     FileEdit,
@@ -47,6 +56,70 @@ from search_harness.evolution.versioning import (
 
 
 SCRATCH_ROOT = Path("runs/components/controller_tests")
+
+
+def _work_item(
+    *,
+    work_id: str,
+    kind: WorkKind,
+    subject_ref: str,
+    input_refs: dict[str, str] | None = None,
+    payload: dict[str, object] | None = None,
+    parent_work_id: str | None = None,
+    attempt: int = 1,
+    work_index: int = 1,
+    lineage: TrajectoryLineage | None = None,
+    logical_work_id: str | None = None,
+) -> WorkItem:
+    """Build a canonical WorkItem while keeping fixtures concise."""
+
+    del work_id
+    values = dict(payload or {})
+    candidate_attempt_id = values.pop("candidate_attempt_id", None)
+    if candidate_attempt_id is not None and not isinstance(
+        candidate_attempt_id,
+        str,
+    ):
+        raise TypeError("candidate_attempt_id fixture must be a string")
+    if lineage is None:
+        run_id = "run_test"
+        generation = int(values.pop("generation", 1))
+        generation_id = make_generation_id(run_id, generation)
+        research_attempt = int(values.pop("research_attempt", 1))
+        research_attempt_id = make_research_attempt_id(
+            generation_id,
+            research_attempt,
+        )
+        lineage = TrajectoryLineage(
+            run_id=run_id,
+            generation=generation,
+            generation_id=generation_id,
+            research_attempt=research_attempt,
+            research_attempt_id=research_attempt_id,
+            candidate_attempt_id=candidate_attempt_id,
+        )
+    selected_logical = logical_work_id or make_logical_work_id(
+        lineage.research_attempt_id,
+        work_index,
+        kind.value,
+    )
+    return WorkItem(
+        work_id=make_work_id(selected_logical, attempt),
+        logical_work_id=selected_logical,
+        work_index=work_index,
+        kind=kind,
+        subject_ref=subject_ref,
+        lineage=lineage,
+        input_refs=dict(input_refs or {}),
+        payload=values,
+        parent_work_id=parent_work_id,
+        attempt=attempt,
+    )
+
+
+def _next_of_kind(plan: object, kind: WorkKind) -> WorkItem:
+    items = getattr(plan, "next_items")
+    return next(item for item in items if item.kind is kind)
 
 
 class HappyPathEffects:
@@ -81,7 +154,12 @@ class HappyPathEffects:
             )
         if work.kind == WorkKind.RESEARCH_HYPOTHESIS:
             return EffectResult(
-                outcome={"output": {"trigger_phase": "pre_final"}},
+                outcome={
+                    "output": {
+                        "scheme_action": "start_new",
+                        "hypothesis": {"trigger_phase": "pre_final"},
+                    }
+                },
                 artifact_refs={"hypothesis_artifact": artifact},
                 usage={"total_tokens": 10},
             )
@@ -207,6 +285,11 @@ class HappyPathEffects:
                 },
                 usage={"total_tokens": 10},
             )
+        if work.kind in {
+            WorkKind.SUMMARIZE_CAPABILITY,
+            WorkKind.SUMMARIZE_DIRECTION,
+        }:
+            return EffectResult(outcome={"status": "completed"})
         if work.kind == WorkKind.PROMOTE_CANDIDATE:
             return EffectResult(
                 outcome={
@@ -295,10 +378,9 @@ class LegacyControlArtifactTest(unittest.TestCase):
             )
         )
 
-    def test_reads_legacy_attempt_names_without_rewriting_file(self) -> None:
+    def test_rejects_legacy_attempt_names(self) -> None:
         root = SCRATCH_ROOT / f"legacy-{uuid4().hex}"
         journal_path = root / "events.jsonl"
-        artifact_store = ControlArtifactStore(root / "artifacts")
         try:
             journal_path.parent.mkdir(parents=True, exist_ok=True)
             legacy_events = [
@@ -332,35 +414,8 @@ class LegacyControlArtifactTest(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            effect_path = artifact_store.effect_path("legacy-work")
-            effect_path.parent.mkdir(parents=True, exist_ok=True)
-            effect_path.write_text(
-                json.dumps(
-                    {
-                        "outcome": {"iteration_id": "iteration_legacy"},
-                        "artifact_refs": {},
-                        "usage": {},
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            events = ControlJournal(journal_path).read()
-            effect = artifact_store.load_effect("legacy-work")
-
-            work = events[1].payload["work"]
-            self.assertEqual(
-                work["payload"]["candidate_attempt_id"],
-                "iteration_legacy",
-            )
-            self.assertEqual(
-                effect.outcome["candidate_attempt_id"],
-                "iteration_legacy",
-            )
-            self.assertIn(
-                "iteration_id",
-                journal_path.read_text(encoding="utf-8"),
-            )
+            with self.assertRaises((TypeError, ValueError)):
+                ControlJournal(journal_path).read()
         finally:
             if root.exists():
                 shutil.rmtree(root)
@@ -397,7 +452,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(outcome.status, "completed")
         self.assertEqual(outcome.current_version, "harness_v0002")
-        self.assertEqual(outcome.completed_work_count, 13)
+        self.assertEqual(outcome.completed_work_count, 14)
         self.assertEqual(
             [item.kind for item in effects.calls],
             [
@@ -413,6 +468,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 WorkKind.VERIFY_CONFORMANCE,
                 WorkKind.EVALUATE_CANDIDATE,
                 WorkKind.REVIEW_CANDIDATE,
+                WorkKind.SUMMARIZE_DIRECTION,
                 WorkKind.PROMOTE_CANDIDATE,
             ],
         )
@@ -434,6 +490,22 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(event.event_type == "version_advanced" for event in events)
         )
+        state = controller._state()
+        self.assertEqual(len(state.settlements), 1)
+        settlement = next(iter(state.settlements.values()))
+        self.assertIs(
+            settlement.classification,
+            SettlementClass.SETTLED_POSITIVE,
+        )
+        self.assertIs(
+            settlement.scope,
+            SettlementScope.CANDIDATE_ATTEMPT,
+        )
+        self.assertEqual(
+            settlement.target_id,
+            settlement.lineage.candidate_attempt_id,
+        )
+        self.assertNotIn("scope_id", settlement.to_dict())
 
     async def test_stops_before_work_without_persisting_pause(self) -> None:
         """调试边界保留正式队列，并可由普通 run 继续。"""
@@ -636,6 +708,23 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(len(incumbent_calls), 1)
         self.assertEqual([item.attempt for item in analysis_calls], [1, 2])
+        self.assertEqual(
+            analysis_calls[0].logical_work_id,
+            analysis_calls[1].logical_work_id,
+        )
+        self.assertNotEqual(
+            analysis_calls[0].work_id,
+            analysis_calls[1].work_id,
+        )
+        invalid = [
+            settlement
+            for settlement in controller._state().settlements.values()
+            if settlement.classification
+            is SettlementClass.INVALID_INDETERMINATE
+        ]
+        self.assertEqual(len(invalid), 1)
+        self.assertIs(invalid[0].scope, SettlementScope.WORK_ATTEMPT)
+        self.assertEqual(invalid[0].target_id, analysis_calls[0].work_id)
 
     async def test_persists_teacher_failure_artifact_before_pausing(self) -> None:
         effects = FailWithRoleArtifact()
@@ -675,7 +764,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     ) -> None:
         """验证 Reviewer 修订先关闭 pending 候选，再返回明确职责层。"""
 
-        review_work = WorkItem(
+        review_work = _work_item(
             work_id="review-candidate",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
@@ -743,7 +832,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     ) -> None:
         """验证机制层能收到 Candidate Reviewer 的具体修订义务。"""
 
-        review_work = WorkItem(
+        review_work = _work_item(
             work_id="review-mechanism",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
@@ -775,11 +864,12 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             }
         )
 
-        reject_work = transition_completed(
+        review_plan = transition_completed(
             item=review_work,
             result=review_result,
             config=EvolutionControlConfig(),
-        ).next_items[0]
+        )
+        reject_work = _next_of_kind(review_plan, WorkKind.REJECT_CANDIDATE)
         mechanism_work = transition_completed(
             item=reject_work,
             result=EffectResult(
@@ -807,7 +897,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     def test_candidate_reject_starts_new_research_attempt(self) -> None:
         """验证真正拒绝只放弃当前方向，并复用 incumbent 开始新研究。"""
 
-        review_work = WorkItem(
+        review_work = _work_item(
             work_id="review-reject",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
@@ -841,11 +931,12 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             }
         )
 
-        reject_work = transition_completed(
+        review_plan = transition_completed(
             item=review_work,
             result=review_result,
             config=EvolutionControlConfig(),
-        ).next_items[0]
+        )
+        reject_work = _next_of_kind(review_plan, WorkKind.REJECT_CANDIDATE)
         next_plan = transition_completed(
             item=reject_work,
             result=EffectResult(
@@ -858,17 +949,15 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
         next_work = next_plan.next_items[0]
-        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
-        self.assertEqual(next_work.payload["research_attempt"], 2)
-        self.assertEqual(next_work.payload["generation"], 1)
+        self.assertEqual(next_work.kind, WorkKind.RESEARCH_HYPOTHESIS)
+        self.assertEqual(next_work.lineage.research_attempt, 1)
+        self.assertEqual(next_work.lineage.generation, 1)
         self.assertEqual(next_work.payload["version_id"], "harness_v0001")
-        self.assertIn(
-            "one rejected solution does not invalidate",
-            next_work.payload["analysis_focus"],
+        continuation = next_work.payload["research_continuation"]
+        self.assertEqual(
+            continuation["feedback_source"],
+            "candidate_reviewer",
         )
-        self.assertLessEqual(len(next_work.payload["analysis_focus"]), 300)
-        self.assertNotIn("trial_count", next_work.payload)
-        self.assertNotIn("compiler_revision", next_work.payload)
         self.assertEqual(next_work.input_refs["report_dir"], "incumbent-report")
         self.assertEqual(
             next_work.input_refs["rollout_file"],
@@ -878,7 +967,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     def test_promotion_gate_reject_starts_new_research_attempt(self) -> None:
         """验证 Reviewer accept 被门禁拒绝后也重新选择研究方向。"""
 
-        review_work = WorkItem(
+        review_work = _work_item(
             work_id="review-gate-reject",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
@@ -896,7 +985,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 "candidate_attempt_id": "candidate_attempt-1",
             },
         )
-        reject_work = transition_completed(
+        review_plan = transition_completed(
             item=review_work,
             result=EffectResult(
                 outcome={
@@ -910,7 +999,8 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 }
             ),
             config=EvolutionControlConfig(max_total_token_ratio=3.0),
-        ).next_items[0]
+        )
+        reject_work = _next_of_kind(review_plan, WorkKind.REJECT_CANDIDATE)
         next_work = transition_completed(
             item=reject_work,
             result=EffectResult(
@@ -922,18 +1012,15 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             config=EvolutionControlConfig(max_total_token_ratio=3.0),
         ).next_items[0]
 
-        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
-        self.assertIn("token ratio", next_work.payload["analysis_focus"])
-        self.assertNotIn(
-            "mechanism is effective",
-            next_work.payload["analysis_focus"],
-        )
+        self.assertEqual(next_work.kind, WorkKind.RESEARCH_HYPOTHESIS)
+        feedback = next_work.payload["research_continuation"]
+        self.assertEqual(feedback["feedback_source"], "promotion_gate")
 
     def test_unchanged_rejected_candidate_skips_validation_revision(self) -> None:
         """验证重复被拒 digest 不消耗 Compiler validation revision。"""
 
         plan = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="stage-unchanged-rejected",
                 kind=WorkKind.STAGE_CANDIDATE,
                 subject_ref="generation:1",
@@ -964,19 +1051,40 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         )
 
         next_work = plan.next_items[0]
-        self.assertEqual(next_work.kind, WorkKind.ANALYZE_FAILURE)
-        self.assertEqual(next_work.payload["research_attempt"], 2)
-        self.assertNotIn("compiler_revision", next_work.payload)
-        self.assertNotIn("validation_feedback", next_work.payload)
+        self.assertEqual(next_work.kind, WorkKind.RESEARCH_HYPOTHESIS)
+        self.assertEqual(next_work.lineage.research_attempt, 1)
+        self.assertIn("research_continuation", next_work.payload)
         self.assertEqual(
             next_work.input_refs["compiler_artifact"],
             "compiler.json",
         )
 
+    def test_validation_failure_projects_actual_compiler_route(self) -> None:
+        """普通 validation failure 只从实际 next work 投影 Compiler。"""
+
+        plan = transition_completed(
+            item=_work_item(
+                work_id="stage-validation-failed",
+                kind=WorkKind.STAGE_CANDIDATE,
+                subject_ref="generation:1",
+                payload={"compiler_revision": 0},
+            ),
+            result=EffectResult(
+                outcome={
+                    "status": "validation_failed",
+                    "candidate_attempt_id": "candidate_attempt-1",
+                    "validation": {"passed": False, "errors": ["invalid"]},
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        self.assertEqual(plan.next_items[0].kind, WorkKind.COMPILE_CANDIDATE)
+
     def test_compiler_routes_explicit_upstream_decisions(self) -> None:
         """验证 Compiler 的证据与机制请求返回对应职责层。"""
 
-        base_work = WorkItem(
+        base_work = _work_item(
             work_id="compile-upstream",
             kind=WorkKind.COMPILE_CANDIDATE,
             subject_ref="generation:1",
@@ -1024,7 +1132,10 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             "Add a negative predicate example.",
         )
         self.assertNotIn("compiler_candidate_file", evidence_work.input_refs)
-        mechanism_work = mechanism_plan.next_items[0]
+        mechanism_work = _next_of_kind(
+            mechanism_plan,
+            WorkKind.DISTILL_MECHANISM,
+        )
         self.assertEqual(mechanism_work.kind, WorkKind.DISTILL_MECHANISM)
         self.assertEqual(
             mechanism_work.payload["capability_constraints"],
@@ -1052,7 +1163,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     ) -> None:
         """验证 replay 脱敏义务经持久拒绝后返回 Compiler。"""
 
-        work = WorkItem(
+        work = _work_item(
             work_id="verify-conformance",
             kind=WorkKind.VERIFY_CONFORMANCE,
             subject_ref="generation:1",
@@ -1095,11 +1206,15 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        reject_work = transition_completed(
+        conformance_plan = transition_completed(
             item=work,
             result=result,
             config=EvolutionControlConfig(),
-        ).next_items[0]
+        )
+        reject_work = _next_of_kind(
+            conformance_plan,
+            WorkKind.REJECT_CANDIDATE,
+        )
         compile_work = transition_completed(
             item=reject_work,
             result=EffectResult(
@@ -1131,7 +1246,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
     def test_conformance_mechanism_diagnosis_routes_to_distiller(self) -> None:
         """Reviewer-owned ambiguous-spec diagnosis bypasses Compiler repair."""
 
-        work = WorkItem(
+        work = _work_item(
             work_id="verify-conformance-mechanism",
             kind=WorkKind.VERIFY_CONFORMANCE,
             subject_ref="generation:1",
@@ -1163,11 +1278,15 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        reject_work = transition_completed(
+        conformance_plan = transition_completed(
             item=work,
             result=result,
             config=EvolutionControlConfig(),
-        ).next_items[0]
+        )
+        reject_work = _next_of_kind(
+            conformance_plan,
+            WorkKind.REJECT_CANDIDATE,
+        )
         next_work = transition_completed(
             item=reject_work,
             result=EffectResult(
@@ -1190,7 +1309,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         """验证每题存在 faithful 且无硬失败时才启动全量评估。"""
 
         plan = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="verify-conformance-pass",
                 kind=WorkKind.VERIFY_CONFORMANCE,
                 subject_ref="generation:1",
@@ -1225,7 +1344,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         """旧 Summary 在恢复时也必须服从当前 effect_goal。"""
 
         plan = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="verify-conformance-legacy-neutral",
                 kind=WorkKind.VERIFY_CONFORMANCE,
                 subject_ref="generation:1",
@@ -1250,9 +1369,10 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             config=EvolutionControlConfig(),
         )
 
-        self.assertEqual(plan.next_items[0].kind, WorkKind.REJECT_CANDIDATE)
+        rejected = _next_of_kind(plan, WorkKind.REJECT_CANDIDATE)
+        self.assertEqual(rejected.kind, WorkKind.REJECT_CANDIDATE)
         self.assertEqual(
-            plan.next_items[0].payload["after_rejection"]["target"],
+            rejected.payload["after_rejection"]["target"],
             "evidence",
         )
 
@@ -1264,7 +1384,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             "unknown Intervention Worker result: invalid_result",
         ):
             transition_completed(
-                item=WorkItem(
+                item=_work_item(
                     work_id="execute-unsupported",
                     kind=WorkKind.EXECUTE_TRIAL,
                     subject_ref="generation:1",
@@ -1291,7 +1411,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             for index in range(1, 4)
         ]
         selected_plan = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="select-batch",
                 kind=WorkKind.SELECT_TRIAL,
                 subject_ref="generation:1",
@@ -1378,7 +1498,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             for index in range(1, 4)
         ]
         execute = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="select-parallel-batch",
                 kind=WorkKind.SELECT_TRIAL,
                 subject_ref="generation:1",
@@ -1447,7 +1567,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         ]
         with self.assertRaisesRegex(ValueError, "remaining Trial budget"):
             transition_completed(
-                item=WorkItem(
+                item=_work_item(
                     work_id="select-over-trial-budget",
                     kind=WorkKind.SELECT_TRIAL,
                     subject_ref="generation:1",
@@ -1488,7 +1608,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
             },
         ]
         first = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="select-empty-batch",
                 kind=WorkKind.SELECT_TRIAL,
                 subject_ref="generation:1",
@@ -1534,7 +1654,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         """Researcher 提交新版后清空旧 Trial、Coverage、计数与批次队列。"""
 
         plan = transition_completed(
-            item=WorkItem(
+            item=_work_item(
                 work_id="research-revision-reset",
                 kind=WorkKind.RESEARCH_HYPOTHESIS,
                 subject_ref="generation:1",
@@ -1548,6 +1668,12 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                     "coverage_summary_artifact": "old-coverage.json",
                 },
                 payload={
+                    "failure_direction_id": "run_test_g0001_fd0001",
+                    "research_scheme_id": (
+                        "run_test_g0001_fd0001_rs0001"
+                    ),
+                    "research_scheme_index": 1,
+                    "research_scheme_revision": 1,
                     "hypothesis_revision": 1,
                     "trial_count": 1,
                     "assignment_count": 2,
@@ -1561,7 +1687,12 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
                 },
             ),
             result=EffectResult(
-                outcome={"output": {"fork_phase": "post_tool"}},
+                outcome={
+                    "output": {
+                        "scheme_action": "revise_current",
+                        "hypothesis": {"fork_phase": "post_tool"},
+                    }
+                },
                 artifact_refs={"hypothesis_artifact": "new-hypothesis.json"},
             ),
             config=EvolutionControlConfig(),
@@ -1586,6 +1717,83 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(selected.payload["batch_assignment_count"], 0)
         self.assertEqual(selected.payload["batch_executed_count"], 0)
         self.assertEqual(selected.payload["hypothesis_revision"], 1)
+
+    def test_researcher_can_start_parallel_scheme_under_same_failure(self) -> None:
+        plan = transition_completed(
+            item=_work_item(
+                work_id="research-start-parallel",
+                kind=WorkKind.RESEARCH_HYPOTHESIS,
+                subject_ref="generation:1",
+                input_refs={
+                    "rollout_file": "rollouts.jsonl",
+                    "report_dir": "report",
+                    "failure_artifact": "failure.json",
+                },
+                payload={
+                    "failure_direction_id": "run_test_g0001_fd0001",
+                    "research_scheme_id": "run_test_g0001_fd0001_rs0001",
+                    "research_scheme_index": 1,
+                    "research_continuation": {"feedback_source": "review"},
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "output": {
+                        "scheme_action": "start_new",
+                        "hypothesis": {"fork_phase": "post_tool"},
+                    }
+                },
+                artifact_refs={"hypothesis_artifact": "new.json"},
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        selected = plan.next_items[0]
+        self.assertEqual(selected.kind, WorkKind.SELECT_TRIAL)
+        self.assertEqual(selected.lineage.research_attempt, 2)
+        self.assertEqual(
+            selected.payload["failure_direction_id"],
+            "run_test_g0001_fd0001",
+        )
+        self.assertEqual(
+            selected.payload["research_scheme_id"],
+            "run_test_g0001_fd0001_rs0002",
+        )
+
+    def test_researcher_reanalysis_routes_to_new_failure_direction(self) -> None:
+        plan = transition_completed(
+            item=_work_item(
+                work_id="research-reanalyse",
+                kind=WorkKind.RESEARCH_HYPOTHESIS,
+                subject_ref="generation:1",
+                input_refs={
+                    "rollout_file": "rollouts.jsonl",
+                    "report_dir": "report",
+                    "failure_artifact": "failure.json",
+                    "hypothesis_artifact": "old.json",
+                },
+                payload={
+                    "failure_direction_id": "run_test_g0001_fd0001",
+                    "research_scheme_id": "run_test_g0001_fd0001_rs0001",
+                    "research_continuation": {"feedback_source": "review"},
+                },
+            ),
+            result=EffectResult(
+                outcome={
+                    "output": {
+                        "scheme_action": "reanalyse_failure",
+                        "hypothesis": None,
+                    }
+                }
+            ),
+            config=EvolutionControlConfig(),
+        )
+
+        analysis = plan.next_items[0]
+        self.assertEqual(analysis.kind, WorkKind.ANALYZE_FAILURE)
+        self.assertEqual(analysis.lineage.research_attempt, 2)
+        self.assertNotIn("failure_artifact", analysis.input_refs)
+        self.assertNotIn("hypothesis_artifact", analysis.input_refs)
 
     def test_promotion_gate_rejects_runner_errors_without_crashing(self) -> None:
         """验证 runner_error 与缺失 token 被表示为门禁失败而非异常。"""
@@ -1618,7 +1826,7 @@ class EvolutionControllerTest(unittest.IsolatedAsyncioTestCase):
         candidate = _metrics(accuracy=0.0, tokens=0)
         candidate["tokens"]["total_tokens"] = None
         candidate["execution"]["status_counts"] = {"runner_error": 3}
-        work = WorkItem(
+        work = _work_item(
             work_id="review-runner-error",
             kind=WorkKind.REVIEW_CANDIDATE,
             subject_ref="generation:1",
@@ -1876,7 +2084,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         effects.role_runner = runtime  # type: ignore[assignment]
 
         await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="analyze-shared-assembly",
                 kind=WorkKind.ANALYZE_FAILURE,
                 subject_ref="generation:1",
@@ -1912,7 +2120,14 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
 
         hypothesis_file = self.run_dir / "hypothesis.json"
         hypothesis_file.write_text(
-            json.dumps({"output": {"fork_phase": "post_tool"}}),
+            json.dumps(
+                {
+                    "output": {
+                        "scheme_action": "start_new",
+                        "hypothesis": {"fork_phase": "post_tool"},
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         rollout_file = self.run_dir / "rollouts.jsonl"
@@ -1940,7 +2155,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             return_value=intervention,
         ):
             await effects.execute(
-                work=WorkItem(
+                work=_work_item(
                     work_id="execute-parallel-trials",
                     kind=WorkKind.EXECUTE_TRIAL,
                     subject_ref="generation:1",
@@ -2064,7 +2279,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             current_version="harness_v0001",
             status="running",
         )
-        first = WorkItem(
+        first = _work_item(
             work_id="stage-first",
             kind=WorkKind.STAGE_CANDIDATE,
             subject_ref="generation:1",
@@ -2072,7 +2287,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
                 "compiler_artifact": str(compiler_artifact.resolve())
             },
         )
-        second = WorkItem(
+        second = _work_item(
             work_id="stage-retry",
             kind=WorkKind.STAGE_CANDIDATE,
             subject_ref="generation:1",
@@ -2104,11 +2319,28 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             if item.status == "pending"
         ]
         self.assertEqual(len(pending), 1)
+        started = self.store.get_candidate_attempt_events(
+            pending[0].candidate_attempt_id
+        )[0]
+        metadata = started.payload["metadata"]
+        self.assertEqual(metadata["run_id"], first.lineage.run_id)
+        self.assertEqual(
+            metadata["generation_id"],
+            first.lineage.generation_id,
+        )
+        self.assertEqual(
+            metadata["research_attempt_id"],
+            first.lineage.research_attempt_id,
+        )
+        self.assertEqual(
+            metadata["source_logical_work_id"],
+            first.logical_work_id,
+        )
         self.store.resume_candidate_attempt(pending[0].candidate_attempt_id).reject(
             "test cleanup"
         )
         repeated_rejected = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="stage-rejected-digest",
                 kind=WorkKind.STAGE_CANDIDATE,
                 subject_ref="generation:1",
@@ -2220,7 +2452,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             ),
         )
         promoted = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="promote-candidate",
                 kind=WorkKind.PROMOTE_CANDIDATE,
                 subject_ref="generation:1",
@@ -2246,7 +2478,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(promoted.outcome["version_id"], "harness_v0002")
         promoted_retry = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="promote-candidate-retry",
                 kind=WorkKind.PROMOTE_CANDIDATE,
                 subject_ref="generation:1",
@@ -2265,7 +2497,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             parent_version="harness_v0002"
         )
         rejected = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="reject-candidate",
                 kind=WorkKind.REJECT_CANDIDATE,
                 subject_ref="generation:2",
@@ -2289,7 +2521,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(rejected.outcome["status"], "rejected")
         rejected_retry = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="reject-candidate-retry",
                 kind=WorkKind.REJECT_CANDIDATE,
                 subject_ref="generation:2",
@@ -2529,7 +2761,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             return_value=candidate,
         ):
             result = await effects.execute(
-                work=WorkItem(
+                work=_work_item(
                     work_id="verify-conformance",
                     kind=WorkKind.VERIFY_CONFORMANCE,
                     subject_ref="generation:1",
@@ -2837,7 +3069,14 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         }
         hypothesis_file = self.run_dir / "hypothesis.json"
         hypothesis_file.write_text(
-            json.dumps({"output": hypothesis}),
+            json.dumps(
+                {
+                    "output": {
+                        "scheme_action": "start_new",
+                        "hypothesis": hypothesis,
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         trial_file = self.run_dir / "trial_001" / "trial.json"
@@ -2894,7 +3133,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
         runtime = ReviewPipelineRuntime()
         effects.role_runner = runtime  # type: ignore[assignment]
         result = await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="review-pipeline",
                 kind=WorkKind.REVIEW_EVIDENCE,
                 subject_ref="generation:1",
@@ -2946,7 +3185,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
             encoding="utf-8",
         )
         await effects.execute(
-            work=WorkItem(
+            work=_work_item(
                 work_id="review-pipeline-continued",
                 kind=WorkKind.REVIEW_EVIDENCE,
                 subject_ref="generation:1",
@@ -2980,7 +3219,7 @@ class LocalControlEffectsTest(unittest.IsolatedAsyncioTestCase):
     def test_trial_paths_ignore_non_index_alias(self) -> None:
         """验证同一 trial 的便利别名不会作为第二份 Reviewer 证据。"""
 
-        work = WorkItem(
+        work = _work_item(
             work_id="review",
             kind=WorkKind.REVIEW_EVIDENCE,
             subject_ref="generation:1",

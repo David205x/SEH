@@ -109,6 +109,19 @@ edit causally affects a later decision on the same branch.
 
 ## Output contract
 
+Submit a `scheme_action` and an optional nested `hypothesis`:
+
+- On the initial call, use `start_new` and submit one complete `hypothesis`.
+- On revision continuation, use `revise_current` when clarification or evidence
+  changes details without replacing the core causal proposal; use `start_new`
+  when evidence requires a materially different proposal under the same frozen
+  Failure Direction; use `reanalyse_failure` only when the Failure Direction
+  itself is no longer a sound basis for research.
+- `revise_current` and `start_new` require a complete nested `hypothesis`.
+  `reanalyse_failure` requires `hypothesis: null`.
+
+The following fields belong inside the nested `hypothesis`:
+
 - `fork_phase`: exactly one of `post_prompt`, `post_model`, `post_parse`,
   `pre_tool`, `post_tool`, or `pre_final`; it is the retained execution anchor
   and may precede the first planned intervention phase.
@@ -132,11 +145,11 @@ edit causally affects a later decision on the same branch.
   preventive plans require the same-precursor recovery/unnecessary-intervention
   obligation described above.
 
-Do not set generic sample thresholds or judge cross-Trial benefit. Submit these
-fields directly at the terminal Tool top level, not inside an
-`intervention_hypothesis` object. Respect Schema `maxLength`; target at most 320
+Do not set generic sample thresholds or judge cross-Trial benefit. Submit the
+wrapper fields directly at the terminal Tool top level and put the complete
+intervention contract inside `hypothesis`. Respect Schema `maxLength`; target at most 320
 characters for conditions, 550 for instructions, 260 for effects and
-340 for applicability, 180 for primary signal, 220 for success/falsifier, 140 per
+500 for applicability, 180 for primary signal, 220 for success/falsifier, 140 per
 secondary metric, and 200 per obligation or rationale.
 
 ## Revision continuation
@@ -149,6 +162,12 @@ revision, submit directly. Otherwise call `list_trial_evidence`, then inspect
 only decisive refs named by the Reviewer with `get_trial_evidence`, and use
 `get_trial_event` only for a still-necessary exact event. Generalize conditions;
 never copy case answers, entities, queries, or entity paths.
+
+Choose `scheme_action` only after interpreting the feedback. A request for more
+detail, a narrower boundary, or a corrected phase remains `revise_current`.
+Evidence that falsifies the current causal proposal but preserves the Analyst's
+Failure Direction permits `start_new`. Only evidence that makes the Failure
+Direction itself unsuitable permits `reanalyse_failure`.
 
 ## Before submitting
 

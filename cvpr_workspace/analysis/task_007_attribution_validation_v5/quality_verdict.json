@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "task_id": "TASK-007",
+  "suite_id": "TASK-007-ATTRIBUTION-V3",
+  "run_count": 28,
+  "verdict": "pass",
+  "accepted_scope": "consumer_ready_experience_draft",
+  "checks": {
+    "completed_runs": "28/28",
+    "exact_type_rubric": "28/28",
+    "teacher_subject": "28/28",
+    "output_limits": "28/28",
+    "tool_protocol": "28/28",
+    "capability_quality": "pass",
+    "direction_quality": "pass",
+    "overlap_independence": "pass",
+    "teacher_work_quality": "pass_with_non_blocking_note"
+  },
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "case_id": "candidate_validation_unchanged_compiler_work",
+      "finding": "One applicability sentence inferred compile-retry budget exhaustion; the authoritative Transition only establishes a new Research Attempt without an ordinary validation revision.",
+      "impact": "The core Teacher subject, repair obligation, consequence and completion condition remain correct; Capability and Direction outputs are unaffected."
+    }
+  ],
+  "evidence_refs": [
+    "cvpr_workspace/analysis/task_007_attribution_validation_v5/summary.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v5/structural_audit.json",
+    "cvpr_workspace/analysis/task_007_attribution_validation_v5/quality_audit.md"
+  ]
+}

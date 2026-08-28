@@ -10,19 +10,27 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import (
+    CapabilityExperienceSummary,
     CandidateReview,
     CompilerResult,
+    DirectionSummary,
     EvidenceReview,
     FailureDirection,
+    HypothesisResearcherResult,
     InterventionHypothesis,
     InterventionWorkerResult,
     MechanismDistillation,
+    ShadowDistillationResult,
     TeacherPayload,
     TrialReview,
 )
 from .loader import load_teacher_agent_spec
 from ..resources.base import TeacherResourceConfig, TeacherResources
 from .spec import TeacherAgentSpec
+from .provenance import (
+    base_prompt_digest,
+    teacher_role_scope,
+)
 
 
 @dataclass(frozen=True)
@@ -80,10 +88,16 @@ def validate_role_output(
         if resources.evaluation is None:
             raise ValueError("Failure Analyst resources are unavailable")
         resources.evaluation.validate_evidence_refs(output.evidence_refs)
+    if isinstance(output, HypothesisResearcherResult) and output.hypothesis:
+        resources.validate_hypothesis_research()
     if isinstance(output, InterventionHypothesis):
         resources.validate_hypothesis_research()
     if isinstance(output, EvidenceReview):
         resources.validate_evidence_review(output)
+    if isinstance(output, CapabilityExperienceSummary):
+        resources.validate_capability_summary(output)
+    if isinstance(output, DirectionSummary):
+        resources.validate_direction_summary(output)
     if isinstance(output, TrialReview):
         resources.validate_trial_review(output)
     if isinstance(output, MechanismDistillation):
@@ -92,6 +106,8 @@ def validate_role_output(
             if output.mechanism_ref is None:
                 raise ValueError("distilled result lacks mechanism_ref")
             resources.mechanisms.resolve(output.mechanism_ref)
+    if isinstance(output, ShadowDistillationResult):
+        resources.validate_mechanism_distillation(output)
     if isinstance(output, InterventionWorkerResult):
         raise ValueError(
             "Intervention Worker must run through "
@@ -114,17 +130,24 @@ def build_role_artifact(
     *,
     runtime: str,
     model: dict[str, Any],
+    input_view_digest: str,
     output: TeacherPayload,
     tool_calls: list[dict[str, Any]],
     usage: dict[str, Any],
     transcript: list[dict[str, Any]],
     runtime_fields: dict[str, Any] | None = None,
+    base_prompt_digest_override: str | None = None,
 ) -> dict[str, Any]:
     """Build the shared persisted artifact envelope for one Role Run."""
 
+    teacher_role_scope(
+        role_id=prepared.spec.role.role_id,
+        role_contract_version=prepared.spec.role.version,
+        model=model,
+    )
     output_schema = prepared.spec.role.output_type.model_json_schema()
     artifact = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "template_root": str(prepared.template_root.resolve()),
         "harness_id": prepared.spec.manifest.harness_id,
@@ -139,10 +162,17 @@ def build_role_artifact(
         },
         "runtime": runtime,
         "model": model,
+        "base_prompt_digest": (
+            base_prompt_digest_override
+            or base_prompt_digest(prepared.spec.prompt)
+        ),
+        "input_view_digest": input_view_digest,
         "input": prepared.role_input.model_dump(mode="json"),
         "resource_config": prepared.resource_config.model_dump(mode="json"),
         "output": output.model_dump(mode="json"),
-        "validated_mechanisms": prepared.resources.mechanisms.validated_payloads(),
+        "validated_mechanisms": (
+            prepared.resources.validated_mechanism_payloads()
+        ),
         "resource_artifacts": prepared.resources.artifacts(),
         "tool_calls": tool_calls,
         "usage": usage,
@@ -163,17 +193,24 @@ def build_failed_role_artifact(
     *,
     runtime: str,
     model: dict[str, Any],
+    input_view_digest: str,
     error: dict[str, Any],
     tool_calls: list[dict[str, Any]],
     usage: dict[str, Any],
     transcript: list[dict[str, Any]],
     runtime_fields: dict[str, Any] | None = None,
+    base_prompt_digest_override: str | None = None,
 ) -> dict[str, Any]:
     """Build a failure artifact without pretending a Role Output exists."""
 
+    teacher_role_scope(
+        role_id=prepared.spec.role.role_id,
+        role_contract_version=prepared.spec.role.version,
+        model=model,
+    )
     output_schema = prepared.spec.role.output_type.model_json_schema()
     artifact = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "failed",
         "template_root": str(prepared.template_root.resolve()),
@@ -189,12 +226,17 @@ def build_failed_role_artifact(
         },
         "runtime": runtime,
         "model": model,
+        "base_prompt_digest": (
+            base_prompt_digest_override
+            or base_prompt_digest(prepared.spec.prompt)
+        ),
+        "input_view_digest": input_view_digest,
         "input": prepared.role_input.model_dump(mode="json"),
         "resource_config": prepared.resource_config.model_dump(mode="json"),
         "output": None,
         "error": error,
         "validated_mechanisms": (
-            prepared.resources.mechanisms.validated_payloads()
+            prepared.resources.validated_mechanism_payloads()
         ),
         "resource_artifacts": prepared.resources.artifacts(),
         "tool_calls": tool_calls,

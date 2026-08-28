@@ -1,0 +1,23 @@
+{
+  "suite_id": "TASK-007-ATTRIBUTION-ARTIFACT-NATIVE-V1",
+  "case_file": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\configs\\task_007_attribution_cases_v2.json",
+  "selection_file": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\configs\\task_007_attribution_selection_v6_overlap_final.json",
+  "template_root": "D:\\_Project\\Agent\\search_harness\\harness_templates\\teacher\\experience_summarizer",
+  "role_id": "experience_summarizer",
+  "role_version": 2,
+  "model": {
+    "provider": "openai_compatible",
+    "base_url": "https://api.deepseek.com",
+    "model_id": "deepseek-v4-flash",
+    "max_tokens": 4096,
+    "timeout": 300.0,
+    "temperature": 0.2,
+    "seed": 42,
+    "ollama_think": null,
+    "thinking_mode": "enabled"
+  },
+  "max_tokens": 4096,
+  "max_turns": 22,
+  "concurrency": 2,
+  "job_count": 3
+}

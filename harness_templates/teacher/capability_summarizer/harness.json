@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_capability_summarizer_v2",
+  "tools": [
+    {
+      "instance_id": "inspect_experience_detail",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "inspect_experience_detail"}
+    }
+  ],
+  "prompt": {
+    "instance_id": "capability_summarizer",
+    "entrypoint": "prompt/component.py:build",
+    "config": {"instructions": "system.md", "user_template": "user.md"}
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

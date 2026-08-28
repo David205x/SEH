@@ -13,6 +13,8 @@ from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any
 
+from search_harness.evolution.identifiers import make_version_id
+
 from .journal import (
     CandidateAttemptEvent,
     CandidateAttemptJournal,
@@ -48,18 +50,13 @@ class TemplateVersionStore:
         self.root = root.resolve()
         self.template_dir = self.root / "template"
         self.metadata_file = self.root / "version_store.json"
-        self.legacy_metadata_file = self.root / "checkpoint.json"
         self.metadata_dir = self.root / ".harness-store"
         self.index_file = self.metadata_dir / "versions.jsonl"
         self.candidate_attempt_file = (
             self.metadata_dir / "candidate_attempts.jsonl"
         )
-        self.legacy_candidate_attempt_file = (
-            self.metadata_dir / "iterations.jsonl"
-        )
         self.candidate_attempt_journal = CandidateAttemptJournal(
-            self.candidate_attempt_file,
-            legacy_path=self.legacy_candidate_attempt_file,
+            self.candidate_attempt_file
         )
         self.validator = validator or HarnessValidator()
 
@@ -91,7 +88,7 @@ class TemplateVersionStore:
         self.metadata_file.write_text(
             json.dumps(
                 {
-                    "schema_version": 2,
+                    "schema_version": 3,
                     "version_store_id": selected_store_id,
                     "initialized_from": {
                         "template_root": str(template_root.resolve()),
@@ -110,7 +107,7 @@ class TemplateVersionStore:
         self._write_template(snapshot.files)
         commit = self._commit(summary)
         record = VersionRecord(
-            version_id="harness_v0001",
+            version_id=make_version_id(1),
             parent_version=None,
             git_commit=commit,
             digest=snapshot.digest,
@@ -125,26 +122,21 @@ class TemplateVersionStore:
     def version_store_id(self) -> str:
         """返回与磁盘位置无关的 Template Version Store 稳定身份。"""
 
-        metadata_file = (
-            self.metadata_file
-            if self.metadata_file.is_file()
-            else self.legacy_metadata_file
-        )
-        if not metadata_file.is_file():
+        if not self.metadata_file.is_file():
             raise FileNotFoundError(
                 "Template Version Store metadata is missing: "
                 f"{self.metadata_file}"
             )
-        raw = json.loads(metadata_file.read_text(encoding="utf-8"))
+        raw = json.loads(self.metadata_file.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise ValueError("invalid Template Version Store metadata")
         schema_version = raw.get("schema_version")
-        if schema_version == 2:
-            store_id = raw.get("version_store_id")
-        elif schema_version == 1 and metadata_file == self.legacy_metadata_file:
-            store_id = raw.get("checkpoint_store_id")
-        else:
-            raise ValueError("invalid Template Version Store metadata")
+        if schema_version != 3:
+            raise ValueError(
+                "unsupported Version Store schema_version: "
+                f"{schema_version}"
+            )
+        store_id = raw.get("version_store_id")
         if not isinstance(store_id, str) or not store_id.strip():
             raise ValueError("version_store_id must be a non-empty string")
         return store_id
@@ -157,17 +149,13 @@ class TemplateVersionStore:
             if not line.strip():
                 continue
             raw = json.loads(line)
-            schema_version = raw.pop("schema_version", 1)
-            if schema_version == 1:
-                legacy_attempt_id = raw.pop("iteration_id", None)
-                raw.setdefault("candidate_attempt_id", legacy_attempt_id)
-            elif schema_version != 2:
+            schema_version = raw.pop("schema_version", None)
+            if schema_version != 3:
                 raise ValueError(
                     "unsupported Version Record schema_version: "
                     f"{schema_version}"
                 )
             raw["evaluation"] = MappingProxyType(dict(raw.get("evaluation", {})))
-            raw.setdefault("candidate_attempt_id", None)
             records.append(VersionRecord(**raw))
         return tuple(records)
 
@@ -315,7 +303,7 @@ class TemplateVersionStore:
             self._write_template(previous_files)
             self._git("restore", "--staged", "--worktree", "--", "template")
             raise
-        version_id = f"harness_v{len(versions) + 1:04d}"
+        version_id = make_version_id(len(versions) + 1)
         record = VersionRecord(
             version_id=version_id,
             parent_version=workspace.parent.version_id,
@@ -374,7 +362,7 @@ class TemplateVersionStore:
     def _append_record(self, record: VersionRecord) -> None:
         self.metadata_dir.mkdir(parents=True, exist_ok=True)
         payload = {
-            "schema_version": 2,
+            "schema_version": 3,
             "version_id": record.version_id,
             "parent_version": record.parent_version,
             "git_commit": record.git_commit,

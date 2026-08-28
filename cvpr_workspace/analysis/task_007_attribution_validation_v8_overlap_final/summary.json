@@ -1,0 +1,447 @@
+{
+  "suite_id": "TASK-007-ATTRIBUTION-ARTIFACT-NATIVE-V1",
+  "case_count": 1,
+  "run_count": 3,
+  "results": [
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the pre_final three-way decision contract whose negative_rule classifies joint 'A and B' questions and single-entity questions as NEGATIVE, the Student model when used as the Hook evaluator cannot reliably classify contract-negative real prefixes; it emits POSITIVE on both a joint 'A and B' question and a single-entity question, violating the frozen boundary.",
+            "applicability": "Frozen Student model as Hook evaluator on real pre_final QA prefixes; three-way decision contract with negative_rule; joint 'A and B' and single-entity question shapes; no other task conditions validated.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "The pre_final one-shot deferral-with-generic-feedback mechanism provides no attributable benefit: its positive activation never fired on an applicable one-sided two-candidate case, all observed gains trace to Student-side variance, and cost is disproportionate (~430k hook tokens, +48% total tokens, accuracy -0.0178, pass@n -0.0667). Stop unchanged; revisit only with either/or-boundary discrimination, a demonstrated beneficial positive activation on a genuine one-sided case, and cost remediation.",
+            "applicability": "One-shot deferral with generic second-candidate search feedback at pre_final for explicit two-candidate questions, evaluated on QA replicates; scope includes activation attribution and hook-token cost regime.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_lIUHPcX6vq0vgP804vqF5616",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "mechanism_fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"At pre_final, detect an explicit two-candidate 'X or Y' question that is about to be finalized on one-sided evidence (no search query references the second candidate and retrieved passages cover only the first), defer the final answer exactly once, and append generic feedback directing the Student to search for the second candidate before finalizing.\"}, {\"selector\": \"mechanism_fallback\", \"content\": \"After the single deferral with the generic feedback, the Student's next generation is a search tool call whose query references the second candidate before the next final answer (observed 2/2 distinct positive trials). Post-deferral answer change and correctness improvement are not claimed; in trial_004 the final answer was unchanged (exact_match_delta 0).\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_ynW0R7n3TsK7tvpnEmpw5244",
+          "arguments": {
+            "raw_arguments": "{\"items\": [{\"experience_type\": \"student_capability\", \"lesson\": \"Under the pre_final three-way decision contract whose negative_rule classifies joint 'A and B' questions and single-entity questions as NEGATIVE, the Student model when used"
+          },
+          "content": "Tool arguments are invalid JSON. Correct them and call the tool again: Unterminated string starting at",
+          "metadata": {
+            "error_type": "invalid_json"
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_EASglC2MGS7NUKuE74AV3606",
+          "arguments": {
+            "arguments": {
+              "items": [
+                {
+                  "experience_type": "student_capability",
+                  "lesson": "Under the pre_final three-way decision contract whose negative_rule classifies joint 'A and B' questions and single-entity questions as NEGATIVE, the Student model when used as the Hook evaluator cannot reliably classify contract-negative real prefixes; it emits POSITIVE on both a joint 'A and B' question and a single-entity question, violating the frozen boundary.",
+                  "applicability": "Frozen Student model as Hook evaluator on real pre_final QA prefixes; three-way decision contract with negative_rule; joint 'A and B' and single-entity question shapes; no other task conditions validated.",
+                  "evidence_refs": [
+                    "candidate_review"
+                  ]
+                },
+                {
+                  "experience_type": "experiment_direction",
+                  "lesson": "The pre_final one-shot deferral-with-generic-feedback mechanism provides no attributable benefit: its positive activation never fired on an applicable one-sided two-candidate case, all observed gains trace to Student-side variance, and cost is disproportionate (~430k hook tokens, +48% total tokens, accuracy -0.0178, pass@n -0.0667). Stop unchanged; revisit only with either/or-boundary discrimination, a demonstrated beneficial positive activation on a genuine one-sided case, and cost remediation.",
+                  "applicability": "One-shot deferral with generic second-candidate search feedback at pre_final for explicit two-candidate questions, evaluated on QA replicates; scope includes activation attribution and hook-token cost regime.",
+                  "evidence_refs": [
+                    "candidate_review"
+                  ]
+                }
+              ]
+            }
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- arguments: Extra inputs are not permitted; actual_length=1",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "arguments:extra_forbidden"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_1VEv3PviYSLkr7Etl8c04813",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final three-way decision contract whose negative_rule classifies joint 'A and B' questions and single-entity questions as NEGATIVE, the Student model when used as the Hook evaluator cannot reliably classify contract-negative real prefixes; it emits POSITIVE on both a joint 'A and B' question and a single-entity question, violating the frozen boundary.",
+                "applicability": "Frozen Student model as Hook evaluator on real pre_final QA prefixes; three-way decision contract with negative_rule; joint 'A and B' and single-entity question shapes; no other task conditions validated.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The pre_final one-shot deferral-with-generic-feedback mechanism provides no attributable benefit: its positive activation never fired on an applicable one-sided two-candidate case, all observed gains trace to Student-side variance, and cost is disproportionate (~430k hook tokens, +48% total tokens, accuracy -0.0178, pass@n -0.0667). Stop unchanged; revisit only with either/or-boundary discrimination, a demonstrated beneficial positive activation on a genuine one-sided case, and cost remediation.",
+                "applicability": "One-shot deferral with generic second-candidate search feedback at pre_final for explicit two-candidate questions, evaluated on QA replicates; scope includes activation attribution and hook-token cost regime.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the pre_final three-way decision contract whose negative_rule classifies joint 'A and B' questions and single-entity questions as NEGATIVE, the Student model when used as the Hook evaluator cannot reliably classify contract-negative real prefixes; it emits POSITIVE on both a joint 'A and B' question and a single-entity question, violating the frozen boundary.\", \"applicability\": \"Frozen Student model as Hook evaluator on real pre_final QA prefixes; three-way decision contract with negative_rule; joint 'A and B' and single-entity question shapes; no other task conditions validated.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"The pre_final one-shot deferral-with-generic-feedback mechanism provides no attributable benefit: its positive activation never fired on an applicable one-sided two-candidate case, all observed gains trace to Student-side variance, and cost is disproportionate (~430k hook tokens, +48% total tokens, accuracy -0.0178, pass@n -0.0667). Stop unchanged; revisit only with either/or-boundary discrimination, a demonstrated beneficial positive activation on a genuine one-sided case, and cost remediation.\", \"applicability\": \"One-shot deferral with generic second-candidate search feedback at pre_final for explicit two-candidate questions, evaluated on QA replicates; scope includes activation attribution and hook-token cost regime.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 5,
+        "input_tokens": 63453,
+        "output_tokens": 12769,
+        "total_tokens": 76222,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5307,
+            "total_tokens": 9403,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1979
+          },
+          {
+            "completion_tokens": 3689,
+            "prompt_tokens": 9433,
+            "total_tokens": 13122,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3589
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9344
+            },
+            "prompt_cache_hit_tokens": 9344,
+            "prompt_cache_miss_tokens": 89
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 13325,
+            "total_tokens": 17421,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4012
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13056
+            },
+            "prompt_cache_hit_tokens": 13056,
+            "prompt_cache_miss_tokens": 269
+          },
+          {
+            "completion_tokens": 389,
+            "prompt_tokens": 17471,
+            "total_tokens": 17860,
+            "completion_tokens_details": {
+              "reasoning_tokens": 15
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13312
+            },
+            "prompt_cache_hit_tokens": 13312,
+            "prompt_cache_miss_tokens": 4159
+          },
+          {
+            "completion_tokens": 499,
+            "prompt_tokens": 17917,
+            "total_tokens": 18416,
+            "completion_tokens_details": {
+              "reasoning_tokens": 128
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 17792
+            },
+            "prompt_cache_hit_tokens": 17792,
+            "prompt_cache_miss_tokens": 125
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_02.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_02_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the pre_final three-way decision contract with negative_rule on real question prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions (joint 'A and B' and single-entity forms) as NEGATIVE; it emits POSITIVE instead.",
+            "applicability": "Frozen Student-as-Hook evaluator over the pre_final NEGATIVE/POSITIVE/NO-OP decision contract on real question prefixes from the two-candidate evaluation material; explicit-negative cases per negative_rule.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "The pre_final one-shot deferral-with-generic-feedback mechanism for one-sided two-candidate questions produced zero beneficial positive activations on any applicable case and degraded utility (accuracy -0.0178, pass@n -0.0667) and cost (+48% tokens, ~430k hook tokens); stop unchanged, revisiting only with fresh evidence of a beneficial positive activation on a genuine one-sided 'X or Y' prefix and cost remediation.",
+            "applicability": "Deferral mechanisms gated by a frozen-model three-way classifier over pre_final question prefixes in two-candidate reasoning material under a negative_rule contract, evaluated on accuracy, stability, and token cost.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_4Z1A8Bf9jUQr6CX4w8tH1214",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The hook's positive path activated only on contract-negative questions in the evaluation: a joint \\\"Are Jane and First for Women both women's magazines?\\\" (A-and-B, per negative_rule) where the deferral directly turned a correct 1.0 replicate into a 0.0 (\\\"insufficient information\\\"), and a single-entity \\\"Just the Two of Us / Donna Weiss and Jackie DeShannon\\\" question where the deferral added a search step and tokens with no score change. The intended positive mechanism never fired on an applicable one-sided two-candidate case: the two \\\"X or Y\\\" questions in the material set were labeled negative (contract-justified for Glenn Hughes/Ross Lynch, whose query referenced both candidates), and every improved replicate inspected had hook decision negative with no modification — so the aggregate accuracy/stability gains are Student-model variance, not hook effects. Aggregate accuracy fell (-0.0178), pass_at_n fell (-0.0667), and total tokens rose ~276k (+48%) with ~430k hook tokens.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_QkFcgoYJAoihqTps21uL2534",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final three-way decision contract with negative_rule on real question prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions (joint 'A and B' and single-entity forms) as NEGATIVE; it emits POSITIVE instead.",
+                "applicability": "Frozen Student-as-Hook evaluator over the pre_final NEGATIVE/POSITIVE/NO-OP decision contract on real question prefixes from the two-candidate evaluation material; explicit-negative cases per negative_rule.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The pre_final one-shot deferral-with-generic-feedback mechanism for one-sided two-candidate questions produced zero beneficial positive activations on any applicable case and degraded utility (accuracy -0.0178, pass@n -0.0667) and cost (+48% tokens, ~430k hook tokens); stop unchanged, revisiting only with fresh evidence of a beneficial positive activation on a genuine one-sided 'X or Y' prefix and cost remediation.",
+                "applicability": "Deferral mechanisms gated by a frozen-model three-way classifier over pre_final question prefixes in two-candidate reasoning material under a negative_rule contract, evaluated on accuracy, stability, and token cost.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the pre_final three-way decision contract with negative_rule on real question prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions (joint 'A and B' and single-entity forms) as NEGATIVE; it emits POSITIVE instead.\", \"applicability\": \"Frozen Student-as-Hook evaluator over the pre_final NEGATIVE/POSITIVE/NO-OP decision contract on real question prefixes from the two-candidate evaluation material; explicit-negative cases per negative_rule.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"The pre_final one-shot deferral-with-generic-feedback mechanism for one-sided two-candidate questions produced zero beneficial positive activations on any applicable case and degraded utility (accuracy -0.0178, pass@n -0.0667) and cost (+48% tokens, ~430k hook tokens); stop unchanged, revisiting only with fresh evidence of a beneficial positive activation on a genuine one-sided 'X or Y' prefix and cost remediation.\", \"applicability\": \"Deferral mechanisms gated by a frozen-model three-way classifier over pre_final question prefixes in two-candidate reasoning material under a negative_rule contract, evaluated on accuracy, stability, and token cost.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 27533,
+        "output_tokens": 8680,
+        "total_tokens": 36213,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5307,
+            "total_tokens": 9403,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1979
+          },
+          {
+            "completion_tokens": 3095,
+            "prompt_tokens": 9433,
+            "total_tokens": 12528,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3001
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9344
+            },
+            "prompt_cache_hit_tokens": 9344,
+            "prompt_cache_miss_tokens": 89
+          },
+          {
+            "completion_tokens": 1489,
+            "prompt_tokens": 12793,
+            "total_tokens": 14282,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1141
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 12416
+            },
+            "prompt_cache_hit_tokens": 12416,
+            "prompt_cache_miss_tokens": 377
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_03.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v8_overlap_final\\runs\\candidate_reject_hook_false_positive_scope\\run_03_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the frozen three-way decision contract with negative_rule on real pre-final prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions as NEGATIVE: it emits POSITIVE for both a joint 'A and B' question and a single-entity question, each producing a harmful or wasted deferral.",
+            "applicability": "Frozen Student model as Hook evaluator; decision contract: three-way hook classification with negative_rule; input class: real pre-final prefixes containing explicit-negative questions (joint A-and-B, single-entity); setting: candidate_review evaluation of the two-candidate deferral mechanism.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "The one-shot deferral-with-generic-feedback hook for explicit two-candidate questions shows no attributable benefit: zero beneficial positive activations on applicable cases, two harmful misactivations on explicit negatives, accuracy -0.0178 and pass@n -0.0667, ~430k hook tokens (+48% total), all gains Student-side variance. Stop unchanged; revisit only with real-prefix either/or discrimination, a demonstrated beneficial activation on a genuine one-sided case, and cost remediation.",
+            "applicability": "Mechanism class: pre-final hook deferral with generic feedback for one-sided two-candidate questions; evaluation setting: candidate_review under the negative_rule contract with token-cost accounting.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_w8GFzQ8PGysW9lq2WJYE7949",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect",
+              "review_reason"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The hook's positive path activated only on contract-negative questions in the evaluation: a joint \\\"Are Jane and First for Women both women's magazines?\\\" (A-and-B, per negative_rule) where the deferral directly turned a correct 1.0 replicate into a 0.0 (\\\"insufficient information\\\"), and a single-entity \\\"Just the Two of Us / Donna Weiss and Jackie DeShannon\\\" question where the deferral added a search step and tokens with no score change. The intended positive mechanism never fired on an applicable one-sided two-candidate case: the two \\\"X or Y\\\" questions in the material set were labeled negative (contract-justified for Glenn Hughes/Ross Lynch, whose query referenced both candidates), and every improved replicate inspected had hook decision negative with no modification — so the aggregate accuracy/stability gains are Student-model variance, not hook effects. Aggregate accuracy fell (-0.0178), pass_at_n fell (-0.0667), and total tokens rose ~276k (+48%) with ~430k hook tokens.\"}, {\"selector\": \"review_reason\", \"content\": \"Reject. The compiled extension is structurally faithful (deterministic guards, one-shot deferral state, exact generic feedback, budget-exhausted no-op), but the hook_model classification violates the frozen contract's negative_rule on real prefixes: it emits POSITIVE for a joint 'A and B' question and a single-entity question — the precise failure mode the known_limits flagged and the implementation summary claimed student_model_experiment_003 had resolved — causing one direct regression (1→0) and one wasted deferral. Meanwhile the intended positive behavior is unobserved on any applicable case (no one-sided two-candidate prefix produced a positive activation), so no task benefit is demonstrated; all improvements trace to Student-side variation. Cost is disproportionate: ~430k hook tokens for two misactivations and zero beneficial activations, with total tokens up 48% and accuracy/pass@n down. Reaching promotability would require independent redesigns: (1) classifier/mechanism discrimination of the either/or boundary on real prefixes, (2) fresh evidence of a beneficial positive activation on a genuine one-sided two-candidate case, and (3) cost remediation — so reject rather than postpone with a single revision.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_GpWNaXINbs4s2zgOX8e35151",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the frozen three-way decision contract with negative_rule on real pre-final prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions as NEGATIVE: it emits POSITIVE for both a joint 'A and B' question and a single-entity question, each producing a harmful or wasted deferral.",
+                "applicability": "Frozen Student model as Hook evaluator; decision contract: three-way hook classification with negative_rule; input class: real pre-final prefixes containing explicit-negative questions (joint A-and-B, single-entity); setting: candidate_review evaluation of the two-candidate deferral mechanism.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The one-shot deferral-with-generic-feedback hook for explicit two-candidate questions shows no attributable benefit: zero beneficial positive activations on applicable cases, two harmful misactivations on explicit negatives, accuracy -0.0178 and pass@n -0.0667, ~430k hook tokens (+48% total), all gains Student-side variance. Stop unchanged; revisit only with real-prefix either/or discrimination, a demonstrated beneficial activation on a genuine one-sided case, and cost remediation.",
+                "applicability": "Mechanism class: pre-final hook deferral with generic feedback for one-sided two-candidate questions; evaluation setting: candidate_review under the negative_rule contract with token-cost accounting.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the frozen three-way decision contract with negative_rule on real pre-final prefixes, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative questions as NEGATIVE: it emits POSITIVE for both a joint 'A and B' question and a single-entity question, each producing a harmful or wasted deferral.\", \"applicability\": \"Frozen Student model as Hook evaluator; decision contract: three-way hook classification with negative_rule; input class: real pre-final prefixes containing explicit-negative questions (joint A-and-B, single-entity); setting: candidate_review evaluation of the two-candidate deferral mechanism.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"The one-shot deferral-with-generic-feedback hook for explicit two-candidate questions shows no attributable benefit: zero beneficial positive activations on applicable cases, two harmful misactivations on explicit negatives, accuracy -0.0178 and pass@n -0.0667, ~430k hook tokens (+48% total), all gains Student-side variance. Stop unchanged; revisit only with real-prefix either/or discrimination, a demonstrated beneficial activation on a genuine one-sided case, and cost remediation.\", \"applicability\": \"Mechanism class: pre-final hook deferral with generic feedback for one-sided two-candidate questions; evaluation setting: candidate_review under the negative_rule contract with token-cost accounting.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 4,
+        "input_tokens": 44683,
+        "output_tokens": 13987,
+        "total_tokens": 58670,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5307,
+            "total_tokens": 9403,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 5248
+            },
+            "prompt_cache_hit_tokens": 5248,
+            "prompt_cache_miss_tokens": 59
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 9433,
+            "total_tokens": 13529,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9344
+            },
+            "prompt_cache_hit_tokens": 9344,
+            "prompt_cache_miss_tokens": 89
+          },
+          {
+            "completion_tokens": 2300,
+            "prompt_tokens": 13559,
+            "total_tokens": 15859,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2201
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13440
+            },
+            "prompt_cache_hit_tokens": 13440,
+            "prompt_cache_miss_tokens": 119
+          },
+          {
+            "completion_tokens": 3495,
+            "prompt_tokens": 16384,
+            "total_tokens": 19879,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3020
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 15744
+            },
+            "prompt_cache_hit_tokens": 15744,
+            "prompt_cache_miss_tokens": 640
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

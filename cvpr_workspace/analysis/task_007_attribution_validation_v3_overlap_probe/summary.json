@@ -1,0 +1,334 @@
+{
+  "suite_id": "TASK-007-ATTRIBUTION-V3",
+  "case_count": 1,
+  "run_count": 3,
+  "results": [
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v3_overlap_probe\\runs\\candidate_reject_hook_false_positive_scope\\run_01.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Frozen semantic Hook positively activated and deferred on two valid explicit contract-negative prefixes (a joint and a single-entity question), misclassifying explicit negatives as evidence gaps, while intended positive cases never activated. Narrow boundary: the Hook cannot selectively gate one-sided two-candidate gaps without over-triggering on explicit negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck.",
+            "applicability": "Scope: frozen semantic Hook in two-candidate evaluation on valid explicit contract-negative joint and single-entity questions, faithful wiring. Recheck: a Hook variant that passes explicit-negative prefixes without activation (verified on matched positives) or a deterministic negative pre-filter.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Semantic-Hook detection of genuine one-sided two-candidate evidence gaps lacks selectivity and utility: activations occurred only on explicit negatives (one directly regressed), no intended positive behavior appeared, and gains came only from Hook-negative no-op runs while accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with activation-attributed benefit on positives and no negative over-trigger.",
+            "applicability": "Mechanism class: semantic Hook gating of one-sided evidence gaps in two-candidate review; contract-negative joint/single-entity cases plus aggregate accuracy/cost. Revisit: activation-attributed benefit over matched controls with no negative over-trigger.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_WpTJeU5CXK8En08Yg2oM8745",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook: on two valid real evaluation prefixes that are explicit contract-negative (a joint and a single-entity question), it positively activated and deferred, misclassifying explicit negatives as evidence gaps, while intended positive cases never activated. Narrow boundary: the Hook cannot selectively gate one-sided two-candidate gaps without over-triggering on explicit negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck.",
+                "applicability": "Scope: frozen semantic Hook in two-candidate evaluation over valid explicit contract-negative joint and single-entity questions with faithful decision/action wiring. Release/recheck condition: a Hook variant that provably passes explicit-negative prefixes without activation (verified on matched positives) or a deterministic negative pre-filter.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook detection of genuine one-sided two-candidate evidence gaps lacks selectivity and utility: activations occurred only on explicit negatives (one causing a direct regression), no intended positive behavior appeared, and all gains came from Hook-negative no-op runs while accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only if a variant shows activation-attributed benefit on positives without negative over-trigger.",
+                "applicability": "Mechanism class: semantic Hook gating/detection of one-sided evidence gaps in two-candidate review. Evaluation setting: contract-negative joint and single-entity cases plus aggregate accuracy/cost comparison. Revisit condition: differential activation-attributed benefit over matched controls with no negative over-trigger.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.lesson: String should have at most 500 characters; maximum_length=500\n- items.0.student_capability.applicability: String should have at most 300 characters; maximum_length=300\n- items.1.experiment_direction.applicability: String should have at most 300 characters; maximum_length=300",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.lesson:string_too_long",
+              "items.0.student_capability.applicability:string_too_long",
+              "items.1.experiment_direction.applicability:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_mUd9cMUqaYBL2SMMC6Hf0674",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Scope: frozen semantic Hook in two-candidate evaluation on valid explicit contract-negative joint and single-entity questions, faithful wiring. Recheck: a Hook variant that passes explicit-negative prefixes without activation (verified on matched positives) or a deterministic negative pre-filter.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook positively activated and deferred on two valid explicit contract-negative prefixes (a joint and a single-entity question), misclassifying explicit negatives as evidence gaps, while intended positive cases never activated. Narrow boundary: the Hook cannot selectively gate one-sided two-candidate gaps without over-triggering on explicit negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck.",
+                "teacher_role_id": null
+              },
+              {
+                "applicability": "Mechanism class: semantic Hook gating of one-sided evidence gaps in two-candidate review; contract-negative joint/single-entity cases plus aggregate accuracy/cost. Revisit: activation-attributed benefit over matched controls with no negative over-trigger.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook detection of genuine one-sided two-candidate evidence gaps lacks selectivity and utility: activations occurred only on explicit negatives (one directly regressed), no intended positive behavior appeared, and gains came only from Hook-negative no-op runs while accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with activation-attributed benefit on positives and no negative over-trigger."
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.student_capability.teacher_role_id: Extra inputs are not permitted",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.student_capability.teacher_role_id:extra_forbidden"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_AEd7u8OI0BSFFTrZoh3o0186",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Scope: frozen semantic Hook in two-candidate evaluation on valid explicit contract-negative joint and single-entity questions, faithful wiring. Recheck: a Hook variant that passes explicit-negative prefixes without activation (verified on matched positives) or a deterministic negative pre-filter.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Frozen semantic Hook positively activated and deferred on two valid explicit contract-negative prefixes (a joint and a single-entity question), misclassifying explicit negatives as evidence gaps, while intended positive cases never activated. Narrow boundary: the Hook cannot selectively gate one-sided two-candidate gaps without over-triggering on explicit negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck."
+              },
+              {
+                "applicability": "Mechanism class: semantic Hook gating of one-sided evidence gaps in two-candidate review; contract-negative joint/single-entity cases plus aggregate accuracy/cost. Revisit: activation-attributed benefit over matched controls with no negative over-trigger.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook detection of genuine one-sided two-candidate evidence gaps lacks selectivity and utility: activations occurred only on explicit negatives (one directly regressed), no intended positive behavior appeared, and gains came only from Hook-negative no-op runs while accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with activation-attributed benefit on positives and no negative over-trigger."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Frozen semantic Hook positively activated and deferred on two valid explicit contract-negative prefixes (a joint and a single-entity question), misclassifying explicit negatives as evidence gaps, while intended positive cases never activated. Narrow boundary: the Hook cannot selectively gate one-sided two-candidate gaps without over-triggering on explicit negatives. Hypothesis Researcher: do not rely unchanged; add a deterministic explicit-negative guard or run a specified recheck.\", \"applicability\": \"Scope: frozen semantic Hook in two-candidate evaluation on valid explicit contract-negative joint and single-entity questions, faithful wiring. Recheck: a Hook variant that passes explicit-negative prefixes without activation (verified on matched positives) or a deterministic negative pre-filter.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Semantic-Hook detection of genuine one-sided two-candidate evidence gaps lacks selectivity and utility: activations occurred only on explicit negatives (one directly regressed), no intended positive behavior appeared, and gains came only from Hook-negative no-op runs while accuracy declined and Hook cost rose sharply. Disposition: stop unchanged; revisit only with activation-attributed benefit on positives and no negative over-trigger.\", \"applicability\": \"Mechanism class: semantic Hook gating of one-sided evidence gaps in two-candidate review; contract-negative joint/single-entity cases plus aggregate accuracy/cost. Revisit: activation-attributed benefit over matched controls with no negative over-trigger.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 21248,
+        "output_tokens": 4418,
+        "total_tokens": 25666,
+        "calls": [
+          {
+            "completion_tokens": 3585,
+            "prompt_tokens": 4447,
+            "total_tokens": 8032,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3180
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 4447
+          },
+          {
+            "completion_tokens": 428,
+            "prompt_tokens": 8155,
+            "total_tokens": 8583,
+            "completion_tokens_details": {
+              "reasoning_tokens": 43
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7936
+            },
+            "prompt_cache_hit_tokens": 7936,
+            "prompt_cache_miss_tokens": 219
+          },
+          {
+            "completion_tokens": 405,
+            "prompt_tokens": 8646,
+            "total_tokens": 9051,
+            "completion_tokens_details": {
+              "reasoning_tokens": 26
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8576
+            },
+            "prompt_cache_hit_tokens": 8576,
+            "prompt_cache_miss_tokens": 70
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v3_overlap_probe\\runs\\candidate_reject_hook_false_positive_scope\\run_02.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen semantic Hook model repeatedly misclassifies explicit contract negatives as deferral-worthy: two valid explicit-negative questions (one joint, one single-entity) both produced Hook-positive activations, one directly regressing the trajectory, with no positive-case activation observed. The Hook cannot separate explicit negatives from genuine one-sided gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic guard on explicit contract-negative inputs before reuse.",
+            "applicability": "Observed for the Hook model's three-way deferral decisions in valid evaluation prefixes with explicit contract-negative joint and single-entity questions; limit releases only with a wider matched probe including true one-sided-gap positives or a deterministic guard.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Semantic-Hook deferral for one-sided two-candidate evidence gaps carries no attributed utility: accuracy declined, Hook cost rose sharply, and every improvement came from Hook-negative no-op runs while activations hit only explicit negatives. Stop unchanged; revisit only with activation-attributed positive-case benefit, bounded Hook cost, and demonstrated selectivity on explicit negatives.",
+            "applicability": "Applies to semantic-Hook deferral mechanisms in candidate evaluation over contract-negative joint and single-entity questions; does not extend to Hook variants that never fire or settings without per-activation cost and utility attribution.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_zVa5HfSDQyS4myEzrctk5416",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen semantic Hook model repeatedly misclassifies explicit contract negatives as deferral-worthy: two valid explicit-negative questions (one joint, one single-entity) both produced Hook-positive activations, one directly regressing the trajectory, with no positive-case activation observed. The Hook cannot separate explicit negatives from genuine one-sided gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic guard on explicit contract-negative inputs before reuse.",
+                "applicability": "Observed for the Hook model's three-way deferral decisions in valid evaluation prefixes with explicit contract-negative joint and single-entity questions; limit releases only with a wider matched probe including true one-sided-gap positives or a deterministic guard.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Semantic-Hook deferral for one-sided two-candidate evidence gaps carries no attributed utility: accuracy declined, Hook cost rose sharply, and every improvement came from Hook-negative no-op runs while activations hit only explicit negatives. Stop unchanged; revisit only with activation-attributed positive-case benefit, bounded Hook cost, and demonstrated selectivity on explicit negatives.",
+                "applicability": "Applies to semantic-Hook deferral mechanisms in candidate evaluation over contract-negative joint and single-entity questions; does not extend to Hook variants that never fire or settings without per-activation cost and utility attribution.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen semantic Hook model repeatedly misclassifies explicit contract negatives as deferral-worthy: two valid explicit-negative questions (one joint, one single-entity) both produced Hook-positive activations, one directly regressing the trajectory, with no positive-case activation observed. The Hook cannot separate explicit negatives from genuine one-sided gaps. Hypothesis Researcher: do not rely unchanged; add a deterministic guard on explicit contract-negative inputs before reuse.\", \"applicability\": \"Observed for the Hook model's three-way deferral decisions in valid evaluation prefixes with explicit contract-negative joint and single-entity questions; limit releases only with a wider matched probe including true one-sided-gap positives or a deterministic guard.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Semantic-Hook deferral for one-sided two-candidate evidence gaps carries no attributed utility: accuracy declined, Hook cost rose sharply, and every improvement came from Hook-negative no-op runs while activations hit only explicit negatives. Stop unchanged; revisit only with activation-attributed positive-case benefit, bounded Hook cost, and demonstrated selectivity on explicit negatives.\", \"applicability\": \"Applies to semantic-Hook deferral mechanisms in candidate evaluation over contract-negative joint and single-entity questions; does not extend to Hook variants that never fire or settings without per-activation cost and utility attribution.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4447,
+        "output_tokens": 2998,
+        "total_tokens": 7445,
+        "calls": [
+          {
+            "completion_tokens": 2998,
+            "prompt_tokens": 4447,
+            "total_tokens": 7445,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2645
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 4447
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v3_overlap_probe\\runs\\candidate_reject_hook_false_positive_scope\\run_03.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The frozen Hook model produces positive activations on two valid explicit contract-negative evaluation prefixes (joint and single-entity questions; one caused a direct regression) and shows no intended positive detection, with reference validity, input validity, and Candidate fidelity confirmed. Narrow false-positive boundary: do not rely unchanged; add a deterministic guard excluding explicit negatives or run a recheck on valid positives.",
+            "applicability": "Applies to this task's explicit contract-negative inputs in the three-way semantic Hook decision mode under the confirmed evaluation set; revisit if reference rules, input distribution, or decision mode change.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Faithfully applied, the semantic-Hook mechanism for one-sided two-candidate gap detection shows no attributed utility: activations occur only on contract-negative questions, improvements only on Hook-negative no-op runs, while accuracy declines and Hook cost rises sharply. Stop unchanged; revisit only with activation-attributed accuracy gains on valid positives at acceptable cost against a matched control.",
+            "applicability": "Delimits semantic-Hook selectivity/utility claims for one-sided evidence-gap detection in this evaluation setting; a legitimate revisit needs valid positive probes with differential, cost-justified benefit.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_JPDj3uRINfVmgpUYe6fA9251",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "The frozen Hook model produces positive activations on two valid explicit contract-negative evaluation prefixes (joint and single-entity questions; one caused a direct regression) and shows no intended positive detection, with reference validity, input validity, and Candidate fidelity confirmed. Narrow false-positive boundary: do not rely unchanged; add a deterministic guard excluding explicit negatives or run a recheck on valid positives.",
+                "applicability": "Applies to this task's explicit contract-negative inputs in the three-way semantic Hook decision mode under the confirmed evaluation set; revisit if reference rules, input distribution, or decision mode change.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Faithfully applied, the semantic-Hook mechanism for one-sided two-candidate gap detection shows no attributed utility: activations occur only on contract-negative questions, improvements only on Hook-negative no-op runs, while accuracy declines and Hook cost rises sharply. Stop unchanged; revisit only with activation-attributed accuracy gains on valid positives at acceptable cost against a matched control.",
+                "applicability": "Delimits semantic-Hook selectivity/utility claims for one-sided evidence-gap detection in this evaluation setting; a legitimate revisit needs valid positive probes with differential, cost-justified benefit.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The frozen Hook model produces positive activations on two valid explicit contract-negative evaluation prefixes (joint and single-entity questions; one caused a direct regression) and shows no intended positive detection, with reference validity, input validity, and Candidate fidelity confirmed. Narrow false-positive boundary: do not rely unchanged; add a deterministic guard excluding explicit negatives or run a recheck on valid positives.\", \"applicability\": \"Applies to this task's explicit contract-negative inputs in the three-way semantic Hook decision mode under the confirmed evaluation set; revisit if reference rules, input distribution, or decision mode change.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Faithfully applied, the semantic-Hook mechanism for one-sided two-candidate gap detection shows no attributed utility: activations occur only on contract-negative questions, improvements only on Hook-negative no-op runs, while accuracy declines and Hook cost rises sharply. Stop unchanged; revisit only with activation-attributed accuracy gains on valid positives at acceptable cost against a matched control.\", \"applicability\": \"Delimits semantic-Hook selectivity/utility claims for one-sided evidence-gap detection in this evaluation setting; a legitimate revisit needs valid positive probes with differential, cost-justified benefit.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "input_tokens": 4447,
+        "output_tokens": 3355,
+        "total_tokens": 7802,
+        "calls": [
+          {
+            "completion_tokens": 3355,
+            "prompt_tokens": 4447,
+            "total_tokens": 7802,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3024
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4352
+            },
+            "prompt_cache_hit_tokens": 4352,
+            "prompt_cache_miss_tokens": 95
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

@@ -13,6 +13,13 @@ from search_harness.evolution.research.roles.contracts import (
     InterventionHypothesis,
     MechanismSpec,
 )
+from search_harness.evolution.research.experience_summary import (
+    ExperienceSummaryRequest,
+    build_conformance_capability_request,
+    build_hook_feasibility_capability_request,
+    build_promotion_direction_request,
+    build_workflow_direction_request,
+)
 from search_harness.evolution.research.hook_feasibility import (
     HookFeasibilityProbeConfig,
 )
@@ -236,7 +243,9 @@ class LocalControlEffects:
             _role_output(_read_json(_ref_path(work, "failure_artifact")))
         )
         hypothesis = InterventionHypothesis.model_validate(
-            _role_output(_read_json(_ref_path(work, "hypothesis_artifact")))
+            _hypothesis_from_artifact(
+                _read_json(_ref_path(work, "hypothesis_artifact"))
+            )
         )
         limits = _required_payload_object(work, "trial_budget")
         max_trials = _required_positive_int(
@@ -282,7 +291,7 @@ class LocalControlEffects:
         work_dir: Path,
     ) -> EffectResult:
         assignment = _required_payload_object(work, "assignment")
-        hypothesis = _role_output(
+        hypothesis = _hypothesis_from_artifact(
             _read_json(_ref_path(work, "hypothesis_artifact"))
         )
         raw_pending = work.payload.get("pending_assignments")
@@ -317,7 +326,7 @@ class LocalControlEffects:
         work_dir: Path,
     ) -> EffectResult:
         trial_paths = _trial_paths(work)
-        hypothesis = _role_output(
+        hypothesis = _hypothesis_from_artifact(
             _read_json(_ref_path(work, "hypothesis_artifact"))
         )
         persisted_reviews: dict[int, Path] = {}
@@ -364,7 +373,7 @@ class LocalControlEffects:
         if not isinstance(reviewer_input, dict):
             raise TypeError("Evidence Reviewer artifact lacks structured input")
         return await self._research_role_effects().distill_mechanism(
-            hypothesis=_role_output(
+            hypothesis=_hypothesis_from_artifact(
                 _read_json(_ref_path(work, "hypothesis_artifact"))
             ),
             review=_role_output(reviewer_artifact),
@@ -546,6 +555,7 @@ class LocalControlEffects:
         return self.candidate_versions.stage(
             candidate=candidate,
             parent_version=_required_current_version(state),
+            work=work,
             work_dir=work_dir,
         )
 
@@ -628,7 +638,7 @@ class LocalControlEffects:
             mechanism=mechanism,
             compiler_output=compiler_output,
             validation_summary=validation_summary,
-            candidate_attempt_id=_required_payload_string(work, "candidate_attempt_id"),
+            candidate_attempt_id=_required_candidate_attempt_id(work),
             incumbent_report_dir=_ref_path(work, "report_dir"),
             candidate_report_dir=_ref_path(
                 work,
@@ -642,6 +652,51 @@ class LocalControlEffects:
             work_dir=work_dir,
         )
 
+    async def _execute_summarize_capability(
+        self,
+        *,
+        work: WorkItem,
+        state: ControlState,
+        work_dir: Path,
+    ) -> EffectResult:
+        """Build and execute one trigger-specific Capability Pass."""
+
+        del state
+        try:
+            request = _capability_summary_request(work)
+            if request is None:
+                return EffectResult(
+                    outcome={
+                        "status": "not_eligible",
+                        "source_event": _experience_source_event(work),
+                    }
+                )
+            return await self._research_role_effects().summarize_capability(
+                request=request,
+                work_dir=work_dir,
+            )
+        except Exception as exc:
+            return _summary_failure_result(work_dir, exc)
+
+    async def _execute_summarize_direction(
+        self,
+        *,
+        work: WorkItem,
+        state: ControlState,
+        work_dir: Path,
+    ) -> EffectResult:
+        """Build and execute one trigger-specific Direction Pass."""
+
+        del state
+        try:
+            request = _direction_summary_request(work)
+            return await self._research_role_effects().summarize_direction(
+                request=request,
+                work_dir=work_dir,
+            )
+        except Exception as exc:
+            return _summary_failure_result(work_dir, exc)
+
     async def _execute_promote_candidate(
         self,
         *,
@@ -649,7 +704,7 @@ class LocalControlEffects:
         state: ControlState,
         work_dir: Path,
     ) -> EffectResult:
-        candidate_attempt_id = _required_payload_string(work, "candidate_attempt_id")
+        candidate_attempt_id = _required_candidate_attempt_id(work)
         completed = self.candidate_versions.promotion_result_if_completed(
             candidate_attempt_id=candidate_attempt_id,
             work_dir=work_dir,
@@ -690,7 +745,7 @@ class LocalControlEffects:
         state: ControlState,
         work_dir: Path,
     ) -> EffectResult:
-        candidate_attempt_id = _required_payload_string(work, "candidate_attempt_id")
+        candidate_attempt_id = _required_candidate_attempt_id(work)
         completed = self.candidate_versions.rejection_result_if_completed(
             candidate_attempt_id=candidate_attempt_id,
             work_dir=work_dir,
@@ -741,7 +796,7 @@ class LocalControlEffects:
         compiler = _read_json(_ref_path(work, "compiler_artifact"))
         output = CompilerResult.model_validate(compiler.get("output"))
         return CandidateArtifact(
-            candidate_attempt_id=_required_payload_string(work, "candidate_attempt_id"),
+            candidate_attempt_id=_required_candidate_attempt_id(work),
             parent_version=_required_current_version(state),
             candidate_digest=_required_payload_string(
                 work,
@@ -830,6 +885,15 @@ def _ref_path(work: WorkItem, name: str) -> Path:
 
 def _required_payload_string(work: WorkItem, name: str) -> str:
     return _required_string(work.payload, name)
+
+
+def _required_candidate_attempt_id(work: WorkItem) -> str:
+    candidate_attempt_id = work.lineage.candidate_attempt_id
+    if candidate_attempt_id is None:
+        raise ValueError(
+            f"{work.kind.value} requires lineage candidate_attempt_id"
+        )
+    return candidate_attempt_id
 
 
 def _required_payload_object(
@@ -1065,6 +1129,228 @@ def _required_non_negative_int(value: dict[str, Any], name: str) -> int:
 
 def _role_output(artifact: dict[str, Any]) -> dict[str, Any]:
     return _required_object(artifact, "output")
+
+
+def _hypothesis_from_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+    output = _role_output(artifact)
+    hypothesis = output.get("hypothesis")
+    if not isinstance(hypothesis, dict):
+        raise TypeError("Researcher artifact lacks an active hypothesis")
+    return hypothesis
+
+
+def _experience_source_event(work: WorkItem) -> str:
+    return _required_payload_string(work, "experience_source_event")
+
+
+def _capability_summary_request(
+    work: WorkItem,
+) -> ExperienceSummaryRequest | None:
+    event = _experience_source_event(work)
+    if event == "hook_feasibility.needs_research_revision":
+        probe_path = _ref_path(work, "hook_feasibility_probe")
+        return build_hook_feasibility_capability_request(
+            _read_json(probe_path),
+            source_ref="hook_feasibility_probe",
+        )
+    if event == "conformance.revise":
+        findings: list[dict[str, Any]] = []
+        refs: list[str] = []
+        for key, raw_path in sorted(work.input_refs.items()):
+            if not key.startswith("conformance_finding_"):
+                continue
+            artifact = _read_json(Path(raw_path))
+            output = artifact.get("output")
+            if isinstance(output, dict):
+                findings.append(output)
+                refs.append(key)
+        return build_conformance_capability_request(
+            findings,
+            source_refs=refs,
+            mechanism=(
+                _read_json(_ref_path(work, "mechanism_file"))
+                if "mechanism_file" in work.input_refs
+                else None
+            ),
+        )
+    if event in {
+        "evidence_reviewer.reject",
+        "evidence_reviewer.revise",
+    }:
+        # These sources are conditionally eligible only when their typed
+        # artifacts contain repeatable direct evaluator decisions. The current
+        # adapters intentionally decline aggregate Reviewer prose.
+        return None
+    raise ValueError(f"unsupported Capability source event: {event}")
+
+
+def _direction_summary_request(work: WorkItem) -> ExperienceSummaryRequest:
+    event = _experience_source_event(work)
+    failure = _role_output(
+        _read_json(_ref_path(work, "failure_artifact"))
+    )
+    researcher = _role_output(
+        _read_json(_ref_path(work, "hypothesis_artifact"))
+    )
+    hypothesis = researcher.get("hypothesis")
+    if not isinstance(hypothesis, dict):
+        raise TypeError("Direction source lacks the active Research Scheme")
+    failure_id = _required_payload_string(work, "failure_direction_id")
+    research_id = _required_payload_string(work, "research_scheme_id")
+    mechanism_id = work.payload.get("mechanism_scheme_id")
+    if mechanism_id is not None and not isinstance(mechanism_id, str):
+        raise TypeError("mechanism_scheme_id must be a string")
+    mechanism = (
+        _read_json(_ref_path(work, "mechanism_file"))
+        if "mechanism_file" in work.input_refs
+        else None
+    )
+    failure_summary = _failure_direction_summary(failure)
+    research_summary = _research_scheme_summary(hypothesis)
+    mechanism_summary = (
+        _mechanism_scheme_summary(mechanism)
+        if mechanism is not None
+        else None
+    )
+    if event in {"promotion_gate.failed", "promotion_gate.passed"}:
+        if mechanism is None or mechanism_id is None:
+            raise ValueError("Promotion Direction requires a Mechanism Scheme")
+        return build_promotion_direction_request(
+            failure_direction_id=failure_id,
+            failure_summary=failure_summary,
+            research_scheme_id=research_id,
+            research_summary=research_summary,
+            mechanism_scheme_id=mechanism_id,
+            mechanism_summary=mechanism_summary or "Current Mechanism Scheme.",
+            mechanism_goal=str(mechanism.get("goal", "Goal not recorded.")),
+            candidate_review=_required_payload_object(
+                work,
+                "candidate_review",
+            ),
+            promotion_gate=_required_payload_object(
+                work,
+                "promotion_gate",
+            ),
+            source_refs=_experience_source_refs(work),
+        )
+    source_outcome = _required_payload_object(
+        work,
+        "experience_source_outcome",
+    )
+    source_output = _required_object(source_outcome, "output")
+    target_is_mechanism = event in {
+        "hook_feasibility.needs_spec_revision",
+        "compiler.needs_mechanism_revision",
+        "compiler.implementation_blocked",
+        "conformance.revise_mechanism",
+        "candidate_reviewer.revise_mechanism",
+        "candidate_reviewer.reject",
+    }
+    if target_is_mechanism and (mechanism is None or mechanism_id is None):
+        raise ValueError(
+            f"Direction event {event} requires a Mechanism Scheme"
+        )
+    expected = (
+        str(mechanism.get("goal", "Goal not recorded."))
+        if target_is_mechanism and mechanism is not None
+        else research_summary
+    )
+    return build_workflow_direction_request(
+        source_event=event,
+        failure_direction_id=failure_id,
+        failure_summary=failure_summary,
+        research_scheme_id=research_id,
+        research_summary=research_summary,
+        mechanism_scheme_id=mechanism_id,
+        mechanism_summary=mechanism_summary,
+        expected=expected,
+        source_output=source_output,
+        source_refs=_experience_source_refs(work),
+    )
+
+
+def _failure_direction_summary(value: dict[str, Any]) -> str:
+    pattern = str(value.get("pattern", "Pattern not recorded."))
+    applicability = str(value.get("applicability", ""))
+    return f"{pattern} Applicability: {applicability}"[:800]
+
+
+def _research_scheme_summary(value: dict[str, Any]) -> str:
+    evaluation = value.get("evaluation")
+    primary = (
+        evaluation.get("primary_signal")
+        if isinstance(evaluation, dict)
+        else None
+    )
+    phases = value.get("phase_plan")
+    phase_names = [
+        str(item.get("phase"))
+        for item in phases
+        if isinstance(item, dict) and item.get("phase")
+    ] if isinstance(phases, list) else []
+    return (
+        f"Applicability: {value.get('applicability', 'not recorded')}; "
+        f"phases: {', '.join(phase_names) or 'not recorded'}; "
+        f"primary signal: {primary or 'not recorded'}"
+    )[:800]
+
+
+def _mechanism_scheme_summary(value: dict[str, Any]) -> str:
+    return (
+        f"Goal: {value.get('goal', 'not recorded')}; "
+        f"expected behavior: {value.get('expected_behavior', 'not recorded')}; "
+        f"fallback: {value.get('fallback', 'not recorded')}"
+    )[:800]
+
+
+def _experience_source_refs(work: WorkItem) -> list[str]:
+    return sorted(
+        key
+        for key in work.input_refs
+        if key in {
+            "failure_artifact",
+            "hypothesis_artifact",
+            "reviewer_artifact",
+            "distiller_artifact",
+            "mechanism_file",
+            "hook_feasibility_artifact",
+            "hook_feasibility_probe",
+            "compiler_artifact",
+            "conformance_summary_artifact",
+            "candidate_reviewer_artifact",
+            "candidate_outcome_digest",
+        }
+    )
+
+
+def _summary_failure_result(work_dir: Path, exc: Exception) -> EffectResult:
+    failure = {
+        "status": "failed",
+        "error": f"{type(exc).__name__}: {exc}",
+    }
+    artifact = getattr(exc, "failure_artifact", None)
+    if isinstance(artifact, dict):
+        failure["role_failure"] = artifact
+    path = work_dir / "summary.failed.json"
+    path.write_text(
+        json.dumps(failure, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    usage = artifact.get("usage") if isinstance(artifact, dict) else None
+    total_tokens = (
+        usage.get("total_tokens", 0)
+        if isinstance(usage, dict)
+        else 0
+    )
+    return EffectResult(
+        outcome=failure,
+        artifact_refs={"summary_failure_artifact": str(path.resolve())},
+        usage={
+            "total_tokens": (
+                total_tokens if isinstance(total_tokens, int) else 0
+            )
+        },
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:

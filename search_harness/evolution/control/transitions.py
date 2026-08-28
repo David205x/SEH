@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
+
+from search_harness.evolution.identifiers import (
+    make_generation_id,
+    make_logical_work_id,
+    make_failure_direction_id,
+    make_mechanism_scheme_id,
+    make_research_attempt_id,
+    make_research_scheme_id,
+    make_work_id,
+)
 
 from .domain import (
     EffectResult,
     EvolutionControlConfig,
+    SettlementClass,
+    SettlementDraft,
+    SettlementScope,
+    TrajectoryLineage,
     WorkItem,
     WorkKind,
 )
@@ -37,20 +49,41 @@ class TransitionPlan:
 
     next_items: tuple[WorkItem, ...] = ()
     complete_reason: str | None = None
-    version_advance: tuple[str, int] | None = None
+    version_advance: tuple[str, int, str] | None = None
+    settlements: tuple[SettlementDraft, ...] = ()
 
 
 def initial_work(*, run_id: str, version_id: str) -> WorkItem:
     """Create the first incumbent evaluation for a new run."""
 
+    generation = 1
+    generation_id = make_generation_id(run_id, generation)
+    research_attempt = 1
+    research_id = make_research_attempt_id(
+        generation_id,
+        research_attempt,
+    )
+    work_index = 1
+    logical_work_id = make_logical_work_id(
+        research_id,
+        work_index,
+        WorkKind.EVALUATE_INCUMBENT.value,
+    )
     return WorkItem(
-        work_id=_stable_id(run_id, "initial", WorkKind.EVALUATE_INCUMBENT),
+        work_id=make_work_id(logical_work_id, 1),
+        logical_work_id=logical_work_id,
+        work_index=work_index,
         kind=WorkKind.EVALUATE_INCUMBENT,
-        subject_ref=f"generation:1:{version_id}",
+        subject_ref=generation_id,
+        lineage=TrajectoryLineage(
+            run_id=run_id,
+            generation=generation,
+            generation_id=generation_id,
+            research_attempt=research_attempt,
+            research_attempt_id=research_id,
+        ),
         payload={
-            "generation": 1,
             "version_id": version_id,
-            "research_attempt": 1,
         },
     )
 
@@ -59,13 +92,12 @@ def retry_work(item: WorkItem) -> WorkItem:
     """Create one deterministic retry without mutating the original item."""
 
     return WorkItem(
-        work_id=_stable_id(
-            item.work_id,
-            f"retry:{item.attempt + 1}",
-            item.kind,
-        ),
+        work_id=make_work_id(item.logical_work_id, item.attempt + 1),
+        logical_work_id=item.logical_work_id,
+        work_index=item.work_index,
         kind=item.kind,
         subject_ref=item.subject_ref,
+        lineage=item.lineage,
         input_refs=dict(item.input_refs),
         payload=dict(item.payload),
         parent_work_id=item.work_id,
@@ -119,15 +151,15 @@ class _CompletedTransition:
     def on_analyze_failure(self) -> TransitionPlan:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
-        prior_direction = payload.get("prior_problem_direction_id")
-        payload["problem_direction_id"] = (
-            prior_direction
-            if isinstance(prior_direction, str) and prior_direction
-            else _lineage_id(
-                "problem_direction",
-                refs.get("failure_artifact", self.item.work_id),
-            )
+        direction_index = int(payload.get("direction_index", 0)) + 1
+        payload["direction_index"] = direction_index
+        payload["failure_direction_id"] = make_failure_direction_id(
+            self.item.lineage.generation_id,
+            direction_index,
         )
+        payload["research_scheme_index"] = 0
+        payload.pop("research_scheme_id", None)
+        payload.pop("mechanism_scheme_id", None)
         return self._one(
             WorkKind.RESEARCH_HYPOTHESIS,
             "failure_analyzed",
@@ -136,6 +168,8 @@ class _CompletedTransition:
         )
 
     def on_research_hypothesis(self) -> TransitionPlan:
+        output = _required_object(self.result.outcome, "output")
+        scheme_action = _required_string(output, "scheme_action")
         current_refs = _merge_refs(
             self.item.input_refs,
             self.result.artifact_refs,
@@ -146,6 +180,50 @@ class _CompletedTransition:
             if key in current_refs
         }
         payload = _context(self.item)
+        continuation = payload.get("research_continuation")
+        is_continuation = isinstance(continuation, dict)
+        if not is_continuation and scheme_action != "start_new":
+            raise ValueError(
+                "initial Researcher result must start a Research Scheme"
+            )
+        if scheme_action == "reanalyse_failure":
+            return self._new_failure_analysis(
+                refs=current_refs,
+                payload=payload,
+                route="researcher_reanalyse_failure",
+            )
+        if scheme_action not in {"revise_current", "start_new"}:
+            raise ValueError(
+                f"unknown Researcher scheme_action: {scheme_action}"
+            )
+        next_lineage = self._lineage_without_candidate()
+        next_work_index: int | None = None
+        if scheme_action == "start_new":
+            failure_direction_id = _required_string(
+                payload,
+                "failure_direction_id",
+            )
+            scheme_index = int(payload.get("research_scheme_index", 0)) + 1
+            payload["research_scheme_index"] = scheme_index
+            payload["research_scheme_id"] = make_research_scheme_id(
+                failure_direction_id,
+                scheme_index,
+            )
+            payload["research_scheme_revision"] = 1
+            payload["hypothesis_revision"] = 0
+            payload.pop("mechanism_scheme_id", None)
+            payload.pop("mechanism_revision", None)
+            if is_continuation:
+                next_lineage = self._next_research_lineage()
+                next_work_index = 1
+        else:
+            if "research_scheme_id" not in payload:
+                raise ValueError(
+                    "revise_current requires an existing Research Scheme"
+                )
+            revision = int(payload.get("research_scheme_revision", 1)) + 1
+            payload["research_scheme_revision"] = revision
+            payload["hypothesis_revision"] = revision - 1
         payload.pop("research_continuation", None)
         payload.pop("assignment", None)
         payload.update(
@@ -173,16 +251,18 @@ class _CompletedTransition:
             "hypothesis_ready",
             refs=refs,
             payload=payload,
+            lineage=next_lineage,
+            work_index=next_work_index,
         )
 
     def on_select_trial(self) -> TransitionPlan:
         status = _required_string(self.result.outcome, "status")
         if status == "exhausted":
-            return TransitionPlan(
-                complete_reason=(
-                    "No unused rollout prefix matched the frozen "
-                    "hypothesis and assignment budget."
-                )
+            return self._complete_negative(
+                "no_matching_trial_prefix",
+                "No unused rollout prefix matched the frozen "
+                "hypothesis and assignment budget.",
+                verdict=status,
             )
         if status != "selected":
             raise ValueError(f"unknown trial selection status: {status}")
@@ -345,14 +425,16 @@ class _CompletedTransition:
         if int(payload.get("assignment_count", 0)) >= (
             self.config.max_trial_assignments
         ):
-            return TransitionPlan(
-                complete_reason="Trial assignment budget was exhausted."
+            return self._complete_negative(
+                "sequential_assignment_budget_exhausted",
+                "Trial assignment budget was exhausted.",
             )
         if int(payload.get("trial_count", 0)) >= (
             self.config.max_trials_per_hypothesis
         ):
-            return TransitionPlan(
-                complete_reason="Per-hypothesis trial budget was exhausted."
+            return self._complete_negative(
+                "sequential_trial_budget_exhausted",
+                "Per-hypothesis trial budget was exhausted.",
             )
         return self._one(
             WorkKind.SELECT_TRIAL,
@@ -437,12 +519,14 @@ class _CompletedTransition:
         if int(payload.get("assignment_count", 0)) >= (
             self.config.max_trial_assignments
         ):
-            return TransitionPlan(
-                complete_reason="Trial assignment budget was exhausted."
+            return self._complete_negative(
+                "parallel_assignment_budget_exhausted",
+                "Trial assignment budget was exhausted.",
             )
         if trial_count >= self.config.max_trials_per_hypothesis:
-            return TransitionPlan(
-                complete_reason="Per-hypothesis trial budget was exhausted."
+            return self._complete_negative(
+                "parallel_trial_budget_exhausted",
+                "Per-hypothesis trial budget was exhausted.",
             )
         return self._one(
             WorkKind.SELECT_TRIAL,
@@ -462,20 +546,30 @@ class _CompletedTransition:
             if int(payload.get("trial_count", 0)) >= (
                 self.config.max_trials_per_hypothesis
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Evidence Reviewer requested another trial after the "
-                        "per-hypothesis trial budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "evidence_continue_trial_budget_exhausted",
+                    "Evidence Reviewer requested another trial after the "
+                    "per-hypothesis trial budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="evidence_reviewer",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             if int(payload.get("assignment_count", 0)) >= (
                 self.config.max_trial_assignments
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Evidence Reviewer requested another trial after "
-                        "the assignment budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "evidence_continue_assignment_budget_exhausted",
+                    "Evidence Reviewer requested another trial after "
+                    "the assignment budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="evidence_reviewer",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             return self._one(
                 WorkKind.SELECT_TRIAL,
@@ -484,11 +578,15 @@ class _CompletedTransition:
                 payload=payload,
             )
         if decision in {"revise", "reject"}:
-            return self._research_revision(
-                feedback_source="evidence_reviewer",
-                feedback=output,
-                refs=refs,
-                payload=payload,
+            return self._with_experience(
+                self._research_revision(
+                    feedback_source="evidence_reviewer",
+                    feedback=output,
+                    refs=refs,
+                    payload=payload,
+                ),
+                capability_event=f"evidence_reviewer.{decision}",
+                direction_event=f"evidence_reviewer.{decision}",
             )
         if decision != "ready_to_distill":
             raise ValueError(f"unknown Evidence Reviewer decision: {decision}")
@@ -505,27 +603,43 @@ class _CompletedTransition:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
         if decision == "not_distillable":
-            return TransitionPlan(
-                complete_reason="Evidence was judged not distillable."
+            return self._with_experience(
+                self._research_revision(
+                    feedback_source="mechanism_distiller",
+                    feedback=output,
+                    refs=refs,
+                    payload=payload,
+                ),
+                direction_event="mechanism_distiller.not_distillable",
             )
         if decision == "needs_evidence":
             if int(payload.get("trial_count", 0)) >= (
                 self.config.max_trials_per_hypothesis
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Mechanism Distiller requested more evidence after "
-                        "the trial budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "distiller_evidence_trial_budget_exhausted",
+                    "Mechanism Distiller requested more evidence after "
+                    "the trial budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="mechanism_distiller",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             if int(payload.get("assignment_count", 0)) >= (
                 self.config.max_trial_assignments
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Mechanism Distiller requested more evidence after "
-                        "the assignment budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "distiller_evidence_assignment_budget_exhausted",
+                    "Mechanism Distiller requested more evidence after "
+                    "the assignment budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="mechanism_distiller",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             payload["prior_obligation"] = output.get("next_obligation")
             return self._one(
@@ -538,6 +652,17 @@ class _CompletedTransition:
             raise ValueError(f"unknown Mechanism Distiller decision: {decision}")
         payload["effect_goal"] = str(
             self.result.outcome.get("effect_goal", "task_outcome")
+        )
+        research_scheme_id = _required_string(
+            payload,
+            "research_scheme_id",
+        )
+        payload.setdefault(
+            "mechanism_scheme_id",
+            make_mechanism_scheme_id(research_scheme_id),
+        )
+        payload["mechanism_scheme_revision"] = (
+            int(payload.get("mechanism_revision", 0)) + 1
         )
         if self.result.outcome.get("requires_hook_feasibility") is True:
             return self._one(
@@ -576,11 +701,13 @@ class _CompletedTransition:
         if decision == "needs_spec_revision":
             revision = int(payload.get("mechanism_revision", 0)) + 1
             if revision > self.config.max_mechanism_revisions:
-                return TransitionPlan(
-                    complete_reason=(
-                        "Hook feasibility requested a specification revision "
-                        "after the mechanism revision budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "hook_spec_revision_budget_exhausted",
+                    "Hook feasibility requested a specification revision "
+                    "after the mechanism revision budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="mechanism_distiller",
+                    revision_obligation=feedback,
                 )
             payload["mechanism_revision"] = revision
             constraints = list(payload.get("capability_constraints", []))
@@ -588,18 +715,29 @@ class _CompletedTransition:
             payload["capability_constraints"] = constraints
             refs.pop("hook_feasibility_artifact", None)
             refs.pop("hook_feasibility_probe", None)
-            return self._one(
-                WorkKind.DISTILL_MECHANISM,
-                f"hook_spec_revision:{revision}",
-                refs=refs,
-                payload=payload,
+            return self._with_experience(
+                self._one(
+                    WorkKind.DISTILL_MECHANISM,
+                    f"hook_spec_revision:{revision}",
+                    refs=refs,
+                    payload=payload,
+                ),
+                direction_event="hook_feasibility.needs_spec_revision",
             )
         if decision == "needs_research_revision":
-            return self._research_revision(
-                feedback_source="hook_feasibility_reviewer",
-                feedback=output,
-                refs=refs,
-                payload=payload,
+            return self._with_experience(
+                self._research_revision(
+                    feedback_source="hook_feasibility_reviewer",
+                    feedback=output,
+                    refs=refs,
+                    payload=payload,
+                ),
+                capability_event=(
+                    "hook_feasibility.needs_research_revision"
+                ),
+                direction_event=(
+                    "hook_feasibility.needs_research_revision"
+                ),
             )
         raise ValueError(f"unknown Hook feasibility decision: {decision}")
 
@@ -613,20 +751,30 @@ class _CompletedTransition:
             if int(payload.get("trial_count", 0)) >= (
                 self.config.max_trials_per_hypothesis
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Compiler requested more evidence after the trial "
-                        "budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "compiler_evidence_trial_budget_exhausted",
+                    "Compiler requested more evidence after the trial "
+                    "budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="compiler",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             if int(payload.get("assignment_count", 0)) >= (
                 self.config.max_trial_assignments
             ):
-                return TransitionPlan(
-                    complete_reason=(
-                        "Compiler requested more evidence after the assignment "
-                        "budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "compiler_evidence_assignment_budget_exhausted",
+                    "Compiler requested more evidence after the assignment "
+                    "budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="compiler",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             payload["prior_obligation"] = _required_string(
                 output,
@@ -645,11 +793,16 @@ class _CompletedTransition:
             refs.pop("compiler_candidate_file", None)
             revision = int(payload.get("mechanism_revision", 0)) + 1
             if revision > self.config.max_mechanism_revisions:
-                return TransitionPlan(
-                    complete_reason=(
-                        "Compiler requested a mechanism revision after the "
-                        "configured revision budget was exhausted."
-                    )
+                return self._complete_negative(
+                    "compiler_mechanism_revision_budget_exhausted",
+                    "Compiler requested a mechanism revision after the "
+                    "configured revision budget was exhausted.",
+                    verdict=decision,
+                    revision_owner="mechanism_distiller",
+                    revision_obligation=_required_string(
+                        output,
+                        "next_obligation",
+                    ),
                 )
             payload["mechanism_revision"] = revision
             constraints = list(payload.get("capability_constraints", []))
@@ -657,11 +810,19 @@ class _CompletedTransition:
                 _required_string(output, "next_obligation")
             )
             payload["capability_constraints"] = constraints
-            return self._one(
-                WorkKind.DISTILL_MECHANISM,
-                f"compiler_mechanism_revision:{revision}",
-                refs=refs,
-                payload=payload,
+            event = (
+                "compiler.needs_mechanism_revision"
+                if decision == "needs_mechanism_revision"
+                else "compiler.implementation_blocked"
+            )
+            return self._with_experience(
+                self._one(
+                    WorkKind.DISTILL_MECHANISM,
+                    f"compiler_mechanism_revision:{revision}",
+                    refs=refs,
+                    payload=payload,
+                ),
+                direction_event=event,
             )
         if decision != "submitted":
             raise ValueError(f"unknown Compiler decision: {decision}")
@@ -677,13 +838,39 @@ class _CompletedTransition:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
         payload = _context(self.item)
         if status == "validation_failed":
+            candidate_attempt_id = _required_string(
+                self.result.outcome,
+                "candidate_attempt_id",
+            )
+            candidate_settlement = self._settlement(
+                SettlementScope.CANDIDATE_ATTEMPT,
+                SettlementClass.SETTLED_NEGATIVE,
+                "candidate_validation_failed",
+                verdict=status,
+                candidate_attempt_id=candidate_attempt_id,
+            )
             revision = int(payload.get("compiler_revision", 0)) + 1
             if revision > self.config.max_compiler_revisions:
-                return TransitionPlan(
-                    complete_reason=(
+                validation = self.result.outcome.get("validation")
+                errors = (
+                    list(validation.get("errors", []))
+                    if isinstance(validation, dict)
+                    else []
+                )
+                obligation = (
+                    " | ".join(str(error) for error in errors if str(error))
+                    or "Candidate validation remained invalid."
+                )
+                return self._with_settlement(
+                    self._complete_negative(
+                        "candidate_validation_revision_budget_exhausted",
                         "Candidate validation failed after the Compiler "
-                        "revision budget was exhausted."
-                    )
+                        "revision budget was exhausted.",
+                        verdict=status,
+                        revision_owner="compiler",
+                        revision_obligation=obligation,
+                    ),
+                    candidate_settlement,
                 )
             payload["compiler_revision"] = revision
             feedback = self.result.outcome.get("validation")
@@ -692,33 +879,52 @@ class _CompletedTransition:
                 if isinstance(feedback, dict)
                 else ["Candidate validation failed."]
             )
-            return self._one(
-                WorkKind.COMPILE_CANDIDATE,
-                f"validation_revision:{revision}",
-                refs=refs,
-                payload=payload,
+            return self._with_settlement(
+                self._one(
+                    WorkKind.COMPILE_CANDIDATE,
+                    f"validation_revision:{revision}",
+                    refs=refs,
+                    payload=payload,
+                ),
+                candidate_settlement,
             )
         if status == "unchanged_rejected_candidate":
+            candidate_attempt_id = _required_string(
+                self.result.outcome,
+                "candidate_attempt_id",
+            )
             reason = self.result.outcome.get("rejection_reason")
             detail = (
                 str(reason).strip()
                 if isinstance(reason, str) and reason.strip()
                 else "the Compiler resubmitted an unchanged rejected Candidate"
             )
-            return self._new_research_attempt(
-                refs=refs,
-                payload=payload,
-                rejection_reason=detail,
-                route="unchanged_rejected_candidate",
+            return self._with_settlement(
+                self._research_revision(
+                    feedback_source="candidate_validation",
+                    feedback={
+                        "decision": status,
+                        "assessment": detail,
+                    },
+                    refs=refs,
+                    payload=payload,
+                ),
+                self._settlement(
+                    SettlementScope.CANDIDATE_ATTEMPT,
+                    SettlementClass.SETTLED_NEGATIVE,
+                    "candidate_validation_failed",
+                    verdict=status,
+                    candidate_attempt_id=candidate_attempt_id,
+                ),
             )
         if status != "valid":
             raise ValueError(f"unknown candidate stage status: {status}")
+        candidate_attempt_id = _required_string(
+            self.result.outcome,
+            "candidate_attempt_id",
+        )
         payload.update(
             {
-                "candidate_attempt_id": _required_string(
-                    self.result.outcome,
-                    "candidate_attempt_id",
-                ),
                 "candidate_digest": _required_string(
                     self.result.outcome,
                     "candidate_digest",
@@ -729,12 +935,13 @@ class _CompletedTransition:
                 ),
             }
         )
-        payload["solution_attempt_id"] = payload["candidate_attempt_id"]
+        lineage = self._lineage_with_candidate(candidate_attempt_id)
         return self._one(
             WorkKind.VERIFY_CONFORMANCE,
             "candidate_valid",
             refs=refs,
             payload=payload,
+            lineage=lineage,
         )
 
     def on_verify_conformance(self) -> TransitionPlan:
@@ -797,12 +1004,25 @@ class _CompletedTransition:
             if revision <= self.config.max_candidate_revisions
             else None
         )
-        return self._one(
+        plan = self._one(
             WorkKind.REJECT_CANDIDATE,
             "conformance_failed",
             refs=refs,
             payload=payload,
         )
+        if target == "evidence":
+            return self._with_experience(
+                plan,
+                capability_event="conformance.revise",
+                direction_event="conformance.revise_evidence",
+            )
+        if target == "mechanism":
+            return self._with_experience(
+                plan,
+                capability_event="conformance.revise",
+                direction_event="conformance.revise_mechanism",
+            )
+        return plan
 
     def on_evaluate_candidate(self) -> TransitionPlan:
         refs = _merge_refs(self.item.input_refs, self.result.artifact_refs)
@@ -861,11 +1081,14 @@ class _CompletedTransition:
         payload["candidate_review"] = output
 
         if gate.passed:
-            return self._one(
-                WorkKind.PROMOTE_CANDIDATE,
-                "promotion_gate_passed",
-                refs=refs,
-                payload=payload,
+            return self._with_experience(
+                self._one(
+                    WorkKind.PROMOTE_CANDIDATE,
+                    "promotion_gate_passed",
+                    refs=refs,
+                    payload=payload,
+                ),
+                direction_event="promotion_gate.passed",
             )
         if recommendation == "revise":
             revision = int(payload.get("candidate_revision", 0)) + 1
@@ -884,61 +1107,150 @@ class _CompletedTransition:
         else:
             payload["after_rejection"] = None
             payload["start_new_research_attempt"] = True
-        return self._one(
+        plan = self._one(
             WorkKind.REJECT_CANDIDATE,
             f"promotion_gate_failed:{recommendation}",
             refs=refs,
             payload=payload,
         )
+        if recommendation == "revise":
+            target = _required_string(output, "revision_target")
+            if target == "evidence":
+                return self._with_experience(
+                    plan,
+                    direction_event="candidate_reviewer.revise_evidence",
+                )
+            if target == "mechanism":
+                return self._with_experience(
+                    plan,
+                    direction_event="candidate_reviewer.revise_mechanism",
+                )
+            return plan
+        if recommendation == "reject":
+            return self._with_experience(
+                plan,
+                direction_event="candidate_reviewer.reject",
+            )
+        return self._with_experience(
+            plan,
+            direction_event="promotion_gate.failed",
+        )
+
+    def on_summarize_capability(self) -> TransitionPlan:
+        """Finish an independent Capability Draft side work."""
+
+        return TransitionPlan()
+
+    def on_summarize_direction(self) -> TransitionPlan:
+        """Finish an independent Direction Draft side work."""
+
+        return TransitionPlan()
 
     def on_promote_candidate(self) -> TransitionPlan:
         version_id = _required_string(self.result.outcome, "version_id")
-        generation = int(self.item.payload.get("generation", 1))
+        generation = self.item.lineage.generation
+        settlement = self._settlement(
+            SettlementScope.CANDIDATE_ATTEMPT,
+            SettlementClass.SETTLED_POSITIVE,
+            "candidate_promoted",
+            verdict=str(self.result.outcome.get("status", "accepted")),
+            candidate_attempt_id=self._candidate_attempt_id(),
+        )
         if generation >= self.config.max_generations:
             return TransitionPlan(
                 complete_reason=(
                     f"Accepted {version_id}; generation budget completed."
                 ),
-                version_advance=(version_id, generation),
+                version_advance=(
+                    version_id,
+                    generation,
+                    self.item.lineage.generation_id,
+                ),
+                settlements=(settlement,),
             )
         next_generation = generation + 1
+        generation_id = make_generation_id(
+            self.item.lineage.run_id,
+            next_generation,
+        )
+        research_attempt = 1
+        research_id = make_research_attempt_id(
+            generation_id,
+            research_attempt,
+        )
+        next_lineage = TrajectoryLineage(
+            run_id=self.item.lineage.run_id,
+            generation=next_generation,
+            generation_id=generation_id,
+            research_attempt=research_attempt,
+            research_attempt_id=research_id,
+        )
+        work_index = 1
+        logical_work_id = make_logical_work_id(
+            research_id,
+            work_index,
+            WorkKind.EVALUATE_INCUMBENT.value,
+        )
         next_item = WorkItem(
-            work_id=_stable_id(
-                self.item.work_id,
-                f"generation:{next_generation}",
-                WorkKind.EVALUATE_INCUMBENT,
-            ),
+            work_id=make_work_id(logical_work_id, 1),
+            logical_work_id=logical_work_id,
+            work_index=work_index,
             kind=WorkKind.EVALUATE_INCUMBENT,
-            subject_ref=f"generation:{next_generation}:{version_id}",
+            subject_ref=generation_id,
+            lineage=next_lineage,
             payload={
-                "generation": next_generation,
                 "version_id": version_id,
-                "research_attempt": 1,
             },
             parent_work_id=self.item.work_id,
         )
         return TransitionPlan(
             next_items=(next_item,),
-            version_advance=(version_id, next_generation),
+            version_advance=(version_id, next_generation, generation_id),
+            settlements=(settlement,),
         )
 
     def on_reject_candidate(self) -> TransitionPlan:
+        candidate_settlement = self._settlement(
+            SettlementScope.CANDIDATE_ATTEMPT,
+            SettlementClass.SETTLED_NEGATIVE,
+            "candidate_rejected",
+            verdict=str(self.result.outcome.get("status", "rejected")),
+            candidate_attempt_id=self._candidate_attempt_id(),
+        )
         after = self.item.payload.get("after_rejection")
         if not isinstance(after, dict):
             if self.item.payload.get("start_new_research_attempt") is True:
-                return self._new_research_attempt(
-                    refs=_merge_refs(
-                        self.item.input_refs,
-                        self.result.artifact_refs,
+                feedback_source = (
+                    "candidate_reviewer"
+                    if isinstance(
+                        self.item.payload.get("candidate_review"),
+                        dict,
+                    )
+                    and self.item.payload["candidate_review"].get(
+                        "recommendation"
+                    )
+                    == "reject"
+                    else "promotion_gate"
+                )
+                return self._with_settlement(
+                    self._research_revision(
+                        feedback_source=feedback_source,
+                        feedback=_candidate_research_feedback(
+                            self.item.payload
+                        ),
+                        refs=_merge_refs(
+                            self.item.input_refs,
+                            self.result.artifact_refs,
+                        ),
+                        payload=_context(self.item),
                     ),
-                    payload=_context(self.item),
-                    rejection_reason=_candidate_rejection_reason(
-                        self.item.payload
-                    ),
-                    route="candidate_rejected",
+                    candidate_settlement,
                 )
             return TransitionPlan(
-                complete_reason="Candidate was rejected by review or promotion gate."
+                complete_reason=(
+                    "Candidate was rejected by review or promotion gate."
+                ),
+                settlements=(candidate_settlement,),
             )
         target = _required_string(after, "target")
         obligation = _required_string(after, "obligation")
@@ -960,20 +1272,30 @@ class _CompletedTransition:
             if int(payload.get("trial_count", 0)) >= (
                 self.config.max_trials_per_hypothesis
             ):
-                return TransitionPlan(
-                    complete_reason=(
+                return self._with_settlement(
+                    self._complete_negative(
+                        "candidate_evidence_trial_budget_exhausted",
                         "Candidate evidence revision was requested after "
-                        "the trial budget was exhausted."
-                    )
+                        "the trial budget was exhausted.",
+                        verdict="revision_budget_exhausted",
+                        revision_owner="evidence_reviewer",
+                        revision_obligation=obligation,
+                    ),
+                    candidate_settlement,
                 )
             if int(payload.get("assignment_count", 0)) >= (
                 self.config.max_trial_assignments
             ):
-                return TransitionPlan(
-                    complete_reason=(
+                return self._with_settlement(
+                    self._complete_negative(
+                        "candidate_evidence_assignment_budget_exhausted",
                         "Candidate evidence revision was requested after "
-                        "the assignment budget was exhausted."
-                    )
+                        "the assignment budget was exhausted.",
+                        verdict="revision_budget_exhausted",
+                        revision_owner="evidence_reviewer",
+                        revision_obligation=obligation,
+                    ),
+                    candidate_settlement,
                 )
             kind = WorkKind.SELECT_TRIAL
         elif target == "mechanism":
@@ -992,53 +1314,66 @@ class _CompletedTransition:
             kind = WorkKind.COMPILE_CANDIDATE
         else:
             raise ValueError(f"unknown candidate revision target: {target}")
-        return self._one(
-            kind,
-            f"candidate_revision:{target}",
-            refs=refs,
-            payload=payload,
+        return self._with_settlement(
+            self._one(
+                kind,
+                f"candidate_revision:{target}",
+                refs=refs,
+                payload=payload,
+                lineage=self._lineage_without_candidate(),
+            ),
+            candidate_settlement,
         )
 
-    def _new_research_attempt(
+    def _new_failure_analysis(
         self,
         *,
         refs: dict[str, str],
         payload: dict[str, Any],
-        rejection_reason: str,
         route: str,
     ) -> TransitionPlan:
-        """Start another solution attempt while retaining nearby evidence."""
+        """Start a new attempt whose Analyst creates a new Failure Direction."""
 
-        attempt = int(payload.get("research_attempt", 1)) + 1
+        next_lineage = self._next_research_lineage()
         next_refs = {
             key: value for key, value in refs.items() if key in _RESEARCH_REF_KEYS
         }
+        next_refs.pop("failure_artifact", None)
+        next_refs.pop("hypothesis_artifact", None)
         next_payload = {
             key: payload[key]
-            for key in ("generation", "version_id", "incumbent_metrics")
+            for key in (
+                "version_id",
+                "incumbent_metrics",
+                "direction_index",
+                "solution_failure_count",
+                "analysis_focus",
+            )
             if key in payload
         }
-        next_payload["research_attempt"] = attempt
-        failure_count = int(payload.get("solution_failure_count", 0)) + 1
-        next_payload["solution_failure_count"] = failure_count
-        next_payload["prior_problem_direction_id"] = payload.get(
-            "problem_direction_id"
-        )
-        next_payload["prior_solution_attempt_id"] = payload.get(
-            "solution_attempt_id",
-        )
-        next_payload["prior_solution_fingerprint"] = payload.get(
-            "solution_fingerprint"
-        )
-        next_payload["analysis_focus"] = _candidate_rejection_focus(
-            rejection_reason,
-            failure_count=failure_count,
-        )
         return self._one(
             WorkKind.ANALYZE_FAILURE,
-            f"research_attempt:{attempt}:{route}",
+            f"research_attempt:{next_lineage.research_attempt}:{route}",
             refs=next_refs,
             payload=next_payload,
+            lineage=next_lineage,
+            work_index=1,
+        )
+
+    def _next_research_lineage(self) -> TrajectoryLineage:
+        """Advance the Research Attempt without changing the Generation."""
+
+        attempt = self.item.lineage.research_attempt + 1
+        research_id = make_research_attempt_id(
+            self.item.lineage.generation_id,
+            attempt,
+        )
+        return TrajectoryLineage(
+            run_id=self.item.lineage.run_id,
+            generation=self.item.lineage.generation,
+            generation_id=self.item.lineage.generation_id,
+            research_attempt=attempt,
+            research_attempt_id=research_id,
         )
 
     def _research_revision(
@@ -1049,24 +1384,188 @@ class _CompletedTransition:
         refs: dict[str, str],
         payload: dict[str, Any],
     ) -> TransitionPlan:
-        revision = int(payload.get("hypothesis_revision", 0)) + 1
-        if revision > self.config.max_hypothesis_revisions:
-            return TransitionPlan(
-                complete_reason=(
-                    "Hypothesis revision budget was exhausted before "
-                    "evidence became distillable."
-                )
+        revision_request = int(
+            payload.get("researcher_revision_count", 0)
+        ) + 1
+        if revision_request > self.config.max_hypothesis_revisions:
+            return self._complete_negative(
+                "hypothesis_revision_budget_exhausted",
+                "Hypothesis revision budget was exhausted before "
+                "evidence became distillable.",
+                verdict=feedback_source,
+                revision_owner="hypothesis_researcher",
+                revision_obligation=_revision_obligation(feedback),
             )
-        payload["hypothesis_revision"] = revision
+        payload["researcher_revision_count"] = revision_request
         payload["research_continuation"] = {
             "feedback_source": feedback_source,
             "feedback": feedback,
         }
         return self._one(
             WorkKind.RESEARCH_HYPOTHESIS,
-            f"hypothesis_revision:{revision}",
+            f"researcher_revision:{revision_request}",
             refs=refs,
             payload=payload,
+        )
+
+    def _lineage_with_candidate(
+        self,
+        candidate_attempt_id: str,
+    ) -> TrajectoryLineage:
+        lineage = self.item.lineage
+        return TrajectoryLineage(
+            run_id=lineage.run_id,
+            generation=lineage.generation,
+            generation_id=lineage.generation_id,
+            research_attempt=lineage.research_attempt,
+            research_attempt_id=lineage.research_attempt_id,
+            candidate_attempt_id=candidate_attempt_id,
+        )
+
+    def _lineage_without_candidate(self) -> TrajectoryLineage:
+        lineage = self.item.lineage
+        return TrajectoryLineage(
+            run_id=lineage.run_id,
+            generation=lineage.generation,
+            generation_id=lineage.generation_id,
+            research_attempt=lineage.research_attempt,
+            research_attempt_id=lineage.research_attempt_id,
+        )
+
+    def _candidate_attempt_id(self) -> str:
+        candidate_attempt_id = self.item.lineage.candidate_attempt_id
+        if candidate_attempt_id is None:
+            raise ValueError(
+                f"{self.item.kind.value} requires candidate_attempt_id"
+            )
+        return candidate_attempt_id
+
+    def _settlement(
+        self,
+        scope: SettlementScope,
+        classification: SettlementClass,
+        terminal_code: str,
+        *,
+        verdict: str | None = None,
+        candidate_attempt_id: str | None = None,
+        revision_owner: str | None = None,
+        revision_obligation: str | None = None,
+    ) -> SettlementDraft:
+        return SettlementDraft(
+            scope=scope,
+            classification=classification,
+            terminal_code=terminal_code,
+            verdict=verdict or terminal_code,
+            candidate_attempt_id=candidate_attempt_id,
+            revision_owner=revision_owner,
+            revision_obligation=revision_obligation,
+        )
+
+    def _complete_negative(
+        self,
+        terminal_code: str,
+        reason: str,
+        *,
+        verdict: str | None = None,
+        revision_owner: str | None = None,
+        revision_obligation: str | None = None,
+    ) -> TransitionPlan:
+        return TransitionPlan(
+            complete_reason=reason,
+            settlements=(
+                self._settlement(
+                    SettlementScope.RESEARCH_ATTEMPT,
+                    SettlementClass.SETTLED_NEGATIVE,
+                    terminal_code,
+                    verdict=verdict,
+                    revision_owner=revision_owner,
+                    revision_obligation=revision_obligation,
+                ),
+            ),
+        )
+
+    def _with_settlement(
+        self,
+        plan: TransitionPlan,
+        settlement: SettlementDraft,
+    ) -> TransitionPlan:
+        return TransitionPlan(
+            next_items=plan.next_items,
+            complete_reason=plan.complete_reason,
+            version_advance=plan.version_advance,
+            settlements=(*plan.settlements, settlement),
+        )
+
+    def _with_experience(
+        self,
+        plan: TransitionPlan,
+        *,
+        capability_event: str | None = None,
+        direction_event: str | None = None,
+    ) -> TransitionPlan:
+        """Schedule independent Draft passes before the unchanged main route."""
+
+        events = [
+            (WorkKind.SUMMARIZE_CAPABILITY, capability_event),
+            (WorkKind.SUMMARIZE_DIRECTION, direction_event),
+        ]
+        selected = [(kind, event) for kind, event in events if event]
+        if not selected:
+            return plan
+        if not plan.next_items or plan.complete_reason is not None:
+            # Budget and terminal settlements already close the run. They do
+            # not create a resumable agenda boundary for optional Draft work.
+            return plan
+        if len(plan.next_items) != 1:
+            raise ValueError(
+                "experience side work requires one resumable next WorkItem"
+            )
+        main = plan.next_items[0]
+        source_refs = _merge_refs(
+            self.item.input_refs,
+            self.result.artifact_refs,
+        )
+        source_payload = _context(self.item)
+        source_payload["experience_source_kind"] = self.item.kind.value
+        source_payload["experience_source_outcome"] = dict(
+            self.result.outcome
+        )
+        side_items: list[WorkItem] = []
+        for offset, (kind, event) in enumerate(selected, start=1):
+            work_index = self.item.work_index + offset
+            logical_work_id = make_logical_work_id(
+                self.item.lineage.research_attempt_id,
+                work_index,
+                kind.value,
+            )
+            payload = dict(source_payload)
+            payload["experience_source_event"] = event
+            side_items.append(
+                WorkItem(
+                    work_id=make_work_id(logical_work_id, 1),
+                    logical_work_id=logical_work_id,
+                    work_index=work_index,
+                    kind=kind,
+                    subject_ref=self.item.lineage.generation_id,
+                    lineage=self.item.lineage,
+                    input_refs=source_refs,
+                    payload=payload,
+                    parent_work_id=self.item.work_id,
+                )
+            )
+        if (
+            main.lineage.research_attempt_id
+            == self.item.lineage.research_attempt_id
+        ):
+            main = _reindex_work_item(
+                main,
+                work_index=self.item.work_index + len(side_items) + 1,
+            )
+        return TransitionPlan(
+            next_items=(*side_items, main),
+            complete_reason=plan.complete_reason,
+            version_advance=plan.version_advance,
+            settlements=plan.settlements,
         )
 
     def _one(
@@ -1076,13 +1575,26 @@ class _CompletedTransition:
         *,
         refs: dict[str, str],
         payload: dict[str, Any],
+        lineage: TrajectoryLineage | None = None,
+        work_index: int | None = None,
     ) -> TransitionPlan:
+        del route
+        selected_lineage = lineage or self.item.lineage
+        selected_index = work_index or self.item.work_index + 1
+        logical_work_id = make_logical_work_id(
+            selected_lineage.research_attempt_id,
+            selected_index,
+            kind.value,
+        )
         return TransitionPlan(
             next_items=(
                 WorkItem(
-                    work_id=_stable_id(self.item.work_id, route, kind),
+                    work_id=make_work_id(logical_work_id, 1),
+                    logical_work_id=logical_work_id,
+                    work_index=selected_index,
                     kind=kind,
-                    subject_ref=self.item.subject_ref,
+                    subject_ref=selected_lineage.generation_id,
+                    lineage=selected_lineage,
                     input_refs=dict(refs),
                     payload=dict(payload),
                     parent_work_id=self.item.work_id,
@@ -1091,18 +1603,29 @@ class _CompletedTransition:
         )
 
 
-def _stable_id(parent_id: str, route: str, kind: WorkKind) -> str:
-    raw = json.dumps(
-        [parent_id, route, kind.value],
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-    return f"{kind.value}-{digest}"
-
-
 def _context(item: WorkItem) -> dict[str, Any]:
     return dict(item.payload)
+
+
+def _reindex_work_item(item: WorkItem, *, work_index: int) -> WorkItem:
+    """Shift one queued WorkItem after inserted side work in the same attempt."""
+
+    logical_work_id = make_logical_work_id(
+        item.lineage.research_attempt_id,
+        work_index,
+        item.kind.value,
+    )
+    return WorkItem(
+        work_id=make_work_id(logical_work_id, 1),
+        logical_work_id=logical_work_id,
+        work_index=work_index,
+        kind=item.kind,
+        subject_ref=item.subject_ref,
+        lineage=item.lineage,
+        input_refs=dict(item.input_refs),
+        payload=dict(item.payload),
+        parent_work_id=item.parent_work_id,
+    )
 
 
 def _merge_refs(
@@ -1155,6 +1678,23 @@ def _candidate_rejection_reason(payload: dict[str, Any]) -> str:
     return "the Candidate was rejected by review or the promotion gate"
 
 
+def _candidate_research_feedback(payload: dict[str, Any]) -> dict[str, Any]:
+    """Project the final Candidate result for Researcher-first routing."""
+
+    review = payload.get("candidate_review")
+    gate = payload.get("promotion_gate")
+    digest = payload.get("candidate_outcome_digest")
+    return {
+        "decision": "candidate_rejected",
+        "assessment": _candidate_rejection_reason(payload),
+        "candidate_review": dict(review) if isinstance(review, dict) else None,
+        "promotion_gate": dict(gate) if isinstance(gate, dict) else None,
+        "candidate_outcome_digest": (
+            dict(digest) if isinstance(digest, dict) else None
+        ),
+    }
+
+
 def _mechanism_effect_goal(payload: dict[str, Any]) -> str:
     value = payload.get("effect_goal", "task_outcome")
     if value not in {"task_outcome", "behavioral_intermediate"}:
@@ -1205,28 +1745,17 @@ def _apply_effect_goal_to_conformance_summary(
     return "revise", updated
 
 
-def _candidate_rejection_focus(
-    rejection_reason: str,
-    *,
-    failure_count: int,
-) -> str:
-    prefix = (
-        "Reassess the incumbent evidence for the bounded behavior pattern; "
-        "one rejected solution does not invalidate the problem direction. "
-        "Refine its scope only when the evidence requires it. "
-    )
-    if failure_count >= 3:
-        prefix += (
-            "Several distinct solution attempts have failed, so also consider "
-            "whether the problem direction itself should be replaced. "
-        )
-    prefix += "The latest Candidate was rejected because: "
-    return (prefix + rejection_reason.strip())[:300]
-
-
-def _lineage_id(kind: str, value: str) -> str:
-    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
-    return f"{kind}_{digest}"
+def _revision_obligation(feedback: dict[str, Any]) -> str:
+    for name in (
+        "next_obligation",
+        "revision_feedback",
+        "assessment",
+        "reason",
+    ):
+        value = feedback.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "The requested research revision remained unresolved."
 
 
 def _required_object(value: dict[str, Any], name: str) -> dict[str, Any]:

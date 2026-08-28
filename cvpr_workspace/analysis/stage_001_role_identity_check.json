@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "check_id": "CHECK-STAGE-001-ROLE-IDENTITY",
+  "status": "passed",
+  "scope": "development_check_only",
+  "teacher_roles": [
+    {
+      "role_id": "candidate_reviewer",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "378ee99037f03700b05a2d440324589abffb7a1adba482f391a9c54a61b1feab",
+      "input_view_digest": "68255c3cfa489e08cac7adec52582402daa527cbc50800eae1e5ac9d02d6251e"
+    },
+    {
+      "role_id": "compiler",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "84f49bb31e291906fcbbf74d8ee92068b53c7d6a4ad5ed832bb35383decad6dc",
+      "input_view_digest": "55781c9bc1368c215d0a6b8ca7a9a8b73a3326c6f8625e0a3f16fb44b0463865"
+    },
+    {
+      "role_id": "conformance_reviewer",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "8e4fd3ddc76c2c45f7315e07b350e4c9db963fe3558e851d682ab5da84318b6b",
+      "input_view_digest": "0d45337520ebd81c9d168a306ddfe95f98506988382b6d6fc7fb025441603357"
+    },
+    {
+      "role_id": "evidence_reviewer",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "016196040ff43143131726e21a218343b73ddd08a0db32f3221dc438d787996e",
+      "input_view_digest": "fd068bba528b631f6ffd6398c34a6dc9423371b366f358c4231d5d2361049a52"
+    },
+    {
+      "role_id": "failure_analyst",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "b87dc33c841919b394f473eabdf966632da6220b6f8f2bd48aaefa8d88eed3d8",
+      "input_view_digest": "23c3552159c7c39616198b0754a48693ef41aa55030f2c44b3b5d40e81b92035"
+    },
+    {
+      "role_id": "hook_feasibility_reviewer",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "0dc4b77f9db1b9c9e74b837361d0a912ab55e92808c1205495f41ff644c11d03",
+      "input_view_digest": "38e02ff536a9adca6b58f99077a67ddf43f83609e1f74d94aff9c8fdc969b1b2"
+    },
+    {
+      "role_id": "hypothesis_researcher",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "93326ae6f500a1df0cde86adc1dcf1c460b90a8a077a3a6ed43df0cdb27a412e",
+      "input_view_digest": "146ae2ee70544b5c71e736fb4ee6f17d6259ccb1adb3efbe7ddb68f0b9742e07"
+    },
+    {
+      "role_id": "intervention_worker",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "a1f4314c4a50b956772f5f9c291d1857d2b7eb498aabc517cfc7c1a6ad70dde3",
+      "input_view_digest": "a21b633aeb2466eb62136afd32d312ae77cfa20a7b383528d347a95d3676491e"
+    },
+    {
+      "role_id": "mechanism_distiller",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "d116006b88ebd401375c05236ebeeffbb221e49dcfa7320f9168f5eb01e949fa",
+      "input_view_digest": "1cca9e3079ac38f01b0d8ccd569b49e018f0e2a49b0d58f222c1f45ab9938f29"
+    },
+    {
+      "role_id": "trial_reviewer",
+      "role_contract_version": 1,
+      "model_provider": "development_check",
+      "model_id": "teacher-check",
+      "base_prompt_digest": "202fa1cbb590abd2870ffb2676b9916fb0b66ebfa87b1594a9dbe6c224893a72",
+      "input_view_digest": "044f884fd7e4cad6569bfcb5f8f0fe08ab678fe831ed69e5a8cda508e42117f3"
+    }
+  ],
+  "scope_fields": [
+    "role_id",
+    "role_contract_version",
+    "model_provider",
+    "model_id"
+  ],
+  "assertions": {
+    "all_templates_assembled": true,
+    "hard_scope_is_minimal": true,
+    "digests_are_audit_only": true,
+    "model_input_snapshot_is_detached": true,
+    "no_duplicate_role_identity_object": true,
+    "no_input_or_tool_contract_scope": true,
+    "external_api_called": false
+  }
+}

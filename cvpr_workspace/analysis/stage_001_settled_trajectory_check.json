@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "lineage": {
+    "run_id": "run_check",
+    "generation": 1,
+    "generation_id": "run_check_g0001",
+    "research_attempt": 1,
+    "research_attempt_id": "run_check_g0001_r0001",
+    "candidate_attempt_id": null
+  },
+  "logical_work_id": "run_check_g0001_r0001_w0001_evaluate_incumbent",
+  "retry_work_id": "run_check_g0001_r0001_w0001_evaluate_incumbent_a02",
+  "settlements": [
+    {
+      "settlement_id": "candidate_attempt_check_settlement_candidate_promoted",
+      "scope": "candidate_attempt",
+      "classification": "settled_positive",
+      "target_id": "candidate_attempt_check"
+    },
+    {
+      "settlement_id": "run_check_g0001_r0001_settlement_no_matching_trial_prefix",
+      "scope": "research_attempt",
+      "classification": "settled_negative",
+      "target_id": "run_check_g0001_r0001"
+    },
+    {
+      "settlement_id": "run_check_g0001_r0001_w0001_evaluate_incumbent_a02_settlement_work_attempt_failed",
+      "scope": "work_attempt",
+      "classification": "invalid_indeterminate",
+      "target_id": "run_check_g0001_r0001_w0001_evaluate_incumbent_a02"
+    }
+  ],
+  "checks": {
+    "replay_idempotent": true,
+    "conflict_rejected": true,
+    "old_contract_rejected": true,
+    "forbidden_source_tokens_absent": true
+  },
+  "scanned_sources": [
+    "search_harness/evolution/identifiers.py",
+    "search_harness/evolution/control/domain.py",
+    "search_harness/evolution/control/transitions.py",
+    "search_harness/evolution/control/controller.py",
+    "search_harness/evolution/control/journal.py",
+    "search_harness/evolution/control/cli.py",
+    "search_harness/evolution/versioning/journal.py",
+    "search_harness/evolution/versioning/store.py"
+  ]
+}

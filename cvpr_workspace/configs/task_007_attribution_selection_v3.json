@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "repetitions": {
+    "hook_feasibility_student_instability": 3,
+    "distiller_not_distillable_model_boundary": 3,
+    "conformance_semantic_evaluator_boundary": 3,
+    "evidence_reject_no_differential_effect": 3,
+    "evidence_reject_harmful_overtrigger": 3,
+    "evidence_revise_corpus_confound": 3,
+    "candidate_reject_intrinsic_grounding_predicate": 3,
+    "candidate_reject_hook_false_positive_scope": 3,
+    "conformance_empty_passage_projection": 1,
+    "candidate_validation_unchanged_compiler_work": 1,
+    "candidate_reject_no_attributed_utility": 1,
+    "candidate_reject_selectivity_and_cost": 1
+  }
+}

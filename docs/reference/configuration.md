@@ -121,9 +121,16 @@ evidence_reviewer:
 
 当前活动角色为 `failure_analyst`、`hypothesis_researcher`、
 `intervention_worker`、`trial_reviewer`、`evidence_reviewer`、
-`mechanism_distiller`、`hook_feasibility_reviewer`、`compiler`、`candidate_reviewer` 和
-`conformance_reviewer`。Role Artifact 的模型 provenance 记录实际 thinking 设置；
+`mechanism_distiller`、`hook_feasibility_reviewer`、`compiler`、`candidate_reviewer`、
+`conformance_reviewer`、`capability_summarizer` 和 `direction_summarizer`。两个
+Summarizer 当前各使用 `max_tokens: 4096`、`max_turns: 8`、`thinking_mode: enabled`；
+真实 API A/B 中关闭 thinking 会显著增加结构修复与失败，因此没有采用。Role Artifact 的模型 provenance 记录实际 thinking 设置；
 `role_budget` 继续记录 token 和回合预算。
+
+standalone 调试还配置了 `shadow_mechanism_distiller`、
+`shadow_prompt_researcher`、`shadow_compiler` 与
+`shadow_conformance_reviewer` 的独立预算；这些角色尚未接入正式 Evolution
+Controller。
 
 `evolution.effects.teacher_max_turns` 是缺少角色配置时的通用后备值；活动角色配置存在
 时以 `teacher_roles.<role_id>.max_turns` 为准。

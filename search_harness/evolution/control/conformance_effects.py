@@ -26,6 +26,7 @@ from search_harness.evolution.research.roles.contracts import (
     ConformanceFinding,
     ConformanceReviewBatch,
     MechanismSpec,
+    ShadowMechanismSpec,
 )
 from search_harness.evolution.research.roles.runner import RoleRunner
 
@@ -83,19 +84,34 @@ class ConformanceEffects:
         experience_file: Path,
         reviewer_template_root: Path,
         judge_workers: int,
+        reviewer_role_id: str = "conformance_reviewer",
+        reviewer_role_version: int = 1,
     ) -> None:
         if judge_workers < 1:
             raise ValueError("conformance judge_workers must be positive")
+        if not reviewer_role_id.strip():
+            raise ValueError("conformance reviewer_role_id must not be empty")
+        if reviewer_role_version < 1:
+            raise ValueError(
+                "conformance reviewer_role_version must be positive"
+            )
         self.backend = backend
         self.role_runner = role_runner
         self.experience_file = experience_file
         self.reviewer_template_root = reviewer_template_root
         self.judge_workers = judge_workers
+        self.reviewer_role_id = reviewer_role_id
+        self.reviewer_role_version = reviewer_role_version
+        self.reviewer_contract_digest = _reviewer_contract_digest(
+            template_root=reviewer_template_root,
+            role_id=reviewer_role_id,
+            role_version=reviewer_role_version,
+        )
 
     async def verify(
         self,
         *,
-        mechanism: MechanismSpec,
+        mechanism: MechanismSpec | ShadowMechanismSpec,
         trial_files: list[Path],
         candidate: CandidateArtifact,
         work_dir: Path,
@@ -111,6 +127,7 @@ class ConformanceEffects:
             mechanism=mechanism,
             trial_files=trial_files,
             experience_file=self.experience_file,
+            reviewer_contract_digest=self.reviewer_contract_digest,
         )
         checkpoint_dir = (
             work_dir.parent
@@ -323,8 +340,8 @@ class ConformanceEffects:
                         async with semaphore:
                             artifact = await self.role_runner.run(
                                 template_root=self.reviewer_template_root,
-                                role_id="conformance_reviewer",
-                                role_version=1,
+                                role_id=self.reviewer_role_id,
+                                role_version=self.reviewer_role_version,
                                 role_input={
                                     "mechanism": mechanism.model_dump(mode="json"),
                                     "trial_refs": list(case.trial_refs),
@@ -526,7 +543,7 @@ class ConformanceEffects:
                 cases=cases,
                 findings=findings,
                 finding_refs=[str(path) for path in finding_paths],
-                effect_goal=mechanism.effect_goal,
+                effect_goal=_mechanism_effect_goal(mechanism),
             )
             summary_path = _write_json_atomic(
                 checkpoint_dir / "summary.json",
@@ -740,15 +757,19 @@ def _write_json_atomic(path: Path, value: dict[str, Any]) -> Path:
 def _suite_fingerprint(
     *,
     candidate: CandidateArtifact,
-    mechanism: MechanismSpec,
+    mechanism: MechanismSpec | ShadowMechanismSpec,
     trial_files: list[Path],
     experience_file: Path,
+    reviewer_contract_digest: str,
 ) -> str:
     payload = {
-        "conformance_input_schema": 5,
+        "conformance_input_schema": (
+            6 if isinstance(mechanism, ShadowMechanismSpec) else 5
+        ),
         "candidate_attempt_id": candidate.candidate_attempt_id,
         "candidate_digest": candidate.candidate_digest,
         "mechanism": mechanism.model_dump(mode="json"),
+        "reviewer_contract_digest": reviewer_contract_digest,
         "experience_digest": _file_digest(experience_file),
         "trials": [
             {
@@ -761,9 +782,33 @@ def _suite_fingerprint(
     return _json_digest(payload)
 
 
+def _reviewer_contract_digest(
+    *,
+    template_root: Path,
+    role_id: str,
+    role_version: int,
+) -> str:
+    """Bind checkpoints to the exact Reviewer Template and Role contract."""
+
+    digest = hashlib.sha256()
+    digest.update(role_id.encode("utf-8"))
+    digest.update(b"\0")
+    digest.update(str(role_version).encode("ascii"))
+    digest.update(b"\0")
+    for path in sorted(template_root.resolve().rglob("*")):
+        if not path.is_file() or "__pycache__" in path.parts:
+            continue
+        relative = path.relative_to(template_root.resolve()).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _finding_input_digest(
     *,
-    mechanism: MechanismSpec,
+    mechanism: MechanismSpec | ShadowMechanismSpec,
     trial_refs: tuple[str, ...],
     reference_observations: tuple[dict[str, Any], ...],
     candidate_run_ref: str,
@@ -782,7 +827,7 @@ def _finding_input_digest(
 
 def _conformance_batch_input_digest(
     *,
-    mechanism: MechanismSpec,
+    mechanism: MechanismSpec | ShadowMechanismSpec,
     trial_refs: tuple[str, ...],
     reference_observations: tuple[dict[str, Any], ...],
     example_id: str,
@@ -802,11 +847,11 @@ def _conformance_batch_input_digest(
 def _normalize_finding_phases(
     *,
     finding: ConformanceFinding,
-    mechanism: MechanismSpec,
+    mechanism: MechanismSpec | ShadowMechanismSpec,
 ) -> ConformanceFinding:
     """Remove undeclared phases and prevent an empty faithful finding."""
 
-    allowed_phases = {rule.phase for rule in mechanism.phase_rules}
+    allowed_phases = _mechanism_phases(mechanism)
     relevant_phases = [
         phase for phase in finding.observed_phases if phase in allowed_phases
     ]
@@ -820,7 +865,7 @@ def _normalize_finding_phases(
                 "verdict": "inconclusive",
                 "assessment": (
                     "The review named only phases outside the supplied "
-                    "MechanismSpec, so it did not establish implementation "
+                    "Mechanism, so it did not establish implementation "
                     "fidelity."
                 ),
                 "repair_obligation": (
@@ -836,6 +881,26 @@ def _normalize_finding_phases(
             }
         )
     return ConformanceFinding.model_validate(payload)
+
+
+def _mechanism_effect_goal(
+    mechanism: MechanismSpec | ShadowMechanismSpec,
+) -> str:
+    """Return the shared local-effect category without protocol conversion."""
+
+    if isinstance(mechanism, ShadowMechanismSpec):
+        return mechanism.effect.kind
+    return mechanism.effect_goal
+
+
+def _mechanism_phases(
+    mechanism: MechanismSpec | ShadowMechanismSpec,
+) -> set[str]:
+    """Return exact declared phases for finding normalization."""
+
+    if isinstance(mechanism, ShadowMechanismSpec):
+        return {phase.phase for phase in mechanism.phases}
+    return {rule.phase for rule in mechanism.phase_rules}
 
 
 def _json_digest(value: dict[str, Any]) -> str:

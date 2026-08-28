@@ -259,7 +259,7 @@ class CandidateWorkspaceTest(TestCase):
 
 
 class TemplateVersionStoreTest(TestCase):
-    def test_writes_version_store_metadata_schema_v2(self) -> None:
+    def test_writes_current_version_store_metadata_schema(self) -> None:
         with TemporaryDirectory() as tmpdir:
             base = Path(tmpdir)
             store = TemplateVersionStore(base / "versions")
@@ -270,32 +270,28 @@ class TemplateVersionStoreTest(TestCase):
             metadata = json.loads(
                 store.metadata_file.read_text(encoding="utf-8")
             )
-            legacy_metadata_exists = store.legacy_metadata_file.exists()
 
-        self.assertEqual(metadata["schema_version"], 2)
+        self.assertEqual(metadata["schema_version"], 3)
         self.assertEqual(metadata["version_store_id"], "test_store")
         self.assertNotIn("checkpoint_store_id", metadata)
-        self.assertFalse(legacy_metadata_exists)
 
-    def test_reads_legacy_metadata_schema_v1(self) -> None:
+    def test_rejects_previous_version_store_metadata_schema(self) -> None:
         with TemporaryDirectory() as tmpdir:
             base = Path(tmpdir)
             store = TemplateVersionStore(base / "versions")
             store.initialize(_make_template_root(base))
-            store.metadata_file.unlink()
-            store.legacy_metadata_file.write_text(
+            store.metadata_file.write_text(
                 json.dumps(
                     {
-                        "schema_version": 1,
-                        "checkpoint_store_id": "legacy_store",
+                        "schema_version": 2,
+                        "version_store_id": "old_store",
                     }
                 ),
                 encoding="utf-8",
             )
 
-            store_id = store.version_store_id
-
-        self.assertEqual(store_id, "legacy_store")
+            with self.assertRaises(ValueError):
+                _ = store.version_store_id
 
     def test_accepts_and_resolves_multifile_extension(self) -> None:
         """Verify accepting a multi-file extension does not copy its candidate."""
@@ -591,7 +587,7 @@ class TemplateVersionStoreTest(TestCase):
 
 
 class CandidateAttemptJournalTest(TestCase):
-    def test_writes_candidate_attempt_events_and_records_as_schema_v2(
+    def test_writes_candidate_attempt_events_and_records_as_current_schema(
         self,
     ) -> None:
         with TemporaryDirectory() as tmpdir:
@@ -606,28 +602,28 @@ class CandidateAttemptJournalTest(TestCase):
                 store.index_file.read_text(encoding="utf-8")
             )
 
-        self.assertEqual(event["schema_version"], 2)
+        self.assertEqual(event["schema_version"], 3)
         self.assertEqual(
             event["candidate_attempt_id"],
             attempt.candidate_attempt_id,
         )
         self.assertNotIn("iteration_id", event)
-        self.assertEqual(record["schema_version"], 2)
+        self.assertEqual(record["schema_version"], 3)
         self.assertIn("candidate_attempt_id", record)
         self.assertNotIn("iteration_id", record)
 
-    def test_resumes_legacy_schema_v1_and_appends_schema_v2(self) -> None:
+    def test_rejects_previous_candidate_attempt_schema(self) -> None:
         with TemporaryDirectory() as tmpdir:
             base = Path(tmpdir)
             store = TemplateVersionStore(base / "versions")
             first = store.initialize(_make_template_root(base))
             parent = store.resolve(first.version_id)
-            legacy_id = "iteration_legacy"
-            store.legacy_candidate_attempt_file.write_text(
+            old_id = "candidate_attempt_old"
+            store.candidate_attempt_file.write_text(
                 json.dumps(
                     {
-                        "schema_version": 1,
-                        "iteration_id": legacy_id,
+                        "schema_version": 2,
+                        "candidate_attempt_id": old_id,
                         "sequence": 0,
                         "event_type": "started",
                         "timestamp": "2026-01-01T00:00:00+00:00",
@@ -642,48 +638,23 @@ class CandidateAttemptJournalTest(TestCase):
                 encoding="utf-8",
             )
 
-            attempt = store.resume_candidate_attempt(legacy_id)
-            attempt.apply_patch(
-                (
-                    FileEdit(
-                        "write",
-                        "extensions/legacy-note.txt",
-                        "legacy\n",
-                    ),
-                )
-            )
-            current_event = json.loads(
-                store.candidate_attempt_file.read_text(encoding="utf-8")
-            )
-            resumed = TemplateVersionStore(store.root).resume_candidate_attempt(
-                legacy_id
-            )
+            with self.assertRaises(ValueError):
+                store.resume_candidate_attempt(old_id)
 
-        self.assertEqual(attempt.candidate_attempt_id, legacy_id)
-        self.assertEqual(current_event["schema_version"], 2)
-        self.assertEqual(current_event["candidate_attempt_id"], legacy_id)
-        self.assertNotIn("iteration_id", current_event)
-        self.assertTrue(
-            resumed.exists("extensions/legacy-note.txt")
-        )
-
-    def test_reads_legacy_version_record_attempt_id(self) -> None:
+    def test_rejects_previous_version_record_schema(self) -> None:
         with TemporaryDirectory() as tmpdir:
             base = Path(tmpdir)
             store = TemplateVersionStore(base / "versions")
             store.initialize(_make_template_root(base))
             record = json.loads(store.index_file.read_text(encoding="utf-8"))
-            record.pop("schema_version")
-            record["iteration_id"] = "iteration_legacy"
-            record.pop("candidate_attempt_id")
+            record["schema_version"] = 2
             store.index_file.write_text(
                 json.dumps(record) + "\n",
                 encoding="utf-8",
             )
 
-            loaded = store.list_versions()[0]
-
-        self.assertEqual(loaded.candidate_attempt_id, "iteration_legacy")
+            with self.assertRaises(ValueError):
+                store.list_versions()
 
     def test_resumes_patch_without_losing_candidate_attempt_history(self) -> None:
         """Verify resuming and accepting preserves Candidate Attempt history."""

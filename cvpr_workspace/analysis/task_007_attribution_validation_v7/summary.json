@@ -1,0 +1,2434 @@
+{
+  "suite_id": "TASK-007-ATTRIBUTION-ARTIFACT-NATIVE-V1",
+  "case_count": 7,
+  "run_count": 15,
+  "results": [
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under valid probes with thinking modes enabled and disabled (2 repetitions each), the Student model when used as the Hook evaluator cannot reliably realize the negative boundary of the three-way pre_final decision contract: disabled mode never emits negative (2/2 false positives on trial_002 and trial_003) and enabled mode flips trial_002 between negative and positive within mode.",
+            "applicability": "Frozen Hook model as three-label evaluator of pre_final decisions (two-entity comparative finalized on first-entity-only evidence = positive; single-entity factoid / both-entity query = negative); thinking modes enabled and disabled; reference, inputs, implementation, and repetition count validated.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_f02dLGKoHSKmIo2EcFoa6334",
+          "arguments": {
+            "evidence_ref": "hook_review",
+            "view": "decision_trace",
+            "selectors": [
+              "feasibility_assessment",
+              "probe_matrix"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"hook_review\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"feasibility_assessment\", \"content\": \"Frozen pre_final Hook needs a bounded three-label evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoids or both-entity queries (negative). Real prefixes show no faithful mode: disabled never labels negative (false positives on trial_002 and trial_003, 2/2 each); enabled is 7/8 but materially disagrees within mode on trial_002 (negative → positive). Because the best mode is unstable and the negative boundary is not reliably realized, the evaluator cannot be compiled as-is. This is a model-capability/stability defect, not an ambiguous contract, so spec revision does not apply. Researcher must re-validate/tune the evaluator on single-entity factoid negatives and obtain uncertain-boundary evidence before any compilation.\"}, {\"selector\": \"probe_matrix\", \"content\": \"probe#/phase_probes/0/experiment/observations/4/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/5/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/6/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/7/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/12/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/14/raw_output: positive\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_sO0FrzAYnEnfE4wlsndl9682",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under valid probes with thinking modes enabled and disabled (2 repetitions each), the Student model when used as the Hook evaluator cannot reliably realize the negative boundary of the three-way pre_final decision contract: disabled mode never emits negative (2/2 false positives on trial_002 and trial_003) and enabled mode flips trial_002 between negative and positive within mode.",
+                "applicability": "Frozen Hook model as three-label evaluator of pre_final decisions (two-entity comparative finalized on first-entity-only evidence = positive; single-entity factoid / both-entity query = negative); thinking modes enabled and disabled; reference, inputs, implementation, and repetition count validated.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under valid probes with thinking modes enabled and disabled (2 repetitions each), the Student model when used as the Hook evaluator cannot reliably realize the negative boundary of the three-way pre_final decision contract: disabled mode never emits negative (2/2 false positives on trial_002 and trial_003) and enabled mode flips trial_002 between negative and positive within mode.\", \"applicability\": \"Frozen Hook model as three-label evaluator of pre_final decisions (two-entity comparative finalized on first-entity-only evidence = positive; single-entity factoid / both-entity query = negative); thinking modes enabled and disabled; reference, inputs, implementation, and repetition count validated.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 12570,
+        "output_tokens": 4935,
+        "total_tokens": 17505,
+        "calls": [
+          {
+            "completion_tokens": 2540,
+            "prompt_tokens": 4833,
+            "total_tokens": 7373,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2442
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 4065
+          },
+          {
+            "completion_tokens": 2395,
+            "prompt_tokens": 7737,
+            "total_tokens": 10132,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2058
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7296
+            },
+            "prompt_cache_hit_tokens": 7296,
+            "prompt_cache_miss_tokens": 441
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_02.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_02_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the pre_final three-label Hook decision contract (two-entity comparison finalized on first-entity-only evidence vs single-entity factoid vs both-entity query), the Student model when used as the Hook evaluator cannot reliably label single-entity factoid negatives as negative: with thinking disabled it false-positives trial_002 and trial_003 (2/2 each), and with thinking enabled it flips trial_002 within mode.",
+            "applicability": "Frozen Student/Hook model; pre_final decision phase; three-label decision contract with single-entity factoid negative class; thinking_mode enabled/disabled probes at 2 repetitions.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_8F51YW6chOyoadja1Shp1170",
+          "arguments": {
+            "evidence_ref": "hook_review",
+            "view": "upstream_contract",
+            "selectors": [
+              "negative_rule",
+              "decision_inputs"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"hook_review\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"negative_rule\", \"content\": \"The question names only one entity (a single-entity retrieval with no second entity for comparison), or any completed search query text references the second entity or both entities, or any retrieved passage text mentions the second entity.\"}, {\"selector\": \"decision_inputs\", \"content\": \"[\\\"question text naming the entities\\\",\\\"completed search query texts\\\",\\\"retrieved passage texts\\\",\\\"final answer candidate text\\\"]\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_qxuEw0QSvUI72tlGjpEH3161",
+          "arguments": {
+            "evidence_ref": "hook_review",
+            "view": "decision_trace",
+            "selectors": [
+              "feasibility_assessment",
+              "probe_matrix"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"hook_review\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"feasibility_assessment\", \"content\": \"Frozen pre_final Hook needs a bounded three-label evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoids or both-entity queries (negative). Real prefixes show no faithful mode: disabled never labels negative (false positives on trial_002 and trial_003, 2/2 each); enabled is 7/8 but materially disagrees within mode on trial_002 (negative → positive). Because the best mode is unstable and the negative boundary is not reliably realized, the evaluator cannot be compiled as-is. This is a model-capability/stability defect, not an ambiguous contract, so spec revision does not apply. Researcher must re-validate/tune the evaluator on single-entity factoid negatives and obtain uncertain-boundary evidence before any compilation.\"}, {\"selector\": \"probe_matrix\", \"content\": \"probe#/phase_probes/0/experiment/observations/4/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/5/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/6/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/7/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/12/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/14/raw_output: positive\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_3cqcLDLyaPju5JP4Zosn4411",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final three-label Hook decision contract (two-entity comparison finalized on first-entity-only evidence vs single-entity factoid vs both-entity query), the Student model when used as the Hook evaluator cannot reliably label single-entity factoid negatives as negative: with thinking disabled it false-positives trial_002 and trial_003 (2/2 each), and with thinking enabled it flips trial_002 within mode.",
+                "applicability": "Frozen Student/Hook model; pre_final decision phase; three-label decision contract with single-entity factoid negative class; thinking_mode enabled/disabled probes at 2 repetitions.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the pre_final three-label Hook decision contract (two-entity comparison finalized on first-entity-only evidence vs single-entity factoid vs both-entity query), the Student model when used as the Hook evaluator cannot reliably label single-entity factoid negatives as negative: with thinking disabled it false-positives trial_002 and trial_003 (2/2 each), and with thinking enabled it flips trial_002 within mode.\", \"applicability\": \"Frozen Student/Hook model; pre_final decision phase; three-label decision contract with single-entity factoid negative class; thinking_mode enabled/disabled probes at 2 repetitions.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 13793,
+        "output_tokens": 7267,
+        "total_tokens": 21060,
+        "calls": [
+          {
+            "completion_tokens": 3636,
+            "prompt_tokens": 4833,
+            "total_tokens": 8469,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3455
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 768
+            },
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 4065
+          },
+          {
+            "completion_tokens": 3631,
+            "prompt_tokens": 8960,
+            "total_tokens": 12591,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3255
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8448
+            },
+            "prompt_cache_hit_tokens": 8448,
+            "prompt_cache_miss_tokens": 512
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_03.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\hook_feasibility_student_instability\\run_03_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the three-label feasibility evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoid or both-entity-query negatives on real trial prefixes, the Student model when used as the Hook evaluator cannot reliably realize the negative boundary: disabled thinking mode false-positives trial_002 and trial_003 in 2/2 repetitions each, and enabled mode is unstable on trial_002.",
+            "applicability": "Real trial prefixes; three-label feasibility decision contract; enabled and disabled thinking modes; two probe repetitions; explicit negatives are single-entity factoids and both-entity queries.",
+            "evidence_refs": [
+              "hook_review"
+            ],
+            "experience_type": "student_capability"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_QhZhswcM3fnoZpomeY0V5369",
+          "arguments": {
+            "evidence_ref": "hook_review",
+            "view": "decision_trace",
+            "selectors": [
+              "feasibility_assessment",
+              "probe_matrix"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"hook_review\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"feasibility_assessment\", \"content\": \"Frozen pre_final Hook needs a bounded three-label evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoids or both-entity queries (negative). Real prefixes show no faithful mode: disabled never labels negative (false positives on trial_002 and trial_003, 2/2 each); enabled is 7/8 but materially disagrees within mode on trial_002 (negative → positive). Because the best mode is unstable and the negative boundary is not reliably realized, the evaluator cannot be compiled as-is. This is a model-capability/stability defect, not an ambiguous contract, so spec revision does not apply. Researcher must re-validate/tune the evaluator on single-entity factoid negatives and obtain uncertain-boundary evidence before any compilation.\"}, {\"selector\": \"probe_matrix\", \"content\": \"probe#/phase_probes/0/experiment/observations/4/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/5/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/6/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/7/raw_output: positive\\nprobe#/phase_probes/0/experiment/observations/12/raw_output: negative\\nprobe#/phase_probes/0/experiment/observations/14/raw_output: positive\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_hnwFrg3IrUhW5EnpN6dC0204",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the three-label feasibility evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoid or both-entity-query negatives on real trial prefixes, the Student model when used as the Hook evaluator cannot reliably realize the negative boundary: disabled thinking mode false-positives trial_002 and trial_003 in 2/2 repetitions each, and enabled mode is unstable on trial_002.",
+                "applicability": "Real trial prefixes; three-label feasibility decision contract; enabled and disabled thinking modes; two probe repetitions; explicit negatives are single-entity factoids and both-entity queries.",
+                "evidence_refs": [
+                  "hook_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the three-label feasibility evaluator distinguishing two-entity comparisons finalized on first-entity-only evidence (positive) from single-entity factoid or both-entity-query negatives on real trial prefixes, the Student model when used as the Hook evaluator cannot reliably realize the negative boundary: disabled thinking mode false-positives trial_002 and trial_003 in 2/2 repetitions each, and enabled mode is unstable on trial_002.\", \"applicability\": \"Real trial prefixes; three-label feasibility decision contract; enabled and disabled thinking modes; two probe repetitions; explicit negatives are single-entity factoids and both-entity queries.\", \"evidence_refs\": [\"hook_review\"], \"experience_type\": \"student_capability\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 11500,
+        "output_tokens": 4970,
+        "total_tokens": 16470,
+        "calls": [
+          {
+            "completion_tokens": 1470,
+            "prompt_tokens": 4833,
+            "total_tokens": 6303,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1372
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4736
+            },
+            "prompt_cache_hit_tokens": 4736,
+            "prompt_cache_miss_tokens": 97
+          },
+          {
+            "completion_tokens": 3500,
+            "prompt_tokens": 6667,
+            "total_tokens": 10167,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3093
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6272
+            },
+            "prompt_cache_hit_tokens": 6272,
+            "prompt_cache_miss_tokens": 395
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the mechanism activation decision on two-entity comparison transcripts, the Student model when used as the Hook evaluator cannot reliably verify query-target naming: it labeled the both-entities-queried explicit negative as activating in 4/4 generations across two contract wordings and the single-entity negative as activating 2/2 in contract 002.",
+            "applicability": "Frozen Student model probed as Hook evaluator on the mechanism activation decision; two-entity comparison questions; explicit-negative inputs where the query names both entities or only the first entity; two distinct contract wordings.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Deferral-to-second-entity-search is trial-confirmed (2/2 positives, 2/2 negatives) but cannot be distilled as a deterministic guard: the pre_final phase has no complete reproducible rule, the only permitted evaluator (hook_model) mislabels the both-entities-queried explicit negative, the boundary is intrinsic so narrowing is impossible, and needs_evidence is inapplicable because frozen-hypothesis trials measure the Teacher intervention, not the compiled Hook backend. Stop unchanged.",
+            "applicability": "Deterministic distillation of the deferral-feedback guard; two-entity comparison questions with a single retrieval; frozen-hypothesis trial evidence measuring the Teacher intervention.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_PE5EleUMNTeTILgzxXq50614",
+          "arguments": {
+            "evidence_ref": "distillation",
+            "view": "decision_trace",
+            "selectors": [
+              "distillation_rationale"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"distillation\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"distillation_rationale\", \"content\": \"Intervention evidence is complete (2/2 positives trial_001/004 with faithful one-shot deferral and immediate next-generation second-entity-naming search; 2/2 negatives trial_002 single-entity and trial_003 both-entities-queried correctly non-intervened; coverage met; conclusion not required). However, the single pre_final phase cannot be distilled as a deterministic rule: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, so hook_model is the only permitted evaluator. Two descriptive probes (experiments 001 and 002) of the frozen classification task through the production model backend showed the decisive both-entities-queried boundary mislabeled positive in 4/4 generations across two distinct contract wordings (the model factually asserted the query named only the first entity when it named both), and contract 002 additionally mislabeled the single-entity negative positive 2/2. Correct non-intervention on both-entities-queried inputs is part of the mechanism's own activation condition and a validated negative control; recording this misfire as a known limit would excuse a required behavior, which is forbidden. The boundary is intrinsic to the activation condition, so the mechanism cannot be narrowed to avoid it; needs_evidence is inapplicable because a frozen-hypothesis assignment measures the Teacher intervention, not the compiled Hook model backend, which the obligation rules explicitly exclude. No phase, completion, or validation was authored for the draft.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_vJACeDyv1vP39HMidmH13217",
+          "arguments": {
+            "evidence_ref": "distillation",
+            "view": "upstream_contract",
+            "selectors": [
+              "activation_condition",
+              "success_condition"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"distillation\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"activation_condition\", \"content\": \"The question compares two named entities on one attribute; the transcript contains exactly one retrieval, whose query names only the first entity and whose returned passages report no attribute evidence about the second entity; a final answer candidate resolving the comparison is present and no retrieval has ever targeted the second entity.\"}, {\"selector\": \"success_condition\", \"content\": \"The immediate next Student generation after the deferral issues a retrieval whose query names the second entity.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_OJdH136DQrzmz5HDrgCQ3489",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the mechanism activation decision on two-entity comparison transcripts, the Student model when used as the Hook evaluator cannot reliably verify query-target naming: it labeled the both-entities-queried explicit negative as activating in 4/4 generations across two contract wordings and the single-entity negative as activating 2/2 in contract 002.",
+                "applicability": "Frozen Student model probed as Hook evaluator on the mechanism activation decision; two-entity comparison questions; explicit-negative inputs where the query names both entities or only the first entity; two distinct contract wordings.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The deferral-to-second-entity-search mechanism is trial-confirmed (2/2 positives, 2/2 negatives) but cannot be distilled as a deterministic guard: the pre_final phase lacks a complete reproducible rule, the only permitted evaluator (hook_model) mislabels the both-entities-queried explicit negative, the boundary is intrinsic so the mechanism cannot be narrowed, and needs_evidence is inapplicable since frozen-hypothesis trials measure the Teacher intervention, not the compiled Hook backend. Stop unchanged.",
+                "applicability": "Deterministic distillation of the deferral-feedback guard; two-entity comparison questions with a single retrieval; frozen-hypothesis trial evidence measuring the Teacher intervention.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_y04lrq9J0A5yGWGXJZQQ0722",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen Student model probed as Hook evaluator on the mechanism activation decision; two-entity comparison questions; explicit-negative inputs where the query names both entities or only the first entity; two distinct contract wordings.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Under the mechanism activation decision on two-entity comparison transcripts, the Student model when used as the Hook evaluator cannot reliably verify query-target naming: it labeled the both-entities-queried explicit negative as activating in 4/4 generations across two contract wordings and the single-entity negative as activating 2/2 in contract 002."
+              },
+              {
+                "applicability": "Deterministic distillation of the deferral-feedback guard; two-entity comparison questions with a single retrieval; frozen-hypothesis trial evidence measuring the Teacher intervention.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Deferral-to-second-entity-search is trial-confirmed (2/2 positives, 2/2 negatives) but cannot be distilled as a deterministic guard: the pre_final phase has no complete reproducible rule, the only permitted evaluator (hook_model) mislabels the both-entities-queried explicit negative, the boundary is intrinsic so narrowing is impossible, and needs_evidence is inapplicable because frozen-hypothesis trials measure the Teacher intervention, not the compiled Hook backend. Stop unchanged."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the mechanism activation decision on two-entity comparison transcripts, the Student model when used as the Hook evaluator cannot reliably verify query-target naming: it labeled the both-entities-queried explicit negative as activating in 4/4 generations across two contract wordings and the single-entity negative as activating 2/2 in contract 002.\", \"applicability\": \"Frozen Student model probed as Hook evaluator on the mechanism activation decision; two-entity comparison questions; explicit-negative inputs where the query names both entities or only the first entity; two distinct contract wordings.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Deferral-to-second-entity-search is trial-confirmed (2/2 positives, 2/2 negatives) but cannot be distilled as a deterministic guard: the pre_final phase has no complete reproducible rule, the only permitted evaluator (hook_model) mislabels the both-entities-queried explicit negative, the boundary is intrinsic so narrowing is impossible, and needs_evidence is inapplicable because frozen-hypothesis trials measure the Teacher intervention, not the compiled Hook backend. Stop unchanged.\", \"applicability\": \"Deterministic distillation of the deferral-feedback guard; two-entity comparison questions with a single retrieval; frozen-hypothesis trial evidence measuring the Teacher intervention.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 9,
+        "input_tokens": 168568,
+        "output_tokens": 29968,
+        "total_tokens": 198536,
+        "calls": [
+          {
+            "completion_tokens": 827,
+            "prompt_tokens": 4785,
+            "total_tokens": 5612,
+            "completion_tokens_details": {
+              "reasoning_tokens": 653
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 1664
+            },
+            "prompt_cache_hit_tokens": 1664,
+            "prompt_cache_miss_tokens": 3121
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 6092,
+            "total_tokens": 10188,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 5504
+            },
+            "prompt_cache_hit_tokens": 5504,
+            "prompt_cache_miss_tokens": 588
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 10218,
+            "total_tokens": 14314,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10112
+            },
+            "prompt_cache_hit_tokens": 10112,
+            "prompt_cache_miss_tokens": 106
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 14344,
+            "total_tokens": 18440,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 14208
+            },
+            "prompt_cache_hit_tokens": 14208,
+            "prompt_cache_miss_tokens": 136
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 18470,
+            "total_tokens": 22566,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 18432
+            },
+            "prompt_cache_hit_tokens": 18432,
+            "prompt_cache_miss_tokens": 38
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 22596,
+            "total_tokens": 26692,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 22528
+            },
+            "prompt_cache_hit_tokens": 22528,
+            "prompt_cache_miss_tokens": 68
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 26722,
+            "total_tokens": 30818,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 26624
+            },
+            "prompt_cache_hit_tokens": 26624,
+            "prompt_cache_miss_tokens": 98
+          },
+          {
+            "completion_tokens": 3576,
+            "prompt_tokens": 30848,
+            "total_tokens": 34424,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3219
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 30720
+            },
+            "prompt_cache_hit_tokens": 30720,
+            "prompt_cache_miss_tokens": 128
+          },
+          {
+            "completion_tokens": 989,
+            "prompt_tokens": 34493,
+            "total_tokens": 35482,
+            "completion_tokens_details": {
+              "reasoning_tokens": 635
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 34304
+            },
+            "prompt_cache_hit_tokens": 34304,
+            "prompt_cache_miss_tokens": 189
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_02.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_02_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the three-way Hook decision contract across two distinct contract wordings, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative query targets: it mislabeled both-entities-queried inputs as positive in 4/4 generations, factually asserting the query named only the first entity when it named both, and mislabeled the single-entity negative as positive 2/2.",
+            "applicability": "Frozen classification task through the production model backend as Hook evaluator for the one-shot deferral mechanism's pre_final phase (comparison detection, passage-evidence judgment, query-target verification); explicit-negative inputs: both-entities-queried and single-entity queries.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Deterministic distillation of the one-shot deferral pre_final phase is infeasible: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, the only permitted Hook evaluator misfires on activation-condition negatives, and the boundary is intrinsic, so narrowing or excusing it as a known limit is impossible. Stop unchanged; revisit only with a contract whose negatives can be classified without the misfiring Hook evaluator.",
+            "applicability": "Mechanism-distillation and evaluation design for the one-shot deferral mechanism's pre_final phase; covers settings where frozen-hypothesis assignments measure the Teacher intervention, not the compiled Hook backend, making needs_evidence inapplicable.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_VmUIREwcjAidnm0LiJff6914",
+          "arguments": {
+            "evidence_ref": "distillation",
+            "view": "decision_trace",
+            "selectors": [
+              "distillation_rationale"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"distillation\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"distillation_rationale\", \"content\": \"Intervention evidence is complete (2/2 positives trial_001/004 with faithful one-shot deferral and immediate next-generation second-entity-naming search; 2/2 negatives trial_002 single-entity and trial_003 both-entities-queried correctly non-intervened; coverage met; conclusion not required). However, the single pre_final phase cannot be distilled as a deterministic rule: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, so hook_model is the only permitted evaluator. Two descriptive probes (experiments 001 and 002) of the frozen classification task through the production model backend showed the decisive both-entities-queried boundary mislabeled positive in 4/4 generations across two distinct contract wordings (the model factually asserted the query named only the first entity when it named both), and contract 002 additionally mislabeled the single-entity negative positive 2/2. Correct non-intervention on both-entities-queried inputs is part of the mechanism's own activation condition and a validated negative control; recording this misfire as a known limit would excuse a required behavior, which is forbidden. The boundary is intrinsic to the activation condition, so the mechanism cannot be narrowed to avoid it; needs_evidence is inapplicable because a frozen-hypothesis assignment measures the Teacher intervention, not the compiled Hook model backend, which the obligation rules explicitly exclude. No phase, completion, or validation was authored for the draft.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_ZvbGUuULaCpw1HMYKLpM7902",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the three-way Hook decision contract across two distinct contract wordings, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative query targets: it mislabeled both-entities-queried inputs as positive in 4/4 generations, factually asserting the query named only the first entity when it named both, and mislabeled the single-entity negative as positive 2/2.",
+                "applicability": "Frozen classification task through the production model backend as Hook evaluator for the one-shot deferral mechanism's pre_final phase (comparison detection, passage-evidence judgment, query-target verification); explicit-negative inputs: both-entities-queried and single-entity queries.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Deterministic distillation of the one-shot deferral pre_final phase is infeasible: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, the only permitted Hook evaluator misfires on the activation condition's own negatives, and the boundary is intrinsic so narrowing or excusing it as a known limit is impossible. Stop unchanged; revisit only with a decision contract whose negatives can be classified without the misfiring Hook evaluator.",
+                "applicability": "Mechanism-distillation and evaluation design for the one-shot deferral mechanism's pre_final phase; covers settings where frozen-hypothesis assignments measure the Teacher intervention, not the compiled Hook backend, making needs_evidence inapplicable.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_x8t8vAf8ixNBmfcrsSVb7024",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen classification task through the production model backend as Hook evaluator for the one-shot deferral mechanism's pre_final phase (comparison detection, passage-evidence judgment, query-target verification); explicit-negative inputs: both-entities-queried and single-entity queries.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Under the three-way Hook decision contract across two distinct contract wordings, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative query targets: it mislabeled both-entities-queried inputs as positive in 4/4 generations, factually asserting the query named only the first entity when it named both, and mislabeled the single-entity negative as positive 2/2."
+              },
+              {
+                "applicability": "Mechanism-distillation and evaluation design for the one-shot deferral mechanism's pre_final phase; covers settings where frozen-hypothesis assignments measure the Teacher intervention, not the compiled Hook backend, making needs_evidence inapplicable.",
+                "evidence_refs": [
+                  "distillation"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Deterministic distillation of the one-shot deferral pre_final phase is infeasible: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, the only permitted Hook evaluator misfires on activation-condition negatives, and the boundary is intrinsic, so narrowing or excusing it as a known limit is impossible. Stop unchanged; revisit only with a contract whose negatives can be classified without the misfiring Hook evaluator."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the three-way Hook decision contract across two distinct contract wordings, the Student model when used as the Hook evaluator cannot reliably classify explicit-negative query targets: it mislabeled both-entities-queried inputs as positive in 4/4 generations, factually asserting the query named only the first entity when it named both, and mislabeled the single-entity negative as positive 2/2.\", \"applicability\": \"Frozen classification task through the production model backend as Hook evaluator for the one-shot deferral mechanism's pre_final phase (comparison detection, passage-evidence judgment, query-target verification); explicit-negative inputs: both-entities-queried and single-entity queries.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Deterministic distillation of the one-shot deferral pre_final phase is infeasible: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, the only permitted Hook evaluator misfires on activation-condition negatives, and the boundary is intrinsic, so narrowing or excusing it as a known limit is impossible. Stop unchanged; revisit only with a contract whose negatives can be classified without the misfiring Hook evaluator.\", \"applicability\": \"Mechanism-distillation and evaluation design for the one-shot deferral mechanism's pre_final phase; covers settings where frozen-hypothesis assignments measure the Teacher intervention, not the compiled Hook backend, making needs_evidence inapplicable.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 5,
+        "input_tokens": 55121,
+        "output_tokens": 13978,
+        "total_tokens": 69099,
+        "calls": [
+          {
+            "completion_tokens": 1377,
+            "prompt_tokens": 4785,
+            "total_tokens": 6162,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1285
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4736
+            },
+            "prompt_cache_hit_tokens": 4736,
+            "prompt_cache_miss_tokens": 49
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 6512,
+            "total_tokens": 10608,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6144
+            },
+            "prompt_cache_hit_tokens": 6144,
+            "prompt_cache_miss_tokens": 368
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 10638,
+            "total_tokens": 14734,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10496
+            },
+            "prompt_cache_hit_tokens": 10496,
+            "prompt_cache_miss_tokens": 142
+          },
+          {
+            "completion_tokens": 3589,
+            "prompt_tokens": 14764,
+            "total_tokens": 18353,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3206
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 14720
+            },
+            "prompt_cache_hit_tokens": 14720,
+            "prompt_cache_miss_tokens": 44
+          },
+          {
+            "completion_tokens": 820,
+            "prompt_tokens": 18422,
+            "total_tokens": 19242,
+            "completion_tokens_details": {
+              "reasoning_tokens": 440
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 18304
+            },
+            "prompt_cache_hit_tokens": 18304,
+            "prompt_cache_miss_tokens": 118
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_03.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\distiller_not_distillable_model_boundary\\run_03_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under a two-entity, single-retrieval comparison contract requiring the evaluator to verify that the query names only the first entity, the Student model when used as the Hook evaluator cannot reliably classify the query target: it mislabeled both-entities-queried inputs as positive in 4/4 generations across two contract wordings (asserting the query named only the first entity) and mislabeled the single-entity negative as positive in 2/2 in one wording.",
+            "applicability": "Frozen Student model probed as Hook evaluator on the validated two-entity, single-retrieval decision contract; repeated matched probes across two distinct contract wordings; query-target verification and explicit-negative classification.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "The deferral intervention is behaviorally validated (2/2 positives, 2/2 negatives, coverage met), but its activation condition's query-target verification has no reproducible deterministic rule; the frozen hook evaluator mislabels the mechanism's own both-entities-queried negative control, a misfire intrinsic to the activation condition that cannot be narrowed, guarded, or excused — distillation stops unchanged; revisit only with an activation condition removing the un-rule-able judgment.",
+            "applicability": "Soft deferral intervention for two-entity single-retrieval comparison questions; distillation into a deterministic guard via the hook_model evaluator; settled mechanism_distiller not_distillable decision.",
+            "evidence_refs": [
+              "distillation"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_wtnaH5hQOnigpKrwBHT20196",
+          "arguments": {
+            "evidence_ref": "distillation",
+            "view": "decision_trace",
+            "selectors": [
+              "distillation_rationale"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"distillation\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"distillation_rationale\", \"content\": \"Intervention evidence is complete (2/2 positives trial_001/004 with faithful one-shot deferral and immediate next-generation second-entity-naming search; 2/2 negatives trial_002 single-entity and trial_003 both-entities-queried correctly non-intervened; coverage met; conclusion not required). However, the single pre_final phase cannot be distilled as a deterministic rule: comparison detection, passage-evidence judgment, and query-target verification have no complete reproducible rule, so hook_model is the only permitted evaluator. Two descriptive probes (experiments 001 and 002) of the frozen classification task through the production model backend showed the decisive both-entities-queried boundary mislabeled positive in 4/4 generations across two distinct contract wordings (the model factually asserted the query named only the first entity when it named both), and contract 002 additionally mislabeled the single-entity negative positive 2/2. Correct non-intervention on both-entities-queried inputs is part of the mechanism's own activation condition and a validated negative control; recording this misfire as a known limit would excuse a required behavior, which is forbidden. The boundary is intrinsic to the activation condition, so the mechanism cannot be narrowed to avoid it; needs_evidence is inapplicable because a frozen-hypothesis assignment measures the Teacher intervention, not the compiled Hook model backend, which the obligation rules explicitly exclude. No phase, completion, or validation was authored for the draft.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_3i1E0VRKtiEyc1ywh9hU2754",
+          "arguments": {
+            "evidence_ref": "distillation",
+            "view": "upstream_contract",
+            "selectors": [
+              "activation_condition",
+              "success_condition"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"distillation\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"activation_condition\", \"content\": \"The question compares two named entities on one attribute; the transcript contains exactly one retrieval, whose query names only the first entity and whose returned passages report no attribute evidence about the second entity; a final answer candidate resolving the comparison is present and no retrieval has ever targeted the second entity.\"}, {\"selector\": \"success_condition\", \"content\": \"The immediate next Student generation after the deferral issues a retrieval whose query names the second entity.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_Cg1x7CPZXIRqyPwURzUf7621",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under a two-entity, single-retrieval comparison contract requiring the evaluator to verify that the query names only the first entity, the Student model when used as the Hook evaluator cannot reliably classify the query target: it mislabeled both-entities-queried inputs as positive in 4/4 generations across two contract wordings (asserting the query named only the first entity) and mislabeled the single-entity negative as positive in 2/2 in one wording.",
+                "applicability": "Frozen Student model probed as Hook evaluator on the validated two-entity, single-retrieval decision contract; repeated matched probes across two distinct contract wordings; query-target verification and explicit-negative classification.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "The deferral intervention is behaviorally validated (2/2 positives, 2/2 negatives, coverage met), but its activation condition's query-target verification has no reproducible deterministic rule; the frozen hook evaluator mislabels the mechanism's own both-entities-queried negative control, a misfire intrinsic to the activation condition that cannot be narrowed, guarded, or excused — distillation stops unchanged; revisit only with an activation condition removing the un-rule-able judgment.",
+                "applicability": "Soft deferral intervention for two-entity single-retrieval comparison questions; distillation into a deterministic guard via the hook_model evaluator; settled mechanism_distiller not_distillable decision.",
+                "evidence_refs": [
+                  "distillation"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under a two-entity, single-retrieval comparison contract requiring the evaluator to verify that the query names only the first entity, the Student model when used as the Hook evaluator cannot reliably classify the query target: it mislabeled both-entities-queried inputs as positive in 4/4 generations across two contract wordings (asserting the query named only the first entity) and mislabeled the single-entity negative as positive in 2/2 in one wording.\", \"applicability\": \"Frozen Student model probed as Hook evaluator on the validated two-entity, single-retrieval decision contract; repeated matched probes across two distinct contract wordings; query-target verification and explicit-negative classification.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"The deferral intervention is behaviorally validated (2/2 positives, 2/2 negatives, coverage met), but its activation condition's query-target verification has no reproducible deterministic rule; the frozen hook evaluator mislabels the mechanism's own both-entities-queried negative control, a misfire intrinsic to the activation condition that cannot be narrowed, guarded, or excused — distillation stops unchanged; revisit only with an activation condition removing the un-rule-able judgment.\", \"applicability\": \"Soft deferral intervention for two-entity single-retrieval comparison questions; distillation into a deterministic guard via the hook_model evaluator; settled mechanism_distiller not_distillable decision.\", \"evidence_refs\": [\"distillation\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 21933,
+        "output_tokens": 8190,
+        "total_tokens": 30123,
+        "calls": [
+          {
+            "completion_tokens": 1246,
+            "prompt_tokens": 4785,
+            "total_tokens": 6031,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1072
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4736
+            },
+            "prompt_cache_hit_tokens": 4736,
+            "prompt_cache_miss_tokens": 49
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 6511,
+            "total_tokens": 10607,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 6016
+            },
+            "prompt_cache_hit_tokens": 6016,
+            "prompt_cache_miss_tokens": 495
+          },
+          {
+            "completion_tokens": 2848,
+            "prompt_tokens": 10637,
+            "total_tokens": 13485,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2252
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10496
+            },
+            "prompt_cache_hit_tokens": 10496,
+            "prompt_cache_miss_tokens": 141
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The Compiler wired the pre_final grounding evaluator's 'retrieved passages' input to an empty list instead of the trace's actual passage content, so grounded=false was trivially returned on an empty set, defeating the mechanism's conditional trigger and semantic grounding. Populate passages with the retrieved passage content; completion is met when the pre_final invocation carries the trace's retrieved passages and conformance confirms declared inputs govern the decision.",
+            "applicability": "Compiler implementation of the pre_final grounding evaluator in the candidate-deferral mechanism; applies to conformance's declared-inputs-govern-the-decision fidelity criterion for the grounding classification invocation.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "teacher_work",
+            "teacher_role_id": "compiler"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_w9qI5WZGQuCjHdVs8uzJ9957",
+          "arguments": {
+            "evidence_ref": "conformance",
+            "view": "decision_trace",
+            "selectors": [
+              "finding_1",
+              "repair_1"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"conformance\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"finding_1\", \"content\": \"Both declared phases activated exactly once with correct actions, budgets, and state transitions. post_tool: at the first search result the hook classified the relation as required but not stated, appended a procedural, value-free verification note to the tool-result content (persisted as the next user-role message); no note at the second search. pre_final: the value-asserting candidate was deferred exactly once with value-free feedback, deferral_consumed set, and post-deferral re-generation issued an additional search; the final non-asserting answer passed through unmodified. However, the trajectory exposes a defect in the pre_final evaluator invocation: hook_model_input contained \\\"passages\\\": [] although retrieved passages existed in the trace, so the declared input \\\"retrieved passages\\\" did not govern the grounding decision. The classifier trivially returned grounded=false on an empty set rather than evaluating the actual passages, defeating the mechanism's conditional trigger and semantic grounding capability. Since \\\"declared inputs governed the decision\\\" is a required fidelity criterion, this is an implementation mismatch despite the correct observable outcome here.\"}, {\"selector\": \"repair_1\", \"content\": \"Ensure the pre_final grounding evaluator receives the actual retrieved passages from the conversation/trace (populate the passages field with the retrieved passage content) so the declared \\\"retrieved passages\\\" decision input governs whether the candidate is deferred, rather than invoking the classifier with an empty passage list.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_wbG8vshhHQKnowc7rdji0989",
+          "arguments": {
+            "evidence_ref": "conformance",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"conformance\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"Cause the Student, after a first search whose retrieved passages never state the relation a bridge question asks about, to either run an additional search for the missing relational information or finalize only with a value explicitly grounded in a retrieved passage statement of that relation — enforced by a one-time pre-final deferral of ungrounded candidates.\"}, {\"selector\": \"fallback\", \"content\": \"After the note, the Student either issues an additional search for the missing relational information or emits a final answer whose value is explicitly grounded in a retrieved passage statement of the relation; an ungrounded candidate is deferred exactly once, after which re-generation issues a search or grounds a revised value instead of re-emitting the unsupported candidate.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_qbNZ63ZjmDvgWe8j2pbM7591",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "teacher_work",
+                "teacher_role_id": "compiler",
+                "lesson": "The Compiler failed to wire the pre_final grounding evaluator's declared 'retrieved passages' input to the actual trace content; it invoked the classifier with passages: [], so grounded=false was trivially returned on an empty set, defeating the mechanism's conditional trigger and semantic grounding despite the observably correct deferral. Populate passages with the retrieved passage content; completion is met when the pre_final invocation carries the trace's retrieved passages and conformance confirms declared inputs govern the decision.",
+                "applicability": "Compiler implementation of the pre_final grounding evaluator in the candidate-deferral mechanism; applies to conformance's declared-inputs-govern-the-decision fidelity criterion for the grounding classification invocation.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.teacher_work.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.teacher_work.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_pmiaqKh5kWmEKei7qGwH3196",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Compiler implementation of the pre_final grounding evaluator in the candidate-deferral mechanism; applies to conformance's declared-inputs-govern-the-decision fidelity criterion for the grounding classification invocation.",
+                "evidence_refs": [
+                  "conformance"
+                ],
+                "experience_type": "teacher_work",
+                "lesson": "The Compiler wired the pre_final grounding evaluator's 'retrieved passages' input to an empty list instead of the trace's actual passage content, so grounded=false was trivially returned on an empty set, defeating the mechanism's conditional trigger and semantic grounding. Populate passages with the retrieved passage content; completion is met when the pre_final invocation carries the trace's retrieved passages and conformance confirms declared inputs govern the decision.",
+                "teacher_role_id": "compiler"
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The Compiler wired the pre_final grounding evaluator's 'retrieved passages' input to an empty list instead of the trace's actual passage content, so grounded=false was trivially returned on an empty set, defeating the mechanism's conditional trigger and semantic grounding. Populate passages with the retrieved passage content; completion is met when the pre_final invocation carries the trace's retrieved passages and conformance confirms declared inputs govern the decision.\", \"applicability\": \"Compiler implementation of the pre_final grounding evaluator in the candidate-deferral mechanism; applies to conformance's declared-inputs-govern-the-decision fidelity criterion for the grounding classification invocation.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"teacher_work\", \"teacher_role_id\": \"compiler\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 23305,
+        "output_tokens": 5614,
+        "total_tokens": 28919,
+        "calls": [
+          {
+            "completion_tokens": 2556,
+            "prompt_tokens": 4933,
+            "total_tokens": 7489,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2378
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1605
+          },
+          {
+            "completion_tokens": 2274,
+            "prompt_tokens": 8015,
+            "total_tokens": 10289,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1812
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7424
+            },
+            "prompt_cache_hit_tokens": 7424,
+            "prompt_cache_miss_tokens": 591
+          },
+          {
+            "completion_tokens": 784,
+            "prompt_tokens": 10357,
+            "total_tokens": 11141,
+            "completion_tokens_details": {
+              "reasoning_tokens": 548
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10240
+            },
+            "prompt_cache_hit_tokens": 10240,
+            "prompt_cache_miss_tokens": 117
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_02.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_02_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Compiler obligation: pre_final grounding evaluator must receive actual retrieved passages so they govern deferral. Violation: hook_model_input had 'passages': [] though retrieved passages existed in the trace; classifier returned grounded=false on an empty set. Consequence: conditional trigger and grounding defeated despite correct observable actions. Next: populate the passages field with trace's retrieved content. Completion: recheck shows passages populated and grounding governed by them.",
+            "applicability": "Applies to the Candidate implementation of the pre_final grounding evaluator under conformance.revise_implementation: the evaluator invocation must carry the actual retrieved passages from the trace rather than an empty list, and declared inputs must govern the grounding decision.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "teacher_work",
+            "teacher_role_id": "compiler"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_lC9GZpvmDtvXwYHsFKVa7470",
+          "arguments": {
+            "evidence_ref": "conformance",
+            "view": "decision_trace",
+            "selectors": [
+              "finding_1",
+              "repair_1"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"conformance\", \"view\": \"decision_trace\", \"items\": [{\"selector\": \"finding_1\", \"content\": \"Both declared phases activated exactly once with correct actions, budgets, and state transitions. post_tool: at the first search result the hook classified the relation as required but not stated, appended a procedural, value-free verification note to the tool-result content (persisted as the next user-role message); no note at the second search. pre_final: the value-asserting candidate was deferred exactly once with value-free feedback, deferral_consumed set, and post-deferral re-generation issued an additional search; the final non-asserting answer passed through unmodified. However, the trajectory exposes a defect in the pre_final evaluator invocation: hook_model_input contained \\\"passages\\\": [] although retrieved passages existed in the trace, so the declared input \\\"retrieved passages\\\" did not govern the grounding decision. The classifier trivially returned grounded=false on an empty set rather than evaluating the actual passages, defeating the mechanism's conditional trigger and semantic grounding capability. Since \\\"declared inputs governed the decision\\\" is a required fidelity criterion, this is an implementation mismatch despite the correct observable outcome here.\"}, {\"selector\": \"repair_1\", \"content\": \"Ensure the pre_final grounding evaluator receives the actual retrieved passages from the conversation/trace (populate the passages field with the retrieved passage content) so the declared \\\"retrieved passages\\\" decision input governs whether the candidate is deferred, rather than invoking the classifier with an empty passage list.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_9926lNzKlR0ZN17O7qhC9221",
+          "arguments": {
+            "evidence_ref": "conformance",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"conformance\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"Cause the Student, after a first search whose retrieved passages never state the relation a bridge question asks about, to either run an additional search for the missing relational information or finalize only with a value explicitly grounded in a retrieved passage statement of that relation — enforced by a one-time pre-final deferral of ungrounded candidates.\"}, {\"selector\": \"fallback\", \"content\": \"After the note, the Student either issues an additional search for the missing relational information or emits a final answer whose value is explicitly grounded in a retrieved passage statement of the relation; an ungrounded candidate is deferred exactly once, after which re-generation issues a search or grounds a revised value instead of re-emitting the unsupported candidate.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_94icUJG58MmbA2OEXAAl6368",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "teacher_work",
+                "teacher_role_id": "compiler",
+                "lesson": "Compiler obligation: implement the pre_final grounding evaluator so the declared 'retrieved passages' input governs the deferral decision. Violation: hook_model_input contained 'passages': [] although retrieved passages existed in the trace, so the classifier trivially returned grounded=false on an empty set and never evaluated the actual passages. Consequence: the mechanism's conditional trigger and semantic grounding were defeated despite correct observable phase actions. Next action: populate the passages field with the actual retrieved passage content from the conversation/trace. Completion: conformance re-check shows passages populated and the deferral decision governed by them.",
+                "applicability": "Applies to the Candidate implementation of the pre_final grounding evaluator under conformance.revise_implementation: the evaluator invocation must carry the actual retrieved passages from the trace rather than an empty list, and declared inputs must govern the grounding decision.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.teacher_work.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.teacher_work.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_6jgFnx3TU9FhemmOOAWW4116",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Applies to the Candidate implementation of the pre_final grounding evaluator under conformance.revise_implementation: the evaluator invocation must carry the actual retrieved passages from the trace rather than an empty list, and declared inputs must govern the grounding decision.",
+                "evidence_refs": [
+                  "conformance"
+                ],
+                "experience_type": "teacher_work",
+                "lesson": "Compiler obligation: pre_final grounding evaluator must receive actual retrieved passages so they govern deferral. Violation: hook_model_input had 'passages': [] though retrieved passages existed in the trace; classifier returned grounded=false on an empty set. Consequence: conditional trigger and grounding defeated despite correct observable actions. Next: populate the passages field with trace's retrieved content. Completion: recheck shows passages populated and grounding governed by them.",
+                "teacher_role_id": "compiler"
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Compiler obligation: pre_final grounding evaluator must receive actual retrieved passages so they govern deferral. Violation: hook_model_input had 'passages': [] though retrieved passages existed in the trace; classifier returned grounded=false on an empty set. Consequence: conditional trigger and grounding defeated despite correct observable actions. Next: populate the passages field with trace's retrieved content. Completion: recheck shows passages populated and grounding governed by them.\", \"applicability\": \"Applies to the Candidate implementation of the pre_final grounding evaluator under conformance.revise_implementation: the evaluator invocation must carry the actual retrieved passages from the trace rather than an empty list, and declared inputs must govern the grounding decision.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"teacher_work\", \"teacher_role_id\": \"compiler\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 23643,
+        "output_tokens": 8676,
+        "total_tokens": 32319,
+        "calls": [
+          {
+            "completion_tokens": 2553,
+            "prompt_tokens": 4933,
+            "total_tokens": 7486,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2375
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4864
+            },
+            "prompt_cache_hit_tokens": 4864,
+            "prompt_cache_miss_tokens": 69
+          },
+          {
+            "completion_tokens": 2618,
+            "prompt_tokens": 8012,
+            "total_tokens": 10630,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2134
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7424
+            },
+            "prompt_cache_hit_tokens": 7424,
+            "prompt_cache_miss_tokens": 588
+          },
+          {
+            "completion_tokens": 3505,
+            "prompt_tokens": 10698,
+            "total_tokens": 14203,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3264
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 10624
+            },
+            "prompt_cache_hit_tokens": 10624,
+            "prompt_cache_miss_tokens": 74
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_03.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\conformance_empty_passage_projection\\run_03_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "The Compiler invoked the pre_final grounding evaluator with an empty passage list, so the declared 'retrieved passages' decision input never governed the one-time deferral of ungrounded candidates, failing implementation fidelity. Populate the passages field with the actual retrieved passage content from the trace before invocation. Done when deferral and finalization decisions are observably driven by the actual retrieved passages.",
+            "applicability": "Compiler implementation of the pre_final grounding evaluator for the bridge-question relational deferral mechanism; phase rules were visible to the Compiler, and the mechanism goal requires deferral to be governed by actual retrieved passages.",
+            "evidence_refs": [
+              "conformance"
+            ],
+            "experience_type": "teacher_work",
+            "teacher_role_id": "compiler"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_GoIXkGLA1XS5CSAygLkl9073",
+          "arguments": {
+            "evidence_ref": "conformance",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"conformance\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"Cause the Student, after a first search whose retrieved passages never state the relation a bridge question asks about, to either run an additional search for the missing relational information or finalize only with a value explicitly grounded in a retrieved passage statement of that relation — enforced by a one-time pre-final deferral of ungrounded candidates.\"}, {\"selector\": \"fallback\", \"content\": \"After the note, the Student either issues an additional search for the missing relational information or emits a final answer whose value is explicitly grounded in a retrieved passage statement of the relation; an ungrounded candidate is deferred exactly once, after which re-generation issues a search or grounds a revised value instead of re-emitting the unsupported candidate.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_RID8hkcOPfyCkzKzICnK3969",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "teacher_work",
+                "teacher_role_id": "compiler",
+                "lesson": "The Compiler implemented the pre_final grounding evaluator without populating its passages field from the trace, so the grounding classifier saw an empty passage list and the declared 'retrieved passages' decision input never governed the one-time deferral of ungrounded candidates, failing implementation fidelity. Populate the passages field with the actual retrieved passage content before invoking the evaluator. Done when deferral and finalization decisions are observably driven by those retrieved passages, not an empty list.",
+                "applicability": "Compiler implementation of the pre_final grounding evaluator for the bridge-question relational deferral mechanism; phase rules were visible to the Compiler, and the mechanism goal requires deferral to be governed by actual retrieved passages.",
+                "evidence_refs": [
+                  "conformance"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.teacher_work.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.teacher_work.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_GnBmAghhirRZy4TTp0TH0092",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Compiler implementation of the pre_final grounding evaluator for the bridge-question relational deferral mechanism; phase rules were visible to the Compiler, and the mechanism goal requires deferral to be governed by actual retrieved passages.",
+                "evidence_refs": [
+                  "conformance"
+                ],
+                "experience_type": "teacher_work",
+                "lesson": "The Compiler invoked the pre_final grounding evaluator with an empty passage list, so the declared 'retrieved passages' decision input never governed the one-time deferral of ungrounded candidates, failing implementation fidelity. Populate the passages field with the actual retrieved passage content from the trace before invocation. Done when deferral and finalization decisions are observably driven by the actual retrieved passages.",
+                "teacher_role_id": "compiler"
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"The Compiler invoked the pre_final grounding evaluator with an empty passage list, so the declared 'retrieved passages' decision input never governed the one-time deferral of ungrounded candidates, failing implementation fidelity. Populate the passages field with the actual retrieved passage content from the trace before invocation. Done when deferral and finalization decisions are observably driven by the actual retrieved passages.\", \"applicability\": \"Compiler implementation of the pre_final grounding evaluator for the bridge-question relational deferral mechanism; phase rules were visible to the Compiler, and the mechanism goal requires deferral to be governed by actual retrieved passages.\", \"evidence_refs\": [\"conformance\"], \"experience_type\": \"teacher_work\", \"teacher_role_id\": \"compiler\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 23508,
+        "output_tokens": 4826,
+        "total_tokens": 28334,
+        "calls": [
+          {
+            "completion_tokens": 3752,
+            "prompt_tokens": 4933,
+            "total_tokens": 8685,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3656
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4864
+            },
+            "prompt_cache_hit_tokens": 4864,
+            "prompt_cache_miss_tokens": 69
+          },
+          {
+            "completion_tokens": 757,
+            "prompt_tokens": 8875,
+            "total_tokens": 9632,
+            "completion_tokens_details": {
+              "reasoning_tokens": 421
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8576
+            },
+            "prompt_cache_hit_tokens": 8576,
+            "prompt_cache_miss_tokens": 299
+          },
+          {
+            "completion_tokens": 317,
+            "prompt_tokens": 9700,
+            "total_tokens": 10017,
+            "completion_tokens_details": {
+              "reasoning_tokens": 109
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9600
+            },
+            "prompt_cache_hit_tokens": 9600,
+            "prompt_cache_miss_tokens": 100
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_intrinsic_grounding_predicate\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Literal-single-passage grounding over-triggers: the pre_final hook rejected correct retrieval-supported answers (Fox/Human Error 4x to 'cannot be determined'; Splash! mentor 1.0→0.33) since no passage literally states the relation — +0.6pp within noise, 14 vs 15 regressed, stable_correct 45→42, tokens 5.6x. Narrow: withhold only when retrieval lacks support; accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.",
+            "applicability": "Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_zoORJ3s3WvkMcWVKWD3p8189",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect",
+              "review_reason"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The intended positive path is genuinely observed: on true two-entity bridge questions where a single retrieved passage states the relation, the withhold note drives reformulated searches, the pre_final hook rejects ungrounded candidates, and a grounded commit is made (verified in 5ae73268 r002: withhold note → reformulate → defer \\\"Columbia County\\\" → reformulate → accept \\\"Nassau County\\\" citing the Carle Place passage; likewise Quality Cafe→Todd Phillips, Just the Two of Us→9 weeks, stable_failure→stable_correct). However, the same mechanism demonstrably over-withholds: verified in 5adc1309 r001, the Student retrieved the passage stating House ran on Fox and committed the correct \\\"Fox\\\" answer, which the pre_final hook rejected four times (budget exhausted) because no single passage literally says \\\"Human Error aired on Fox,\\\" ending in \\\"cannot be determined\\\" at 8 steps/22k tokens vs. the incumbent's 2 steps/1.7k tokens. The same over-withholding flipped previously correct answers to failures on Splash! mentor→15 (1.0→0.33), Glenn Hughes vs Ross Lynch (in-scope two-entity comparison, 0.67→0.0), Peter O'Meara/Norman Dike connection (1.0→0.67), and several multi-hop questions. Net aggregate: accuracy +0.6pp (158→160/225), majority-correct +5.3pp, but stable_correct 45→42, unstable 16→20, consistency 0.653→0.613, mean steps 2.12→3.91, tool calls 1.12→1.98, total tokens 558k→3.11M (5.6x) with 1.24M hook tokens; 15 improved vs 14 regressed with several stable_correct→stable_failure flips.\"}, {\"selector\": \"review_reason\", \"content\": \"The compiled mechanism is faithful to the supplied spec (diff matches the two-phase withhold/defer design; compiler and conformance pass), and its positive loop is real on a handful of bridge questions. But the observed effect does not support adoption: the net accuracy gain is within noise (+0.6pp on 225 records), stability worsened meaningfully (stable_correct −3, unstable +4, consistency −4pp), and execution cost rose ~5.6x in tokens (3.11M vs 0.56M) plus 1.24M hook tokens, with mean steps and tool calls nearly doubled. The mechanism's central predicate — commit only when one passage explicitly states the relation, prior knowledge and cross-passage entailment are not grounding, conservative uncertain fallback — is the direct cause of the 14 regressions: correct, retrieval-supported answers (Fox for Human Error; 15 for the Splash! mentor; age comparisons) are repeatedly deferred until the pre_final budget is exhausted and the Student refuses to answer, even on in-scope two-entity bridge/comparison questions. The harms are intrinsic to the designed grounding predicate rather than a bounded implementation defect, and the cost is disproportionate to the small, concentrated gains; gains, stability, regressions, and cost do not jointly support adoption.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_TD48hFjgVbPK7BNBFupy5038",
+          "arguments": {
+            "raw_arguments": "{\"items\": [{\"experience_type\": \"experiment_direction\", \"lesson\": \"Withhold-until-literal-grounding for two-entity bridge questions over-triggers: the pre_final hook deferred correct, retrieval-supported answers (Fox/Human Error rejected 4x into 'cannot be determined', 8 steps/22k tokens vs 2/1.7k; Splash! mentor 1.0→0.33; age comparison 0.67→0.0) because no single passage literally states the relation — net +0.6pp within noise, 14 regressions vs 15 gains, stable_correct 45→42, consistency −4pp, tokens 5.6x. Narrow the mechanism: withhold only when retrieval genuinely lacks support and accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.\", \"applicability\": \"Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.\", \"evidence_refs\":"
+          },
+          "content": "Tool arguments are invalid JSON. Correct them and call the tool again: Expecting value",
+          "metadata": {
+            "error_type": "invalid_json"
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_z2QcHXuBNBCZHgOUA7Tt9202",
+          "arguments": {
+            "arguments": {
+              "items": [
+                {
+                  "experience_type": "experiment_direction",
+                  "lesson": "Withhold-until-literal-grounding for two-entity bridge questions over-triggers: the pre_final hook deferred correct, retrieval-supported answers (Fox/Human Error rejected 4x into 'cannot be determined', 8 steps/22k tokens vs 2/1.7k; Splash! mentor 1.0→0.33; age comparison 0.67→0.0) because no single passage literally states the relation — net +0.6pp within noise, 14 regressions vs 15 gains, stable_correct 45→42, consistency −4pp, tokens 5.6x. Narrow the mechanism: withhold only when retrieval genuinely lacks support and accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.",
+                  "applicability": "Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.",
+                  "evidence_refs": [
+                    "candidate_review"
+                  ]
+                }
+              ]
+            }
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- arguments: Extra inputs are not permitted; actual_length=1",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "arguments:extra_forbidden"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_Q8OF2QjukN0Om6vThbzT8787",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Literal-single-passage grounding over-triggers on bridge questions: pre_final hook rejected correct, retrieval-supported answers (Fox/Human Error 4x into 'cannot be determined' at 22k vs 1.7k tokens; Splash! mentor 1.0→0.33; age comparison 0.67→0.0) because no passage literally states the relation — net +0.6pp within noise, 14 regressed vs 15 gained, stable_correct 45→42, tokens 5.6x. Narrow: withhold only when retrieval lacks support and accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.",
+                "applicability": "Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_zDgdz6FBIzRIv6lYlg0g7790",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Literal-single-passage grounding over-triggers on bridge questions: the pre_final hook rejected correct, retrieval-supported answers (Fox/Human Error 4x into 'cannot be determined', 22k vs 1.7k tokens; Splash! mentor 1.0→0.33; age comparison 0.67→0.0) since no passage literally states the relation — net +0.6pp within noise, 14 regressed vs 15 gained, stable_correct 45→42, tokens 5.6x. Narrow: withhold only when retrieval lacks support and accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.",
+                "applicability": "Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "The same fields still fail validation. Preserve the decision and all valid fields; repair only the listed fields, then submit the complete object again.\nStructured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_kPcxIiPfwewzMQkIDS2G1487",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Literal-single-passage grounding over-triggers: the pre_final hook rejected correct retrieval-supported answers (Fox/Human Error 4x to 'cannot be determined'; Splash! mentor 1.0→0.33) since no passage literally states the relation — +0.6pp within noise, 14 vs 15 regressed, stable_correct 45→42, tokens 5.6x. Narrow: withhold only when retrieval lacks support; accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.",
+                "applicability": "Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Literal-single-passage grounding over-triggers: the pre_final hook rejected correct retrieval-supported answers (Fox/Human Error 4x to 'cannot be determined'; Splash! mentor 1.0→0.33) since no passage literally states the relation — +0.6pp within noise, 14 vs 15 regressed, stable_correct 45→42, tokens 5.6x. Narrow: withhold only when retrieval lacks support; accept paraphrase/entailment grounding; revisit only with zero stable_correct→failure flips and bounded cost.\", \"applicability\": \"Mechanism class: two-phase withhold/defer pre_final grounding hook with literal single-passage grounding and conservative 'cannot be determined' fallback, on search-based two-entity bridge/comparison questions; evaluated on the 225-record bridge set with cost and stability tracking.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 8,
+        "input_tokens": 131680,
+        "output_tokens": 18976,
+        "total_tokens": 150656,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5242,
+            "total_tokens": 9338,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1914
+          },
+          {
+            "completion_tokens": 3135,
+            "prompt_tokens": 9368,
+            "total_tokens": 12503,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3036
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9216
+            },
+            "prompt_cache_hit_tokens": 9216,
+            "prompt_cache_miss_tokens": 152
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 13239,
+            "total_tokens": 17335,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3815
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 12416
+            },
+            "prompt_cache_hit_tokens": 12416,
+            "prompt_cache_miss_tokens": 823
+          },
+          {
+            "completion_tokens": 323,
+            "prompt_tokens": 17382,
+            "total_tokens": 17705,
+            "completion_tokens_details": {
+              "reasoning_tokens": 17
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13184
+            },
+            "prompt_cache_hit_tokens": 13184,
+            "prompt_cache_miss_tokens": 4198
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 17762,
+            "total_tokens": 21858,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 17664
+            },
+            "prompt_cache_hit_tokens": 17664,
+            "prompt_cache_miss_tokens": 98
+          },
+          {
+            "completion_tokens": 1241,
+            "prompt_tokens": 21888,
+            "total_tokens": 23129,
+            "completion_tokens_details": {
+              "reasoning_tokens": 958
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 21760
+            },
+            "prompt_cache_hit_tokens": 21760,
+            "prompt_cache_miss_tokens": 128
+          },
+          {
+            "completion_tokens": 306,
+            "prompt_tokens": 23198,
+            "total_tokens": 23504,
+            "completion_tokens_details": {
+              "reasoning_tokens": 23
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 23040
+            },
+            "prompt_cache_hit_tokens": 23040,
+            "prompt_cache_miss_tokens": 158
+          },
+          {
+            "completion_tokens": 1683,
+            "prompt_tokens": 23601,
+            "total_tokens": 25284,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1428
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 23424
+            },
+            "prompt_cache_hit_tokens": 23424,
+            "prompt_cache_miss_tokens": 177
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the pre_final deferral decision contract on real prefixes, the Student model used as the Hook evaluator cannot reliably keep its POSITIVE decision off contract-negative questions: it emits POSITIVE on both a joint 'A and B' question and a single-entity question.",
+            "applicability": "Frozen Student model as Hook evaluator; three-way pre_final deferral decision contract; real material-set prefixes; contract-negative_rule forms (joint A-and-B and single-entity questions).",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Stop unchanged: the pre_final deferral-with-generic-feedback mechanism for one-sided two-candidate 'X or Y' questions produced no beneficial activation (both material-set items were contract-justified negatives), only over-triggered on contract-negatives, lowered accuracy (-0.0178) and pass_at_n (-0.0667) with +48% tokens (~430k hook tokens); gains traced to Student variance. Revisit only with demonstrated beneficial activation on a genuine one-sided case plus cost remediation.",
+            "applicability": "Mechanism class: pre_final single-deferral hook with generic feedback; evaluation setting: material set with contract negative_rule; no valid one-sided two-candidate positive opportunity fired; revisit requires activation-attributed utility and cost control.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_mYbzMcm3zZc5FFrFJeA16232",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "mechanism_fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"At pre_final, detect an explicit two-candidate 'X or Y' question that is about to be finalized on one-sided evidence (no search query references the second candidate and retrieved passages cover only the first), defer the final answer exactly once, and append generic feedback directing the Student to search for the second candidate before finalizing.\"}, {\"selector\": \"mechanism_fallback\", \"content\": \"After the single deferral with the generic feedback, the Student's next generation is a search tool call whose query references the second candidate before the next final answer (observed 2/2 distinct positive trials). Post-deferral answer change and correctness improvement are not claimed; in trial_004 the final answer was unchanged (exact_match_delta 0).\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_kg6gA4J480uxvDY7xXyv6196",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect",
+              "review_reason"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The hook's positive path activated only on contract-negative questions in the evaluation: a joint \\\"Are Jane and First for Women both women's magazines?\\\" (A-and-B, per negative_rule) where the deferral directly turned a correct 1.0 replicate into a 0.0 (\\\"insufficient information\\\"), and a single-entity \\\"Just the Two of Us / Donna Weiss and Jackie DeShannon\\\" question where the deferral added a search step and tokens with no score change. The intended positive mechanism never fired on an applicable one-sided two-candidate case: the two \\\"X or Y\\\" questions in the material set were labeled negative (contract-justified for Glenn Hughes/Ross Lynch, whose query referenced both candidates), and every improved replicate inspected had hook decision negative with no modification — so the aggregate accuracy/stability gains are Student-model variance, not hook effects. Aggregate accuracy fell (-0.0178), pass_at_n fell (-0.0667), and total tokens rose ~276k (+48%) with ~430k hook tokens.\"}, {\"selector\": \"review_reason\", \"content\": \"Reject. The compiled extension is structurally faithful (deterministic guards, one-shot deferral state, exact generic feedback, budget-exhausted no-op), but the hook_model classification violates the frozen contract's negative_rule on real prefixes: it emits POSITIVE for a joint 'A and B' question and a single-entity question — the precise failure mode the known_limits flagged and the implementation summary claimed student_model_experiment_003 had resolved — causing one direct regression (1→0) and one wasted deferral. Meanwhile the intended positive behavior is unobserved on any applicable case (no one-sided two-candidate prefix produced a positive activation), so no task benefit is demonstrated; all improvements trace to Student-side variation. Cost is disproportionate: ~430k hook tokens for two misactivations and zero beneficial activations, with total tokens up 48% and accuracy/pass@n down. Reaching promotability would require independent redesigns: (1) classifier/mechanism discrimination of the either/or boundary on real prefixes, (2) fresh evidence of a beneficial positive activation on a genuine one-sided two-candidate case, and (3) cost remediation — so reject rather than postpone with a single revision.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_plibxJyEUmxbGgyPG5a56705",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final deferral decision contract on real prefixes, the Student model used as the Hook evaluator cannot reliably keep its POSITIVE decision off contract-negative questions: it emits POSITIVE on both a joint 'A and B' question and a single-entity question.",
+                "applicability": "Frozen Student model as Hook evaluator; three-way pre_final deferral decision contract; real material-set prefixes; contract-negative_rule forms (joint A-and-B and single-entity questions).",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: the pre_final deferral-with-generic-feedback mechanism for one-sided two-candidate 'X or Y' questions produced no beneficial activation on any applicable case (both material-set 'X or Y' items were contract-justified negatives), only over-triggered on contract-negatives, and lowered accuracy (-0.0178) and pass_at_n (-0.0667) with +48% tokens (~430k hook tokens); gains traced to Student variance. Revisit only with demonstrated beneficial activation on a genuine one-sided two-candidate case plus cost remediation.",
+                "applicability": "Mechanism class: pre_final single-deferral hook with generic feedback; evaluation setting: material set with contract negative_rule; no valid one-sided two-candidate positive opportunity fired; revisit requires activation-attributed utility and cost control.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_9c1WK3rxgSga1ythbVAr3922",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen Student model as Hook evaluator; three-way pre_final deferral decision contract; real material-set prefixes; contract-negative_rule forms (joint A-and-B and single-entity questions).",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final deferral decision contract on real prefixes, the Student model used as the Hook evaluator cannot reliably keep its POSITIVE decision off contract-negative questions: it emits POSITIVE on both a joint 'A and B' question and a single-entity question."
+              },
+              {
+                "applicability": "Mechanism class: pre_final single-deferral hook with generic feedback; evaluation setting: material set with contract negative_rule; no valid one-sided two-candidate positive opportunity fired; revisit requires activation-attributed utility and cost control.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: the pre_final deferral-with-generic-feedback mechanism for one-sided two-candidate 'X or Y' questions produced no beneficial activation (both material-set 'X or Y' items were contract-justified negatives), only over-triggered on contract-negatives, lowered accuracy (-0.0178) and pass_at_n (-0.0667) with +48% tokens (~430k hook tokens); gains traced to Student variance. Revisit only with demonstrated beneficial activation on a genuine one-sided two-candidate case plus cost remediation."
+              }
+            ]
+          },
+          "content": "The same fields still fail validation. Preserve the decision and all valid fields; repair only the listed fields, then submit the complete object again.\nStructured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_yH1KRzLkKtAawQwjg0B50354",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Frozen Student model as Hook evaluator; three-way pre_final deferral decision contract; real material-set prefixes; contract-negative_rule forms (joint A-and-B and single-entity questions).",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final deferral decision contract on real prefixes, the Student model used as the Hook evaluator cannot reliably keep its POSITIVE decision off contract-negative questions: it emits POSITIVE on both a joint 'A and B' question and a single-entity question."
+              },
+              {
+                "applicability": "Mechanism class: pre_final single-deferral hook with generic feedback; evaluation setting: material set with contract negative_rule; no valid one-sided two-candidate positive opportunity fired; revisit requires activation-attributed utility and cost control.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: the pre_final deferral-with-generic-feedback mechanism for one-sided two-candidate 'X or Y' questions produced no beneficial activation (both material-set items were contract-justified negatives), only over-triggered on contract-negatives, lowered accuracy (-0.0178) and pass_at_n (-0.0667) with +48% tokens (~430k hook tokens); gains traced to Student variance. Revisit only with demonstrated beneficial activation on a genuine one-sided case plus cost remediation."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the pre_final deferral decision contract on real prefixes, the Student model used as the Hook evaluator cannot reliably keep its POSITIVE decision off contract-negative questions: it emits POSITIVE on both a joint 'A and B' question and a single-entity question.\", \"applicability\": \"Frozen Student model as Hook evaluator; three-way pre_final deferral decision contract; real material-set prefixes; contract-negative_rule forms (joint A-and-B and single-entity questions).\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Stop unchanged: the pre_final deferral-with-generic-feedback mechanism for one-sided two-candidate 'X or Y' questions produced no beneficial activation (both material-set items were contract-justified negatives), only over-triggered on contract-negatives, lowered accuracy (-0.0178) and pass_at_n (-0.0667) with +48% tokens (~430k hook tokens); gains traced to Student variance. Revisit only with demonstrated beneficial activation on a genuine one-sided case plus cost remediation.\", \"applicability\": \"Mechanism class: pre_final single-deferral hook with generic feedback; evaluation setting: material set with contract negative_rule; no valid one-sided two-candidate positive opportunity fired; revisit requires activation-attributed utility and cost control.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 9,
+        "input_tokens": 194309,
+        "output_tokens": 31025,
+        "total_tokens": 225334,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5063,
+            "total_tokens": 9159,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1735
+          },
+          {
+            "completion_tokens": 3925,
+            "prompt_tokens": 9189,
+            "total_tokens": 13114,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3740
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9088
+            },
+            "prompt_cache_hit_tokens": 9088,
+            "prompt_cache_miss_tokens": 101
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 13838,
+            "total_tokens": 17934,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13056
+            },
+            "prompt_cache_hit_tokens": 13056,
+            "prompt_cache_miss_tokens": 782
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 17964,
+            "total_tokens": 22060,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 17920
+            },
+            "prompt_cache_hit_tokens": 17920,
+            "prompt_cache_miss_tokens": 44
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 22090,
+            "total_tokens": 26186,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 22016
+            },
+            "prompt_cache_hit_tokens": 22016,
+            "prompt_cache_miss_tokens": 74
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 26216,
+            "total_tokens": 30312,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 26112
+            },
+            "prompt_cache_hit_tokens": 26112,
+            "prompt_cache_miss_tokens": 104
+          },
+          {
+            "completion_tokens": 4022,
+            "prompt_tokens": 30342,
+            "total_tokens": 34364,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3456
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 30208
+            },
+            "prompt_cache_hit_tokens": 30208,
+            "prompt_cache_miss_tokens": 134
+          },
+          {
+            "completion_tokens": 644,
+            "prompt_tokens": 34433,
+            "total_tokens": 35077,
+            "completion_tokens_details": {
+              "reasoning_tokens": 275
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 34304
+            },
+            "prompt_cache_hit_tokens": 34304,
+            "prompt_cache_miss_tokens": 129
+          },
+          {
+            "completion_tokens": 1954,
+            "prompt_tokens": 35174,
+            "total_tokens": 37128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1593
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 35072
+            },
+            "prompt_cache_hit_tokens": 35072,
+            "prompt_cache_miss_tokens": 102
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 2,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_02.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_02_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Under the pre_final deferral decision contract for explicit one-sided 'X or Y' detection, the Student model when used as the Hook evaluator cannot reliably restrict its defer decision to the two-candidate predicate: on real prefixes it emits POSITIVE for a joint 'A and B' question and for a single-entity question, both explicit contract negatives per the negative_rule.",
+            "applicability": "Validated on real pre_final prefixes under the explicit two-candidate 'X or Y' deferral contract; covers joint A-and-B and single-entity question inputs that must be classified as negative.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "student_capability"
+          },
+          {
+            "lesson": "Stop unchanged: the pre_final one-shot deferral with generic second-candidate search feedback yielded zero activation-attributed benefit — no applicable 'X or Y' case activated, both activations were contract negatives (one 1→0 regression, one wasted deferral), gains were Student-side variance, and cost was disproportionate (accuracy −0.0178, pass@n −0.0667, tokens +48%, ~430k hook tokens). Revisit only with a genuine one-sided two-candidate case showing a beneficial positive activation.",
+            "applicability": "Mechanism class: one-shot pre_final deferral appending generic feedback to force second-candidate search, under the explicit 'X or Y' decision contract; evaluated on the material set with real search prefixes.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_OixH2WY2nH8sSYkIzg2g7081",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "mechanism_fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"At pre_final, detect an explicit two-candidate 'X or Y' question that is about to be finalized on one-sided evidence (no search query references the second candidate and retrieved passages cover only the first), defer the final answer exactly once, and append generic feedback directing the Student to search for the second candidate before finalizing.\"}, {\"selector\": \"mechanism_fallback\", \"content\": \"After the single deferral with the generic feedback, the Student's next generation is a search tool call whose query references the second candidate before the next final answer (observed 2/2 distinct positive trials). Post-deferral answer change and correctness improvement are not claimed; in trial_004 the final answer was unchanged (exact_match_delta 0).\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_E1JWumSyqDZOYZf0TQ3X4420",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect",
+              "review_reason"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The hook's positive path activated only on contract-negative questions in the evaluation: a joint \\\"Are Jane and First for Women both women's magazines?\\\" (A-and-B, per negative_rule) where the deferral directly turned a correct 1.0 replicate into a 0.0 (\\\"insufficient information\\\"), and a single-entity \\\"Just the Two of Us / Donna Weiss and Jackie DeShannon\\\" question where the deferral added a search step and tokens with no score change. The intended positive mechanism never fired on an applicable one-sided two-candidate case: the two \\\"X or Y\\\" questions in the material set were labeled negative (contract-justified for Glenn Hughes/Ross Lynch, whose query referenced both candidates), and every improved replicate inspected had hook decision negative with no modification — so the aggregate accuracy/stability gains are Student-model variance, not hook effects. Aggregate accuracy fell (-0.0178), pass_at_n fell (-0.0667), and total tokens rose ~276k (+48%) with ~430k hook tokens.\"}, {\"selector\": \"review_reason\", \"content\": \"Reject. The compiled extension is structurally faithful (deterministic guards, one-shot deferral state, exact generic feedback, budget-exhausted no-op), but the hook_model classification violates the frozen contract's negative_rule on real prefixes: it emits POSITIVE for a joint 'A and B' question and a single-entity question — the precise failure mode the known_limits flagged and the implementation summary claimed student_model_experiment_003 had resolved — causing one direct regression (1→0) and one wasted deferral. Meanwhile the intended positive behavior is unobserved on any applicable case (no one-sided two-candidate prefix produced a positive activation), so no task benefit is demonstrated; all improvements trace to Student-side variation. Cost is disproportionate: ~430k hook tokens for two misactivations and zero beneficial activations, with total tokens up 48% and accuracy/pass@n down. Reaching promotability would require independent redesigns: (1) classifier/mechanism discrimination of the either/or boundary on real prefixes, (2) fresh evidence of a beneficial positive activation on a genuine one-sided two-candidate case, and (3) cost remediation — so reject rather than postpone with a single revision.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_DQZY9ayVw6gO4JkTaC4V3426",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final deferral decision contract for explicit one-sided 'X or Y' detection, the Student model when used as the Hook evaluator cannot reliably restrict its defer decision to the two-candidate predicate: on real prefixes it emits POSITIVE for a joint 'A and B' question and for a single-entity question, both explicit contract negatives per the negative_rule.",
+                "applicability": "Validated on real pre_final prefixes under the explicit two-candidate 'X or Y' deferral contract; covers joint A-and-B and single-entity question inputs that must be classified as negative.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              },
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: the pre_final one-shot deferral with generic second-candidate search feedback yielded zero activation-attributed benefit — no applicable one-sided 'X or Y' case activated, both activations were contract negatives (one 1→0 regression, one wasted deferral), gains traced to Student-side variance, and cost was disproportionate (accuracy −0.0178, pass@n −0.0667, tokens +48%, ~430k hook tokens). Revisit only with a genuine one-sided two-candidate prefix showing a beneficial positive activation at acceptable cost.",
+                "applicability": "Mechanism class: one-shot pre_final deferral appending generic feedback to force second-candidate search, under the explicit 'X or Y' decision contract; evaluated on the material set with real search prefixes.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.1.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.1.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_i7VNOdsg4fF0IEe3Btx72743",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Validated on real pre_final prefixes under the explicit two-candidate 'X or Y' deferral contract; covers joint A-and-B and single-entity question inputs that must be classified as negative.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "student_capability",
+                "lesson": "Under the pre_final deferral decision contract for explicit one-sided 'X or Y' detection, the Student model when used as the Hook evaluator cannot reliably restrict its defer decision to the two-candidate predicate: on real prefixes it emits POSITIVE for a joint 'A and B' question and for a single-entity question, both explicit contract negatives per the negative_rule."
+              },
+              {
+                "applicability": "Mechanism class: one-shot pre_final deferral appending generic feedback to force second-candidate search, under the explicit 'X or Y' decision contract; evaluated on the material set with real search prefixes.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: the pre_final one-shot deferral with generic second-candidate search feedback yielded zero activation-attributed benefit — no applicable 'X or Y' case activated, both activations were contract negatives (one 1→0 regression, one wasted deferral), gains were Student-side variance, and cost was disproportionate (accuracy −0.0178, pass@n −0.0667, tokens +48%, ~430k hook tokens). Revisit only with a genuine one-sided two-candidate case showing a beneficial positive activation."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Under the pre_final deferral decision contract for explicit one-sided 'X or Y' detection, the Student model when used as the Hook evaluator cannot reliably restrict its defer decision to the two-candidate predicate: on real prefixes it emits POSITIVE for a joint 'A and B' question and for a single-entity question, both explicit contract negatives per the negative_rule.\", \"applicability\": \"Validated on real pre_final prefixes under the explicit two-candidate 'X or Y' deferral contract; covers joint A-and-B and single-entity question inputs that must be classified as negative.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"student_capability\"}, {\"lesson\": \"Stop unchanged: the pre_final one-shot deferral with generic second-candidate search feedback yielded zero activation-attributed benefit — no applicable 'X or Y' case activated, both activations were contract negatives (one 1→0 regression, one wasted deferral), gains were Student-side variance, and cost was disproportionate (accuracy −0.0178, pass@n −0.0667, tokens +48%, ~430k hook tokens). Revisit only with a genuine one-sided two-candidate case showing a beneficial positive activation.\", \"applicability\": \"Mechanism class: one-shot pre_final deferral appending generic feedback to force second-candidate search, under the explicit 'X or Y' decision contract; evaluated on the material set with real search prefixes.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 5,
+        "input_tokens": 53958,
+        "output_tokens": 12127,
+        "total_tokens": 66085,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5063,
+            "total_tokens": 9159,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4992
+            },
+            "prompt_cache_hit_tokens": 4992,
+            "prompt_cache_miss_tokens": 71
+          },
+          {
+            "completion_tokens": 1880,
+            "prompt_tokens": 9189,
+            "total_tokens": 11069,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1780
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9088
+            },
+            "prompt_cache_hit_tokens": 9088,
+            "prompt_cache_miss_tokens": 101
+          },
+          {
+            "completion_tokens": 1349,
+            "prompt_tokens": 11272,
+            "total_tokens": 12621,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1211
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 11008
+            },
+            "prompt_cache_hit_tokens": 11008,
+            "prompt_cache_miss_tokens": 264
+          },
+          {
+            "completion_tokens": 2073,
+            "prompt_tokens": 13146,
+            "total_tokens": 15219,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1587
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 12544
+            },
+            "prompt_cache_hit_tokens": 12544,
+            "prompt_cache_miss_tokens": 602
+          },
+          {
+            "completion_tokens": 2729,
+            "prompt_tokens": 15288,
+            "total_tokens": 18017,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2348
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 15104
+            },
+            "prompt_cache_hit_tokens": 15104,
+            "prompt_cache_miss_tokens": 184
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "repetition": 3,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_03.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_hook_false_positive_scope\\run_03_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Pre-final one-shot deferral with generic feedback produced no beneficial activation on an applicable one-sided 'X or Y' case: positive path fired only on contract-negative questions (one 1→0 regression, one wasted deferral), accuracy -0.0178, pass_at_n -0.0667, tokens +48% (~430k hook tokens), improved replicates hook-negative (Student variance). Stop unchanged; revisit only with either/or discrimination, beneficial positive activation on a genuine one-sided case, and cost remediation.",
+            "applicability": "Hook mechanisms detecting explicit two-candidate 'X or Y' questions at pre_final on one-sided evidence, deferring once with generic search feedback; evaluated on real prefixes under the frozen contract's negative_rule.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_00_GpIb9inoRHgXKCM27QGa8288",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "upstream_contract",
+            "selectors": [
+              "mechanism_goal",
+              "mechanism_fallback"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"upstream_contract\", \"items\": [{\"selector\": \"mechanism_goal\", \"content\": \"At pre_final, detect an explicit two-candidate 'X or Y' question that is about to be finalized on one-sided evidence (no search query references the second candidate and retrieved passages cover only the first), defer the final answer exactly once, and append generic feedback directing the Student to search for the second candidate before finalizing.\"}, {\"selector\": \"mechanism_fallback\", \"content\": \"After the single deferral with the generic feedback, the Student's next generation is a search tool call whose query references the second candidate before the next final answer (observed 2/2 distinct positive trials). Post-deferral answer change and correctness improvement are not claimed; in trial_004 the final answer was unchanged (exact_match_delta 0).\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "inspect_experience_evidence",
+          "call_id": "call_01_615pz0h06YhCG63x87Dk5702",
+          "arguments": {
+            "evidence_ref": "candidate_review",
+            "view": "candidate_comparison",
+            "selectors": [
+              "observed_effect",
+              "review_reason"
+            ]
+          },
+          "content": "{\"evidence_ref\": \"candidate_review\", \"view\": \"candidate_comparison\", \"items\": [{\"selector\": \"observed_effect\", \"content\": \"The hook's positive path activated only on contract-negative questions in the evaluation: a joint \\\"Are Jane and First for Women both women's magazines?\\\" (A-and-B, per negative_rule) where the deferral directly turned a correct 1.0 replicate into a 0.0 (\\\"insufficient information\\\"), and a single-entity \\\"Just the Two of Us / Donna Weiss and Jackie DeShannon\\\" question where the deferral added a search step and tokens with no score change. The intended positive mechanism never fired on an applicable one-sided two-candidate case: the two \\\"X or Y\\\" questions in the material set were labeled negative (contract-justified for Glenn Hughes/Ross Lynch, whose query referenced both candidates), and every improved replicate inspected had hook decision negative with no modification — so the aggregate accuracy/stability gains are Student-model variance, not hook effects. Aggregate accuracy fell (-0.0178), pass_at_n fell (-0.0667), and total tokens rose ~276k (+48%) with ~430k hook tokens.\"}, {\"selector\": \"review_reason\", \"content\": \"Reject. The compiled extension is structurally faithful (deterministic guards, one-shot deferral state, exact generic feedback, budget-exhausted no-op), but the hook_model classification violates the frozen contract's negative_rule on real prefixes: it emits POSITIVE for a joint 'A and B' question and a single-entity question — the precise failure mode the known_limits flagged and the implementation summary claimed student_model_experiment_003 had resolved — causing one direct regression (1→0) and one wasted deferral. Meanwhile the intended positive behavior is unobserved on any applicable case (no one-sided two-candidate prefix produced a positive activation), so no task benefit is demonstrated; all improvements trace to Student-side variation. Cost is disproportionate: ~430k hook tokens for two misactivations and zero beneficial activations, with total tokens up 48% and accuracy/pass@n down. Reaching promotability would require independent redesigns: (1) classifier/mechanism discrimination of the either/or boundary on real prefixes, (2) fresh evidence of a beneficial positive activation on a genuine one-sided two-candidate case, and (3) cost remediation — so reject rather than postpone with a single revision.\"}]}",
+          "metadata": {}
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_gLePZRS2doSkdOZKZVGK2450",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Pre-final one-shot deferral with generic feedback produced no beneficial activation on any applicable one-sided two-candidate case: positive path fired only on contract-negative questions (one 1→0 regression, one wasted deferral), accuracy -0.0178, pass_at_n -0.0667, tokens +48% (~430k hook tokens), improved replicates were hook-negative (Student variance). Stop unchanged; revisit only with either/or-boundary discrimination, beneficial positive activation on a genuine one-sided case, and cost remediation.",
+                "applicability": "Hook mechanisms detecting explicit two-candidate 'X or Y' questions at pre_final on one-sided evidence, deferring once with generic search feedback; evaluated on real prefixes under the frozen contract's negative_rule.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_qfGBtM6DnPMpygBlwTEV7712",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Pre-final one-shot deferral with generic feedback produced no beneficial activation on an applicable one-sided 'X or Y' case: positive path fired only on contract-negative questions (one 1→0 regression, one wasted deferral), accuracy -0.0178, pass_at_n -0.0667, tokens +48% (~430k hook tokens), improved replicates hook-negative (Student variance). Stop unchanged; revisit only with either/or discrimination, beneficial positive activation on a genuine one-sided case, and cost remediation.",
+                "applicability": "Hook mechanisms detecting explicit two-candidate 'X or Y' questions at pre_final on one-sided evidence, deferring once with generic search feedback; evaluated on real prefixes under the frozen contract's negative_rule.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Pre-final one-shot deferral with generic feedback produced no beneficial activation on an applicable one-sided 'X or Y' case: positive path fired only on contract-negative questions (one 1→0 regression, one wasted deferral), accuracy -0.0178, pass_at_n -0.0667, tokens +48% (~430k hook tokens), improved replicates hook-negative (Student variance). Stop unchanged; revisit only with either/or discrimination, beneficial positive activation on a genuine one-sided case, and cost remediation.\", \"applicability\": \"Hook mechanisms detecting explicit two-candidate 'X or Y' questions at pre_final on one-sided evidence, deferring once with generic search feedback; evaluated on real prefixes under the frozen contract's negative_rule.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 9,
+        "input_tokens": 199002,
+        "output_tokens": 35873,
+        "total_tokens": 234875,
+        "calls": [
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 5063,
+            "total_tokens": 9159,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 4992
+            },
+            "prompt_cache_hit_tokens": 4992,
+            "prompt_cache_miss_tokens": 71
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 9189,
+            "total_tokens": 13285,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3917
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 9088
+            },
+            "prompt_cache_hit_tokens": 9088,
+            "prompt_cache_miss_tokens": 101
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 14015,
+            "total_tokens": 18111,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 13184
+            },
+            "prompt_cache_hit_tokens": 13184,
+            "prompt_cache_miss_tokens": 831
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 18141,
+            "total_tokens": 22237,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 18048
+            },
+            "prompt_cache_hit_tokens": 18048,
+            "prompt_cache_miss_tokens": 93
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 22267,
+            "total_tokens": 26363,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 22144
+            },
+            "prompt_cache_hit_tokens": 22144,
+            "prompt_cache_miss_tokens": 123
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 26393,
+            "total_tokens": 30489,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4013
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 26240
+            },
+            "prompt_cache_hit_tokens": 26240,
+            "prompt_cache_miss_tokens": 153
+          },
+          {
+            "completion_tokens": 4096,
+            "prompt_tokens": 30518,
+            "total_tokens": 34614,
+            "completion_tokens_details": {
+              "reasoning_tokens": 4096
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 30464
+            },
+            "prompt_cache_hit_tokens": 30464,
+            "prompt_cache_miss_tokens": 54
+          },
+          {
+            "completion_tokens": 4059,
+            "prompt_tokens": 34644,
+            "total_tokens": 38703,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3638
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 34560
+            },
+            "prompt_cache_hit_tokens": 34560,
+            "prompt_cache_miss_tokens": 84
+          },
+          {
+            "completion_tokens": 3142,
+            "prompt_tokens": 38772,
+            "total_tokens": 41914,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2898
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 38656
+            },
+            "prompt_cache_hit_tokens": 38656,
+            "prompt_cache_miss_tokens": 116
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_no_attributed_utility",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_no_attributed_utility\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_no_attributed_utility\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Stop unchanged: pre_final deferral-with-corrective-feedback (one extra targeted search for the omitted discriminating term) showed zero mechanism-driven gain in the 75-example eval; all 12 improvements were no-op stochastic, while every activation regressed or stayed equal. Accuracy −0.0044, pass_at_n −0.053, tokens +~24% (+271K input), mean_steps +0.14. Revisit only with measured evidence that the follow-up surfaces the missing term and improves verdicts.",
+            "applicability": "Pre_final hook mechanisms that defer an insufficient-evidence final once with corrective feedback when exactly one bundled search covers one conjunct and omits the discriminating term; evaluated on the 75-example candidate eval under the compiled Candidate.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_DAgzZASKDfEq7GCPGVii6193",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: pre_final deferral-with-corrective-feedback (exactly-one-conjunct bundled retrieval, one extra targeted search for the omitted discriminating term) showed zero mechanism-driven gain in the 75-example eval: all 12 improvements were hook-negative no-ops or guard-failure no-ops (stochastic), while every activation case regressed or stayed equal (Aixam 1.0→0.0, Jane/First for Women 0.667→0.0, Cadmium Chloride 0.333→0.0, Coldplay unchanged at 1.0). Accuracy −0.0044, pass_at_n −0.053, +271K input tokens (~24% total), mean_steps +0.14. Revisit only with measured evidence that the follow-up search surfaces the missing term and improves verdicts at acceptable cost.",
+                "applicability": "Pre_final hook mechanisms that defer an insufficient-evidence final once with corrective feedback when exactly one bundled search covers one question conjunct and omits the discriminating term; evaluated on the 75-example candidate eval under the compiled Candidate.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_hsuCdcoHwgkX7cPIH3tl1762",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Pre_final hook mechanisms that defer an insufficient-evidence final once with corrective feedback when exactly one bundled search covers one conjunct and omits the discriminating term; evaluated on the 75-example candidate eval under the compiled Candidate.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: pre_final deferral-with-corrective-feedback (one extra targeted search for the omitted discriminating term) showed zero mechanism-driven gain in the 75-example eval: all 12 improvements were hook-negative or guard-failure no-ops (stochastic), while every activation case regressed or stayed equal. Accuracy −0.0044, pass_at_n −0.053, +271K input tokens (~24% total), mean_steps +0.14. Revisit only with measured evidence that the follow-up surfaces the missing term and improves verdicts at acceptable cost."
+              }
+            ]
+          },
+          "content": "The same fields still fail validation. Preserve the decision and all valid fields; repair only the listed fields, then submit the complete object again.\nStructured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.lesson: String should have at most 500 characters; maximum_length=500",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.lesson:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_GdBN2xI2qaEg6d2EP5rQ0356",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Pre_final hook mechanisms that defer an insufficient-evidence final once with corrective feedback when exactly one bundled search covers one conjunct and omits the discriminating term; evaluated on the 75-example candidate eval under the compiled Candidate.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Stop unchanged: pre_final deferral-with-corrective-feedback (one extra targeted search for the omitted discriminating term) showed zero mechanism-driven gain in the 75-example eval; all 12 improvements were no-op stochastic, while every activation regressed or stayed equal. Accuracy −0.0044, pass_at_n −0.053, tokens +~24% (+271K input), mean_steps +0.14. Revisit only with measured evidence that the follow-up surfaces the missing term and improves verdicts."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Stop unchanged: pre_final deferral-with-corrective-feedback (one extra targeted search for the omitted discriminating term) showed zero mechanism-driven gain in the 75-example eval; all 12 improvements were no-op stochastic, while every activation regressed or stayed equal. Accuracy −0.0044, pass_at_n −0.053, tokens +~24% (+271K input), mean_steps +0.14. Revisit only with measured evidence that the follow-up surfaces the missing term and improves verdicts.\", \"applicability\": \"Pre_final hook mechanisms that defer an insufficient-evidence final once with corrective feedback when exactly one bundled search covers one conjunct and omits the discriminating term; evaluated on the 75-example candidate eval under the compiled Candidate.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 3,
+        "input_tokens": 21008,
+        "output_tokens": 3664,
+        "total_tokens": 24672,
+        "calls": [
+          {
+            "completion_tokens": 2399,
+            "prompt_tokens": 5224,
+            "total_tokens": 7623,
+            "completion_tokens_details": {
+              "reasoning_tokens": 1852
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1896
+          },
+          {
+            "completion_tokens": 303,
+            "prompt_tokens": 7692,
+            "total_tokens": 7995,
+            "completion_tokens_details": {
+              "reasoning_tokens": 33
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7552
+            },
+            "prompt_cache_hit_tokens": 7552,
+            "prompt_cache_miss_tokens": 140
+          },
+          {
+            "completion_tokens": 962,
+            "prompt_tokens": 8092,
+            "total_tokens": 9054,
+            "completion_tokens_details": {
+              "reasoning_tokens": 717
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 7936
+            },
+            "prompt_cache_hit_tokens": 7936,
+            "prompt_cache_miss_tokens": 156
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "case_id": "candidate_reject_selectivity_and_cost",
+      "repetition": 1,
+      "status": "completed",
+      "artifact": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_selectivity_and_cost\\run_01.json",
+      "input_projection": "D:\\_Project\\Agent\\search_harness\\cvpr_workspace\\analysis\\task_007_attribution_validation_v7\\runs\\candidate_reject_selectivity_and_cost\\run_01_input_projection.json",
+      "output": {
+        "items": [
+          {
+            "lesson": "Soft Hook note-activation steering a second per-entity retrieval on two-entity questions: stop unchanged. Accuracy stayed flat (0.6711) while answer consistency (0.6533→0.6044) and majority-correct (0.68→0.6667) fell; deltas 7 vs 10 regressed, one improvement activation-attributed; out-of-scope false-positive (5a822d46) caused a mechanism regression; tokens +93%. Revisit only if activation is restricted to the validated count/possession scope with net attributable gains and controlled cost.",
+            "applicability": "Mechanism class: Hook-classified note activation (single-activation budget) steering a second per-entity retrieval on two-entity count/possession questions; evaluated across 225 records with per-entity search evidence, including out-of-scope shared-membership questions.",
+            "evidence_refs": [
+              "candidate_review"
+            ],
+            "experience_type": "experiment_direction"
+          }
+        ]
+      },
+      "tool_calls": [
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_WAzVbpx5t03u0mIlXL3m6770",
+          "arguments": {
+            "items": [
+              {
+                "experience_type": "experiment_direction",
+                "lesson": "Soft Hook note-activation steering a second per-entity retrieval on two-entity questions: stop unchanged. Accuracy stayed flat (0.6711) while answer consistency (0.6533→0.6044) and majority-correct (0.68→0.6667) fell; deltas 7 vs 10 regressed, one improvement activation-attributed; out-of-scope false-positive (5a822d46) caused a mechanism regression; tokens +93%. Revisit only if activation is restricted to the validated count/possession scope with net attributable gains and controlled cost.",
+                "applicability": "Mechanism class: Hook-classified note activation (single-activation budget) steering the frozen Student to a second per-entity retrieval on two-entity count/possession questions; evaluated across 225 records with per-entity search evidence and a three-way decision contract, including out-of-scope shared-membership questions.",
+                "evidence_refs": [
+                  "candidate_review"
+                ]
+              }
+            ]
+          },
+          "content": "Structured output validation failed. Preserve the decision and all valid fields. Repair only the listed fields, then call the submit tool again with the complete object:\n- items.0.experiment_direction.applicability: String should have at most 300 characters; maximum_length=300",
+          "metadata": {
+            "terminal": false,
+            "validation_error": true,
+            "validation_error_fields": [
+              "items.0.experiment_direction.applicability:string_too_long"
+            ]
+          }
+        },
+        {
+          "name": "submit_experience_summary",
+          "call_id": "call_00_uTZtAQTUUCdWqWYCSwFE1203",
+          "arguments": {
+            "items": [
+              {
+                "applicability": "Mechanism class: Hook-classified note activation (single-activation budget) steering a second per-entity retrieval on two-entity count/possession questions; evaluated across 225 records with per-entity search evidence, including out-of-scope shared-membership questions.",
+                "evidence_refs": [
+                  "candidate_review"
+                ],
+                "experience_type": "experiment_direction",
+                "lesson": "Soft Hook note-activation steering a second per-entity retrieval on two-entity questions: stop unchanged. Accuracy stayed flat (0.6711) while answer consistency (0.6533→0.6044) and majority-correct (0.68→0.6667) fell; deltas 7 vs 10 regressed, one improvement activation-attributed; out-of-scope false-positive (5a822d46) caused a mechanism regression; tokens +93%. Revisit only if activation is restricted to the validated count/possession scope with net attributable gains and controlled cost."
+              }
+            ]
+          },
+          "content": "{\"items\": [{\"lesson\": \"Soft Hook note-activation steering a second per-entity retrieval on two-entity questions: stop unchanged. Accuracy stayed flat (0.6711) while answer consistency (0.6533→0.6044) and majority-correct (0.68→0.6667) fell; deltas 7 vs 10 regressed, one improvement activation-attributed; out-of-scope false-positive (5a822d46) caused a mechanism regression; tokens +93%. Revisit only if activation is restricted to the validated count/possession scope with net attributable gains and controlled cost.\", \"applicability\": \"Mechanism class: Hook-classified note activation (single-activation budget) steering a second per-entity retrieval on two-entity count/possession questions; evaluated across 225 records with per-entity search evidence, including out-of-scope shared-membership questions.\", \"evidence_refs\": [\"candidate_review\"], \"experience_type\": \"experiment_direction\"}]}",
+          "metadata": {
+            "terminal": true
+          }
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "input_tokens": 14113,
+        "output_tokens": 4156,
+        "total_tokens": 18269,
+        "calls": [
+          {
+            "completion_tokens": 3675,
+            "prompt_tokens": 5184,
+            "total_tokens": 8859,
+            "completion_tokens_details": {
+              "reasoning_tokens": 3409
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 3328
+            },
+            "prompt_cache_hit_tokens": 3328,
+            "prompt_cache_miss_tokens": 1856
+          },
+          {
+            "completion_tokens": 481,
+            "prompt_tokens": 8929,
+            "total_tokens": 9410,
+            "completion_tokens_details": {
+              "reasoning_tokens": 225
+            },
+            "prompt_tokens_details": {
+              "cached_tokens": 8832
+            },
+            "prompt_cache_hit_tokens": 8832,
+            "prompt_cache_miss_tokens": 97
+          }
+        ]
+      },
+      "error": null
+    }
+  ]
+}

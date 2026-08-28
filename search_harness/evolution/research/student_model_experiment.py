@@ -16,6 +16,7 @@ from search_harness.framework import (
 
 
 _THINKING_MODES = ("enabled", "disabled")
+MAX_EXPERIMENT_USER_PROMPT_CHARACTERS = 16000
 
 
 @dataclass(frozen=True)
@@ -34,8 +35,11 @@ class StudentModelExperimentCase:
             raise ValueError("Student model experiment user_prompt must not be empty")
         if len(case_id) > 80:
             raise ValueError("Student model experiment case_id exceeds 80 characters")
-        if len(user_prompt) > 12000:
-            raise ValueError("Student model experiment user_prompt exceeds 12000 characters")
+        if len(user_prompt) > MAX_EXPERIMENT_USER_PROMPT_CHARACTERS:
+            raise ValueError(
+                "Student model experiment user_prompt exceeds "
+                f"{MAX_EXPERIMENT_USER_PROMPT_CHARACTERS} characters"
+            )
         object.__setattr__(self, "case_id", case_id)
         object.__setattr__(self, "user_prompt", user_prompt)
 

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "task": "TASK-007 Student Capability v3 development validation",
+  "status": "not_accepted",
+  "external_api_called": true,
+  "run_count": 12,
+  "completed_count": 12,
+  "failed_count": 0,
+  "provider_requests": 87,
+  "input_tokens": 2038767,
+  "output_tokens": 256696,
+  "total_tokens": 2295463,
+  "structural_output_pass_count": 12,
+  "capability_key_pass_count": 6,
+  "exact_type_pass_count": 4,
+  "tool_protocol_pass_count": 11,
+  "supported_findings": [
+    "atomic capability fields are structurally usable",
+    "missing typed Prompt variants conservatively remain fixed_prompt",
+    "the Distiller query_coverage anchor was semantically stable in 3 of 3 runs"
+  ],
+  "blocking_findings": [
+    "the closed capability taxonomy does not cleanly represent the mixed Hook anchor",
+    "the Conformance answer_commitment expectation lacks repeated evidence",
+    "the Candidate input omits an explicit input-validity boundary fact",
+    "provider-request and token long tails are too large for production use"
+  ],
+  "evidence": {
+    "raw_runs": "runs/experiments/20260824_task007_capability_v3_api/",
+    "structural_audit": "runs/experiments/20260824_task007_capability_v3_api/structural_audit.json",
+    "report": "cvpr_workspace/analysis/TASK-007_capability_v3_api_validation_v1.md"
+  }
+}

@@ -18,6 +18,9 @@ from search_harness.evolution.research.cli import _read_request
 from search_harness.evolution.research.roles.agents_sdk_runner import (
     AgentsSdkRoleRunner,
 )
+from search_harness.evolution.research.roles.provenance import (
+    teacher_role_scope_from_artifact,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -245,9 +248,21 @@ class AgentsSdkRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     trial_files=[trial_file],
                 ),
                 model=MechanismReplayModel("trial_001"),
+                model_provenance={
+                    "provider": "test",
+                    "model_id": "mechanism-replay",
+                },
             )
 
         self.assertEqual(artifact["output"]["decision"], "distilled")
+        self.assertEqual(artifact["schema_version"], 2)
+        self.assertEqual(
+            teacher_role_scope_from_artifact(artifact).model_id,
+            "mechanism-replay",
+        )
+        self.assertEqual(len(artifact["base_prompt_digest"]), 64)
+        self.assertEqual(len(artifact["input_view_digest"]), 64)
+        self.assertNotIn("role_identity", artifact)
         self.assertIn("mechanism_001", artifact["validated_mechanisms"])
         self.assertIn(
             "ACTOR_OBLIGATION_AFTER_DEFER",
@@ -291,6 +306,10 @@ class AgentsSdkRoleRunnerTest(unittest.IsolatedAsyncioTestCase):
                     trial_files=[trial_file],
                 ),
                 model=InvalidThenCorrectedOutputModel("trial_001"),
+                model_provenance={
+                    "provider": "test",
+                    "model_id": "invalid-then-corrected",
+                },
             )
 
         submissions = [

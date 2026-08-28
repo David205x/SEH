@@ -14,7 +14,7 @@ models:
     model_id: deepseek-v4-flash
     max_tokens: 8192
     request_timeout: 300
-    temperature: 0.2
+    temperature: 0.4
     seed: 42
     thinking_mode: enabled                    # 控制 Teacher 是否启用供应商支持的 thinking 模式
   summary:
@@ -36,10 +36,16 @@ teacher_roles:
   trial_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
   evidence_reviewer: {max_tokens: 12288, max_turns: 20, thinking_mode: enabled}
   mechanism_distiller: {max_tokens: 16384, max_turns: 20, thinking_mode: enabled}
+  shadow_mechanism_distiller: {max_tokens: 16384, max_turns: 20, thinking_mode: enabled}
+  shadow_prompt_researcher: {max_tokens: 12288, max_turns: 8, thinking_mode: enabled}
   hook_feasibility_reviewer: {max_tokens: 12288, max_turns: 12, thinking_mode: enabled}
   compiler: {max_tokens: 12288, max_turns: 30, thinking_mode: enabled}
+  shadow_compiler: {max_tokens: 12288, max_turns: 30, thinking_mode: enabled}
   candidate_reviewer: {max_tokens: 12288, max_turns: 20, thinking_mode: enabled}
   conformance_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  shadow_conformance_reviewer: {max_tokens: 8192, max_turns: 20, thinking_mode: enabled}
+  capability_summarizer: {max_tokens: 4096, max_turns: 8, thinking_mode: enabled}
+  direction_summarizer: {max_tokens: 4096, max_turns: 8, thinking_mode: enabled}
 
 # Teacher Judge 是评估组件而非 Teacher Role，单独控制；默认关闭以降低判分成本
 teacher_judge:
@@ -73,7 +79,7 @@ evolution:
   effects:
     student_max_steps: 20                     # 每条 Student rollout 最多执行的 Agent Loop 步数
     teacher_max_turns: 20                     # 没有角色专用配置时 Teacher Role 的回合数后备上限
-    rollout_workers: 6                        # 批量评估时，同时运行 Student rollout 的并发数量
+    rollout_workers: 12                       # 批量评估时，同时运行 Student rollout 的并发数量
     rollouts_per_example: 3                   # 每个 Experience Set 样本重复执行的 rollout 数
     judge_workers: 8                          # 批量评估时，同时运行 llm as judge 的并发数量
     candidate_error_streak_limit: 3           # 连续相同 Candidate 运行错误的提前停止阈值

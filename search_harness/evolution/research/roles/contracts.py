@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
@@ -13,6 +14,9 @@ from pydantic import (
     model_validator,
 )
 
+from search_harness.framework.harness import STAGE_KEYS_BY_PHASE
+
+from ..mechanism.hook_api import query_hook_api
 from ..mechanism.runtime_inputs import RuntimeInputId
 
 
@@ -101,7 +105,7 @@ class InterventionHypothesis(TeacherPayload):
         max_length=4,
     )
     evaluation: HypothesisEvaluationSpec
-    applicability: str = Field(min_length=1, max_length=500)
+    applicability: str = Field(min_length=1, max_length=600)
     special_evidence_obligations: list[HypothesisEvidenceObligation] = Field(
         default_factory=list,
         max_length=2,
@@ -159,6 +163,33 @@ class InterventionHypothesis(TeacherPayload):
         return self.fork_phase
 
 
+ResearchSchemeAction = Literal[
+    "revise_current",
+    "start_new",
+    "reanalyse_failure",
+]
+
+
+class HypothesisResearcherResult(TeacherPayload):
+    """Researcher lineage decision and its optional complete hypothesis."""
+
+    scheme_action: ResearchSchemeAction
+    hypothesis: InterventionHypothesis | None = None
+
+    @model_validator(mode="after")
+    def validate_action_payload(self) -> "HypothesisResearcherResult":
+        has_hypothesis = self.hypothesis is not None
+        if self.scheme_action == "reanalyse_failure" and has_hypothesis:
+            raise ValueError(
+                "reanalyse_failure must not submit an intervention hypothesis"
+            )
+        if self.scheme_action != "reanalyse_failure" and not has_hypothesis:
+            raise ValueError(
+                f"{self.scheme_action} requires a complete hypothesis"
+            )
+        return self
+
+
 EvidenceDecision = Literal["continue", "revise", "reject", "ready_to_distill"]
 PhaseEvidenceStatus = Literal[
     "supported",
@@ -174,7 +205,7 @@ class PhaseEvidenceFinding(TeacherPayload):
 
     phase: HookPhaseName
     status: PhaseEvidenceStatus
-    assessment: str = Field(min_length=1, max_length=500)
+    assessment: str = Field(min_length=1, max_length=600)
 
 
 class EvidenceReview(TeacherPayload):
@@ -561,6 +592,369 @@ class MechanismDistillation(TeacherPayload):
         return self
 
 
+ShadowDistillationOutcome = Literal[
+    "distilled",
+    "needs_evidence",
+    "not_distillable",
+]
+ShadowEffectKind = Literal["task_outcome", "behavioral_intermediate"]
+ShadowDecisionEvaluator = Literal["deterministic", "hook_model"]
+ShadowStateValueType = Literal["bool", "int", "str", "json_object"]
+
+
+class ShadowEffectSpec(TeacherPayload):
+    """Shadow Mechanism 的效果目标与可观察成功条件。"""
+
+    kind: ShadowEffectKind
+    success: str = Field(min_length=1, max_length=1200)
+
+
+class ShadowTaskInput(TeacherPayload):
+    """一个 Phase Task 的语义名称与受控 runtime sources。"""
+
+    name: str = Field(min_length=1, max_length=120)
+    sources: list[Annotated[str, Field(min_length=1, max_length=120)]] = Field(
+        min_length=1,
+        max_length=8,
+    )
+
+    @model_validator(mode="after")
+    def validate_sources(self) -> "ShadowTaskInput":
+        if len(self.sources) != len(set(self.sources)):
+            raise ValueError("shadow task input sources must be unique")
+        if any(
+            not source.startswith(("core.", "stage.", "state."))
+            for source in self.sources
+        ):
+            raise ValueError(
+                "shadow task input sources must use core.*, stage.*, or state.*"
+            )
+        return self
+
+
+class ShadowDecisionTask(TeacherPayload):
+    """返回三值控制标签的 phase-local task。"""
+
+    kind: Literal["decision"]
+    evaluator: ShadowDecisionEvaluator
+    inputs: list[ShadowTaskInput] = Field(min_length=1, max_length=8)
+    positive: str = Field(min_length=1, max_length=1200)
+    negative: str = Field(min_length=1, max_length=1200)
+    uncertain: str = Field(min_length=1, max_length=1200)
+
+    @model_validator(mode="after")
+    def validate_task(self) -> "ShadowDecisionTask":
+        names = [item.name for item in self.inputs]
+        if len(names) != len(set(names)):
+            raise ValueError("shadow decision input names must be unique")
+        boundaries = {
+            self.positive.casefold(),
+            self.negative.casefold(),
+            self.uncertain.casefold(),
+        }
+        if len(boundaries) != 3:
+            raise ValueError("shadow decision boundaries must be distinct")
+        return self
+
+
+class ShadowGenerationTask(TeacherPayload):
+    """由 Hook model 生成供 phase action 使用的自然语言文本。"""
+
+    kind: Literal["generation"]
+    evaluator: Literal["hook_model"]
+    inputs: list[ShadowTaskInput] = Field(min_length=1, max_length=8)
+    output_name: str = Field(min_length=1, max_length=80)
+    requirement: str = Field(min_length=1, max_length=1600)
+
+    @model_validator(mode="after")
+    def validate_task(self) -> "ShadowGenerationTask":
+        names = [item.name for item in self.inputs]
+        if len(names) != len(set(names)):
+            raise ValueError("shadow generation input names must be unique")
+        if not self.output_name.isidentifier():
+            raise ValueError(
+                "shadow generation output_name must be an identifier"
+            )
+        return self
+
+
+ShadowPhaseTask = Annotated[
+    ShadowDecisionTask | ShadowGenerationTask,
+    Field(discriminator="kind"),
+]
+
+
+class ShadowFallbackPolicy(TeacherPayload):
+    """非成功 task 结果与 phase budget 耗尽时的行为。"""
+
+    default: str = Field(min_length=1, max_length=800)
+    uncertain: str | None = Field(default=None, min_length=1, max_length=800)
+    exhausted: str | None = Field(default=None, min_length=1, max_length=800)
+
+    @model_validator(mode="after")
+    def validate_actions(self) -> "ShadowFallbackPolicy":
+        actions = {
+            "default": self.default,
+            "uncertain": self.uncertain,
+            "exhausted": self.exhausted,
+        }
+        for name, action in actions.items():
+            if action is None:
+                continue
+            if (
+                action != "continue_without_change"
+                and not re.search(
+                    r"\bstate\.[A-Za-z_][A-Za-z0-9_]*\b",
+                    action,
+                )
+            ):
+                raise ValueError(
+                    f"shadow fallback {name} must be "
+                    "continue_without_change or update declared state"
+                )
+        for name in ("uncertain", "exhausted"):
+            action = actions[name]
+            if action is not None and action == self.default:
+                raise ValueError(
+                    f"shadow fallback {name} must be null when it "
+                    "inherits default"
+                )
+        return self
+
+
+class ShadowStateSpec(TeacherPayload):
+    """一个 rollout-local 的有类型 Mechanism state。"""
+
+    name: str = Field(min_length=1, max_length=80)
+    value_type: ShadowStateValueType
+    initial: Any
+
+    @model_validator(mode="after")
+    def validate_initial(self) -> "ShadowStateSpec":
+        if not self.name.isidentifier():
+            raise ValueError("shadow state name must be an identifier")
+        valid = {
+            "bool": isinstance(self.initial, bool),
+            "int": (
+                isinstance(self.initial, int)
+                and not isinstance(self.initial, bool)
+            ),
+            "str": isinstance(self.initial, str),
+            "json_object": isinstance(self.initial, dict),
+        }[self.value_type]
+        if not valid:
+            raise ValueError(
+                "shadow state initial value does not match value_type"
+            )
+        return self
+
+
+class ShadowPhaseSpec(TeacherPayload):
+    """一个最小 phase-local task、成功动作与 fallback。"""
+
+    phase: HookPhaseName
+    guards: list[Annotated[str, Field(min_length=1, max_length=500)]] = Field(
+        default_factory=list,
+        max_length=8,
+    )
+    task: ShadowPhaseTask
+    on_success: str = Field(min_length=1, max_length=2000)
+    fallback: ShadowFallbackPolicy
+    activation_limit: int = Field(ge=1, le=20)
+
+    @model_validator(mode="after")
+    def validate_phase(self) -> "ShadowPhaseSpec":
+        if len(self.guards) != len(set(self.guards)):
+            raise ValueError("shadow phase guards must be unique")
+        if (
+            isinstance(self.task, ShadowGenerationTask)
+            and self.task.output_name not in self.on_success
+        ):
+            raise ValueError(
+                "shadow generation on_success must reference output_name"
+            )
+        return self
+
+
+def _validate_shadow_source_at_phase(source: str, phase: str) -> None:
+    contract = query_hook_api(source)
+    if contract.get("kind") != "state_key":
+        raise ValueError(
+            f"shadow task input source must be a state key: {source}"
+        )
+    if source.startswith("stage.") and source not in (
+        STAGE_KEYS_BY_PHASE.get(phase, frozenset())
+    ):
+        raise ValueError(f"shadow source {source} is unavailable at {phase}")
+
+
+class ShadowMechanismSpec(TeacherPayload):
+    """新协议下最小、低冗余且实现无关的 Mechanism。"""
+
+    effect: ShadowEffectSpec
+    phases: list[ShadowPhaseSpec] = Field(min_length=1, max_length=4)
+    state: list[ShadowStateSpec] = Field(default_factory=list, max_length=12)
+    constraints: list[
+        Annotated[str, Field(min_length=1, max_length=800)]
+    ] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode="after")
+    def validate_mechanism(self) -> "ShadowMechanismSpec":
+        phase_order = {
+            name: index
+            for index, name in enumerate(
+                (
+                    "post_prompt",
+                    "post_model",
+                    "post_parse",
+                    "pre_tool",
+                    "post_tool",
+                    "pre_final",
+                )
+            )
+        }
+        phases = [item.phase for item in self.phases]
+        if len(phases) != len(set(phases)):
+            raise ValueError("shadow mechanism phases must be unique")
+        if phases != sorted(phases, key=phase_order.__getitem__):
+            raise ValueError(
+                "shadow mechanism phases must follow Harness lifecycle order"
+            )
+        state_names = [item.name for item in self.state]
+        if len(state_names) != len(set(state_names)):
+            raise ValueError("shadow mechanism state names must be unique")
+        if len(self.constraints) != len(set(self.constraints)):
+            raise ValueError("shadow mechanism constraints must be unique")
+        declared_state = set(state_names)
+        referenced_state: set[str] = set()
+        for phase in self.phases:
+            for item in phase.task.inputs:
+                for source in item.sources:
+                    if source.startswith("state."):
+                        state_name = source.removeprefix("state.")
+                        referenced_state.add(state_name)
+                        if state_name not in declared_state:
+                            raise ValueError(
+                                "shadow task input references undeclared state: "
+                                f"{source}"
+                            )
+                        continue
+                    _validate_shadow_source_at_phase(source, phase.phase)
+            text_fields = [
+                *phase.guards,
+                phase.on_success,
+                phase.fallback.default,
+                phase.fallback.uncertain or "",
+                phase.fallback.exhausted or "",
+            ]
+            for text in text_fields:
+                for source in re.findall(
+                    r"\b(?:core|stage)\.[A-Za-z_][A-Za-z0-9_]*\b",
+                    text,
+                ):
+                    _validate_shadow_source_at_phase(source, phase.phase)
+                referenced_state.update(
+                    re.findall(r"\bstate\.([A-Za-z_][A-Za-z0-9_]*)\b", text)
+                )
+        for constraint in self.constraints:
+            referenced_state.update(
+                re.findall(
+                    r"\bstate\.([A-Za-z_][A-Za-z0-9_]*)\b",
+                    constraint,
+                )
+            )
+        unknown_state = referenced_state - declared_state
+        if unknown_state:
+            raise ValueError(
+                "shadow mechanism text references undeclared state: "
+                f"{sorted(unknown_state)}"
+            )
+        unused_state = declared_state - referenced_state
+        if unused_state:
+            raise ValueError(
+                "shadow mechanism declares unused state: "
+                f"{sorted(unused_state)}"
+            )
+        return self
+
+
+class ShadowDistillationResult(TeacherPayload):
+    """Shadow Distiller 的路由结果及可选内嵌 Mechanism。"""
+
+    outcome: ShadowDistillationOutcome
+    mechanism: ShadowMechanismSpec | None = None
+    obligation: str | None = Field(default=None, min_length=1, max_length=1000)
+
+    @field_validator("obligation")
+    @classmethod
+    def reject_null_sentinel(cls, value: str | None) -> str | None:
+        if value is not None and value.casefold() in {"null", "none", "n/a"}:
+            raise ValueError("shadow obligation must use JSON null")
+        return value
+
+    @model_validator(mode="after")
+    def validate_outcome(self) -> "ShadowDistillationResult":
+        if self.outcome == "distilled":
+            if self.mechanism is None:
+                raise ValueError("distilled shadow result requires mechanism")
+            if self.obligation is not None:
+                raise ValueError(
+                    "distilled shadow result must not include obligation"
+                )
+            return self
+        if self.mechanism is not None:
+            raise ValueError(
+                f"{self.outcome} shadow result must not include mechanism"
+            )
+        if self.obligation is None:
+            raise ValueError(
+                f"{self.outcome} shadow result requires obligation"
+            )
+        return self
+
+
+class ShadowDistillationSubmission(TeacherPayload):
+    """Model-facing shallow commit for one program-assembled Mechanism."""
+
+    outcome: ShadowDistillationOutcome
+    mechanism_ref: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+    )
+    obligation: str | None = Field(default=None, min_length=1, max_length=1000)
+
+    @field_validator("obligation")
+    @classmethod
+    def reject_null_sentinel(cls, value: str | None) -> str | None:
+        if value is not None and value.casefold() in {"null", "none", "n/a"}:
+            raise ValueError("shadow obligation must use JSON null")
+        return value
+
+    @model_validator(mode="after")
+    def validate_outcome(self) -> "ShadowDistillationSubmission":
+        if self.outcome == "distilled":
+            if self.mechanism_ref is None:
+                raise ValueError(
+                    "distilled shadow submission requires mechanism_ref"
+                )
+            if self.obligation is not None:
+                raise ValueError(
+                    "distilled shadow submission must not include obligation"
+                )
+            return self
+        if self.mechanism_ref is not None:
+            raise ValueError(
+                f"{self.outcome} shadow submission must not include "
+                "mechanism_ref"
+            )
+        if self.obligation is None:
+            raise ValueError(
+                f"{self.outcome} shadow submission requires obligation"
+            )
+        return self
+
+
 InterventionActionName = Literal[
     "append_user_message",
     "append_system_message",
@@ -878,6 +1272,207 @@ class MechanismDistillerInput(TeacherPayload):
         return self
 
 
+ShadowPromptResearchOutcome = Literal["ready", "not_feasible"]
+HookPromptThinkingMode = Literal["enabled", "disabled"]
+HookPromptResponseAdapter = Literal[
+    "tri_label",
+    "raw_text",
+    "structured_edit",
+]
+
+
+class ShadowPromptResearcherInput(TeacherPayload):
+    """One frozen stateless Hook-model phase and its reviewed Trials."""
+
+    mechanism: ShadowMechanismSpec
+    phase: HookPhaseName
+    trial_reviews: list[TrialReview] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_scope(self) -> "ShadowPromptResearcherInput":
+        if self.mechanism.state:
+            raise ValueError(
+                "Shadow Prompt Researcher currently supports stateless "
+                "mechanisms only"
+            )
+        if len(self.mechanism.phases) != 1:
+            raise ValueError(
+                "Shadow Prompt Researcher currently supports one phase only"
+            )
+        selected = self.mechanism.phases[0]
+        if selected.phase != self.phase:
+            raise ValueError(
+                "Shadow Prompt Researcher phase does not match mechanism"
+            )
+        if selected.task.evaluator != "hook_model":
+            raise ValueError(
+                "Shadow Prompt Researcher requires a hook_model task"
+            )
+        review_phases = {
+            observation.phase
+            for review in self.trial_reviews
+            for observation in review.predicate_observations
+        }
+        if self.phase not in review_phases:
+            raise ValueError(
+                "Shadow Prompt Researcher lacks reviewed cases for phase"
+            )
+        return self
+
+
+class ShadowHookPromptProduct(TeacherPayload):
+    """Frozen Prompt and runtime adapter bound to one exact Phase Task."""
+
+    phase: HookPhaseName
+    task_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input_projection_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    prompt: str = Field(min_length=1, max_length=6000)
+    thinking_mode: HookPromptThinkingMode
+    response_adapter: HookPromptResponseAdapter
+
+
+class ShadowPromptResearchSubmission(TeacherPayload):
+    """Model-facing selection of one actually reviewed Prompt probe."""
+
+    outcome: ShadowPromptResearchOutcome
+    prompt: str | None = Field(default=None, min_length=1, max_length=6000)
+    thinking_mode: HookPromptThinkingMode | None = None
+    selected_probe_ref: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+    )
+    obligation: str | None = Field(default=None, min_length=1, max_length=800)
+
+    @model_validator(mode="after")
+    def validate_outcome(self) -> "ShadowPromptResearchSubmission":
+        selected = (
+            self.prompt is not None,
+            self.thinking_mode is not None,
+            self.selected_probe_ref is not None,
+        )
+        if self.outcome == "ready":
+            if not all(selected):
+                raise ValueError(
+                    "ready Prompt Research submission requires prompt, "
+                    "thinking_mode and selected_probe_ref"
+                )
+            if self.obligation is not None:
+                raise ValueError(
+                    "ready Prompt Research submission must not include "
+                    "obligation"
+                )
+            return self
+        if any(selected):
+            raise ValueError(
+                "not_feasible Prompt Research submission must not include "
+                "a selected Prompt"
+            )
+        if self.obligation is None:
+            raise ValueError(
+                "not_feasible Prompt Research submission requires obligation"
+            )
+        return self
+
+
+class ShadowPromptResearchResult(TeacherPayload):
+    """Public Prompt Research result with program-owned product identity."""
+
+    outcome: ShadowPromptResearchOutcome
+    product: ShadowHookPromptProduct | None = None
+    obligation: str | None = Field(default=None, min_length=1, max_length=800)
+
+    @model_validator(mode="after")
+    def validate_outcome(self) -> "ShadowPromptResearchResult":
+        if self.outcome == "ready":
+            if self.product is None:
+                raise ValueError("ready Prompt Research result requires product")
+            if self.obligation is not None:
+                raise ValueError(
+                    "ready Prompt Research result must not include obligation"
+                )
+            return self
+        if self.product is not None:
+            raise ValueError(
+                "not_feasible Prompt Research result must not include product"
+            )
+        if self.obligation is None:
+            raise ValueError(
+                "not_feasible Prompt Research result requires obligation"
+            )
+        return self
+
+
+class ShadowCompilerInput(TeacherPayload):
+    """Shadow Mechanism plus exact managed Prompt Products for compilation."""
+
+    mechanism: ShadowMechanismSpec
+    prompt_products: list[ShadowHookPromptProduct] = Field(
+        default_factory=list,
+        max_length=4,
+    )
+    implementation_constraints: list[str] = Field(default_factory=list)
+    validation_feedback: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_prompt_products(self) -> "ShadowCompilerInput":
+        from ..shadow_task_inputs import (
+            shadow_input_projection_digest,
+            shadow_phase_task_digest,
+        )
+
+        by_phase = {product.phase: product for product in self.prompt_products}
+        if len(by_phase) != len(self.prompt_products):
+            raise ValueError("Shadow Compiler Prompt Product phases must be unique")
+        required = {
+            phase.phase
+            for phase in self.mechanism.phases
+            if phase.task.evaluator == "hook_model"
+        }
+        if set(by_phase) != required:
+            raise ValueError(
+                "Shadow Compiler Prompt Products must exactly cover hook_model "
+                f"phases: expected {sorted(required)}, got {sorted(by_phase)}"
+            )
+        for phase in self.mechanism.phases:
+            product = by_phase.get(phase.phase)
+            if product is None:
+                continue
+            task = phase.task.model_dump(mode="json")
+            if product.task_digest != shadow_phase_task_digest(
+                phase=phase.phase,
+                task=task,
+            ):
+                raise ValueError(
+                    f"Prompt Product task digest differs at {phase.phase}"
+                )
+            if product.input_projection_digest != shadow_input_projection_digest(
+                phase=phase.phase,
+                inputs=[
+                    item.model_dump(mode="json")
+                    for item in phase.task.inputs
+                ],
+            ):
+                raise ValueError(
+                    "Prompt Product input projection digest differs at "
+                    f"{phase.phase}"
+                )
+            if isinstance(phase.task, ShadowDecisionTask):
+                if product.response_adapter != "tri_label":
+                    raise ValueError(
+                        "Shadow decision Task requires tri_label Prompt Product"
+                    )
+            elif product.response_adapter not in {
+                "raw_text",
+                "structured_edit",
+            }:
+                raise ValueError(
+                    "Shadow generation Task requires raw_text or "
+                    "structured_edit Prompt Product"
+                )
+        return self
+
+
 HookFeasibilityStatus = Literal[
     "supported",
     "unstable",
@@ -1028,6 +1623,16 @@ class ConformanceReviewerInput(TeacherPayload):
     candidate_trajectory_views: list[dict[str, Any]] = Field(min_length=1)
 
 
+class ShadowConformanceReviewerInput(TeacherPayload):
+    """Shadow Mechanism 的 Example 级 Candidate 行为审阅任务。"""
+
+    mechanism: ShadowMechanismSpec
+    trial_refs: list[str] = Field(min_length=1)
+    reference_observations: list[dict[str, Any]] = Field(min_length=1)
+    example_id: str = Field(min_length=1)
+    candidate_trajectory_views: list[dict[str, Any]] = Field(min_length=1)
+
+
 class ConformanceReview(TeacherPayload):
     """Conformance Reviewer 对一条 Candidate rollout 的语义判断。"""
 
@@ -1141,9 +1746,221 @@ class ConformanceFinding(ConformanceReview):
     candidate_run_ref: str = Field(min_length=1)
 
 
+ExperienceValidityStatus = Literal[
+    "confirmed",
+    "failed",
+    "unknown",
+    "not_applicable",
+]
+ExperienceDetailCoverage = Literal["complete", "bounded_projection"]
+DirectionUpdateTarget = Literal[
+    "failure_direction",
+    "research_scheme",
+    "mechanism_scheme",
+]
+
+
+class ExperienceValidity(TeacherPayload):
+    """Causal validity boundaries established by the source adapter."""
+
+    reference: ExperienceValidityStatus
+    model_input: ExperienceValidityStatus
+    implementation_fidelity: ExperienceValidityStatus
+    data_environment: ExperienceValidityStatus
+
+
+class ExperienceObservation(TeacherPayload):
+    """One normalized expected-versus-observed evidence unit."""
+
+    observation_id: int = Field(ge=1)
+    subject: str = Field(min_length=1, max_length=300)
+    expected: str = Field(min_length=1, max_length=800)
+    observed: str = Field(min_length=1, max_length=800)
+    comparison: str = Field(min_length=1, max_length=800)
+    conditions: str = Field(min_length=1, max_length=600)
+    validity: ExperienceValidity
+    evidence_structure: str = Field(min_length=1, max_length=800)
+    open_checks: list[str] = Field(default_factory=list, max_length=8)
+
+
+class CapabilityObservation(ExperienceObservation):
+    """One model-behavior observation under a program-owned decision scope."""
+
+    decision_scope: str = Field(min_length=1, max_length=1200)
+
+
+class ExperienceDetailDirectoryEntry(TeacherPayload):
+    """One authorized Detail that can resolve a named evidence gap."""
+
+    detail_id: int = Field(ge=1)
+    observation_id: int = Field(ge=1)
+    resolves: str = Field(min_length=1, max_length=120)
+    coverage: ExperienceDetailCoverage
+    description: str = Field(min_length=1, max_length=240)
+
+
+class CapabilitySummarizerInput(TeacherPayload):
+    """Capability Pass view over normalized observations and Detail entries."""
+
+    observations: list[CapabilityObservation] = Field(min_length=1)
+    detail_directory: list[ExperienceDetailDirectoryEntry] = Field(
+        default_factory=list
+    )
+
+    @model_validator(mode="after")
+    def validate_packet_ids(self) -> "CapabilitySummarizerInput":
+        _validate_experience_packet_ids(
+            self.observations,
+            self.detail_directory,
+        )
+        return self
+
+
+class DirectionLayer(TeacherPayload):
+    """Stable identity and fixed typed-artifact projection for one layer."""
+
+    ref: str = Field(min_length=1, max_length=240)
+    summary: str = Field(min_length=1, max_length=800)
+
+
+class ResearchDirectionContext(TeacherPayload):
+    """Program-maintained Failure, Research, and Mechanism Scheme lineage."""
+
+    failure_direction: DirectionLayer
+    research_scheme: DirectionLayer
+    mechanism_scheme: DirectionLayer | None = None
+    update_target: DirectionUpdateTarget
+
+    @model_validator(mode="after")
+    def validate_update_target_exists(self) -> "ResearchDirectionContext":
+        if self.update_target == "mechanism_scheme" and self.mechanism_scheme is None:
+            raise ValueError(
+                "mechanism_scheme update requires a mechanism scheme context"
+            )
+        return self
+
+
+class DirectionSummarizerInput(TeacherPayload):
+    """Direction Pass view over one stable Research Direction."""
+
+    observations: list[ExperienceObservation] = Field(min_length=1)
+    detail_directory: list[ExperienceDetailDirectoryEntry] = Field(
+        default_factory=list
+    )
+    direction_context: ResearchDirectionContext
+
+    @model_validator(mode="after")
+    def validate_packet_ids(self) -> "DirectionSummarizerInput":
+        _validate_experience_packet_ids(
+            self.observations,
+            self.detail_directory,
+        )
+        return self
+
+
+class CapabilityExperienceProposal(TeacherPayload):
+    """One semantic model limitation proposed from direct observations."""
+
+    observed_limitation: str = Field(min_length=1, max_length=600)
+    evidence_refs: list[int] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_refs(self) -> "CapabilityExperienceProposal":
+        _validate_unique_positive_refs(self.evidence_refs)
+        return self
+
+
+class CapabilityExperienceSummary(TeacherPayload):
+    """Zero or more independently supported Capability proposals."""
+
+    items: list[CapabilityExperienceProposal] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_unique_items(self) -> "CapabilityExperienceSummary":
+        keys = [
+            (item.observed_limitation.casefold(), tuple(item.evidence_refs))
+            for item in self.items
+        ]
+        if len(keys) != len(set(keys)):
+            raise ValueError(
+                "capability experience summary contains duplicate items"
+            )
+        return self
+
+
+class CapabilityExperienceProductItem(TeacherPayload):
+    """One program-assembled Capability Experience for later consumption."""
+
+    decision_scope: str = Field(min_length=1, max_length=1200)
+    observed_limitation: str = Field(min_length=1, max_length=600)
+    evidence_summary: str = Field(min_length=1, max_length=2400)
+    evidence_refs: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_refs(self) -> "CapabilityExperienceProductItem":
+        if len(self.evidence_refs) != len(set(self.evidence_refs)):
+            raise ValueError(
+                "capability experience evidence_refs must be unique"
+            )
+        return self
+
+
+class CapabilityExperienceProduct(TeacherPayload):
+    """Program-owned Capability Experience items derived from one Role run."""
+
+    items: list[CapabilityExperienceProductItem] = Field(default_factory=list)
+
+
+class DirectionDraft(TeacherPayload):
+    """One evidence-bounded update to the selected Direction layer."""
+
+    evidence_update: str = Field(min_length=1, max_length=800)
+    disposition: str = Field(min_length=1, max_length=400)
+    revisit_condition: str = Field(min_length=1, max_length=500)
+    applicability: str = Field(min_length=1, max_length=400)
+    evidence_refs: list[int] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_refs(self) -> "DirectionDraft":
+        _validate_unique_positive_refs(self.evidence_refs)
+        return self
+
+
+class DirectionSummary(TeacherPayload):
+    """Zero or one Draft for the Packet's selected Direction layer."""
+
+    items: list[DirectionDraft] = Field(default_factory=list, max_length=1)
+
+
+def _validate_experience_packet_ids(
+    observations: list[ExperienceObservation],
+    details: list[ExperienceDetailDirectoryEntry],
+) -> None:
+    observation_ids = [item.observation_id for item in observations]
+    if len(observation_ids) != len(set(observation_ids)):
+        raise ValueError("experience observation IDs must be unique")
+    detail_ids = [item.detail_id for item in details]
+    if len(detail_ids) != len(set(detail_ids)):
+        raise ValueError("experience detail IDs must be unique")
+    unknown = {
+        item.observation_id for item in details
+    } - set(observation_ids)
+    if unknown:
+        raise ValueError(
+            f"experience details reference unknown observations: {sorted(unknown)}"
+        )
+
+
+def _validate_unique_positive_refs(refs: list[int]) -> None:
+    if any(ref < 1 for ref in refs):
+        raise ValueError("experience evidence refs must be positive")
+    if len(refs) != len(set(refs)):
+        raise ValueError("experience evidence refs must be unique")
+
+
 @dataclass(frozen=True)
 class TeacherRoleDefinition:
-    """代码内固定的角色输入和输出协议。"""
+    """代码内固定的角色兼容性合同；不兼容变化必须提升 version。"""
 
     role_id: str
     version: int
@@ -1164,11 +1981,11 @@ _ROLE_DEFINITIONS = {
     ),
     "hypothesis_researcher": TeacherRoleDefinition(
         role_id="hypothesis_researcher",
-        version=1,
+        version=2,
         input_type=HypothesisResearcherInput,
-        output_contract_id="intervention_hypothesis",
-        output_contract_version=5,
-        output_type=InterventionHypothesis,
+        output_contract_id="hypothesis_researcher_result",
+        output_contract_version=1,
+        output_type=HypothesisResearcherResult,
     ),
     "evidence_reviewer": TeacherRoleDefinition(
         role_id="evidence_reviewer",
@@ -1194,6 +2011,22 @@ _ROLE_DEFINITIONS = {
         output_contract_version=2,
         output_type=MechanismDistillation,
     ),
+    "shadow_mechanism_distiller": TeacherRoleDefinition(
+        role_id="shadow_mechanism_distiller",
+        version=1,
+        input_type=MechanismDistillerInput,
+        output_contract_id="shadow_distillation_result",
+        output_contract_version=1,
+        output_type=ShadowDistillationResult,
+    ),
+    "shadow_prompt_researcher": TeacherRoleDefinition(
+        role_id="shadow_prompt_researcher",
+        version=1,
+        input_type=ShadowPromptResearcherInput,
+        output_contract_id="shadow_prompt_research_result",
+        output_contract_version=1,
+        output_type=ShadowPromptResearchResult,
+    ),
     "hook_feasibility_reviewer": TeacherRoleDefinition(
         role_id="hook_feasibility_reviewer",
         version=1,
@@ -1218,6 +2051,14 @@ _ROLE_DEFINITIONS = {
         output_contract_version=2,
         output_type=CompilerResult,
     ),
+    "shadow_compiler": TeacherRoleDefinition(
+        role_id="shadow_compiler",
+        version=1,
+        input_type=ShadowCompilerInput,
+        output_contract_id="compiler_result",
+        output_contract_version=2,
+        output_type=CompilerResult,
+    ),
     "candidate_reviewer": TeacherRoleDefinition(
         role_id="candidate_reviewer",
         version=1,
@@ -1233,6 +2074,30 @@ _ROLE_DEFINITIONS = {
         output_contract_id="conformance_review_batch",
         output_contract_version=5,
         output_type=ConformanceReviewBatch,
+    ),
+    "shadow_conformance_reviewer": TeacherRoleDefinition(
+        role_id="shadow_conformance_reviewer",
+        version=1,
+        input_type=ShadowConformanceReviewerInput,
+        output_contract_id="conformance_review_batch",
+        output_contract_version=5,
+        output_type=ConformanceReviewBatch,
+    ),
+    "capability_summarizer": TeacherRoleDefinition(
+        role_id="capability_summarizer",
+        version=2,
+        input_type=CapabilitySummarizerInput,
+        output_contract_id="capability_experience_proposal",
+        output_contract_version=1,
+        output_type=CapabilityExperienceSummary,
+    ),
+    "direction_summarizer": TeacherRoleDefinition(
+        role_id="direction_summarizer",
+        version=1,
+        input_type=DirectionSummarizerInput,
+        output_contract_id="direction_summary",
+        output_contract_version=1,
+        output_type=DirectionSummary,
     ),
 }
 

@@ -3,13 +3,12 @@
 ## 已实施边界
 
 Candidate 失败否定的是一次 Solution Attempt，而不是 Failure Analyst 诊断的
-Problem Direction。Controller 在第一次失败后要求 Analyst 复核原方向的证据与范围，
-Researcher 负责读取上一实现和效果证据并提出有实质差异的新方案；累计三次方案失败后，
-Analyst 才会同时收到“考虑替换问题方向”的提示。该计数只提供决策背景，不构成自动
-换向门禁。
+Failure Direction。Controller 先把失败结果交给 Hypothesis Researcher；Researcher
+选择修订当前 Research Scheme、建立同一 Failure Direction 下的平行 Scheme，或通过
+`reanalyse_failure` 请求 Analyst 建立新的 Failure Direction。一次失败不自动换向。
 
-Controller 为每轮机制保留 `problem_direction_id`、上一
-`solution_attempt_id`、`solution_fingerprint` 和累计 `solution_failure_count`。被拒 Candidate 的全量
+Controller 为每轮研究维护 `failure_direction_id`、`research_scheme_id`、
+`mechanism_scheme_id` 及各层 revision。被拒 Candidate 的全量
 Evaluation、rollout、Compiler、Mechanism、Conformance、Candidate Reviewer 与
 Outcome Digest 都以 Artifact 引用回流，不把原始轨迹直接放进角色 Prompt。
 

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_direction_summarizer_v1",
+  "tools": [
+    {
+      "instance_id": "inspect_experience_detail",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "inspect_experience_detail"}
+    }
+  ],
+  "prompt": {
+    "instance_id": "direction_summarizer",
+    "entrypoint": "prompt/component.py:build",
+    "config": {"instructions": "system.md", "user_template": "user.md"}
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

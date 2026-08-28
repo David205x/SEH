@@ -1,0 +1,2489 @@
+{
+  "schema_version": 2,
+  "suite_id": "TASK-007-ATTRIBUTION-ARTIFACT-NATIVE-V1",
+  "role_id": "experience_summarizer",
+  "role_version": 3,
+  "template_root": "harness_templates/teacher/experience_summarizer",
+  "cases": [
+    {
+      "case_id": "evidence_revise_corpus_confound",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/review_evidence-054cca1b11f4a49c/effect.json",
+        "hypothesis": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/research_hypothesis-db42024d85a0598b/role.json"
+      },
+      "trigger": "evidence_reviewer.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "revise",
+        "next_work_kinds": [
+          "research_hypothesis"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "evidence_reviewer",
+          "data_environment"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/evaluation/primary_signal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/phase_plan/0/instruction"
+        },
+        "evidence": {
+          "review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/key_risk"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/phase_findings/0/assessment"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/coverage_summary/default_requirements_met"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/phase_findings/0/status"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/key_risk"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "review": {
+            "upstream_contract": [
+              {
+                "selector": "success_condition",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/success_condition"
+                }
+              },
+              {
+                "selector": "falsifier",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/falsifier"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "phase_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/phase_findings/0/assessment"
+                }
+              },
+              {
+                "selector": "review_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/assessment"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "upstream_design",
+          "data_environment"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "condition success on retrievable evidence",
+          "corpus sufficiency confound"
+        ],
+        "forbidden_attributions": [
+          "Evidence Reviewer caused the failure",
+          "Student capability failure is established"
+        ]
+      }
+    },
+    {
+      "case_id": "evidence_reject_no_differential_effect",
+      "sources": {
+        "effect": "runs/evolution/20260807_debug/artifacts/review_evidence-16d9acb8dae5874e/effect.json",
+        "hypothesis": "runs/evolution/20260807_debug/artifacts/research_hypothesis-833f2534c845b16b/role.json"
+      },
+      "trigger": "evidence_reviewer.reject",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "research_hypothesis"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "evidence_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/evaluation/primary_signal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/phase_plan/0/instruction"
+        },
+        "evidence": {
+          "review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/key_risk"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/phase_findings/0/assessment"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/coverage_summary/default_requirements_met"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/phase_findings/0/status"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/key_risk"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "review": {
+            "upstream_contract": [
+              {
+                "selector": "success_condition",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/success_condition"
+                }
+              },
+              {
+                "selector": "falsifier",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/falsifier"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "phase_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/phase_findings/0/assessment"
+                }
+              },
+              {
+                "selector": "review_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/assessment"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "upstream_design"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "require a differential effect against control",
+          "reject contradicted causal direction"
+        ],
+        "forbidden_attributions": [
+          "Evidence Reviewer error",
+          "missing negative coverage caused rejection"
+        ]
+      }
+    },
+    {
+      "case_id": "evidence_reject_harmful_overtrigger",
+      "sources": {
+        "effect": "runs/evolution/20260808_slice01/artifacts/review_evidence-d7e874f6ee0f6abd/effect.json",
+        "hypothesis": "runs/evolution/20260808_slice01/artifacts/research_hypothesis-143d5f362ea5efb7/role.json"
+      },
+      "trigger": "evidence_reviewer.reject",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "evidence_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "research_hypothesis"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "evidence_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/evaluation/primary_signal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/phase_plan/0/instruction"
+        },
+        "evidence": {
+          "review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/key_risk"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/phase_findings/0/assessment"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/coverage_summary/default_requirements_met"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/phase_findings/0/status"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/key_risk"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "review": {
+            "upstream_contract": [
+              {
+                "selector": "success_condition",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/success_condition"
+                }
+              },
+              {
+                "selector": "falsifier",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/falsifier"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "phase_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/phase_findings/0/assessment"
+                }
+              },
+              {
+                "selector": "review_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/assessment"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "upstream_design"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "falsifier and harmful over-trigger",
+          "do not continue this direction unchanged"
+        ],
+        "forbidden_attributions": [
+          "Evidence Reviewer error"
+        ]
+      }
+    },
+    {
+      "case_id": "hook_feasibility_student_instability",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/verify_hook_feasibility-64ddfe9a2a85e492/effect.json",
+        "probe": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/verify_hook_feasibility-64ddfe9a2a85e492/probe.json"
+      },
+      "trigger": "hook_feasibility.needs_research_revision",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "hook_feasibility_reviewer",
+        "decision": "needs_research_revision",
+        "next_work_kinds": [
+          "research_hypothesis"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "hook_feasibility_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "probe",
+          "pointer": "/phase_probes/0/decision_contract/predicate"
+        },
+        "attempt": {
+          "op": "join_values",
+          "values": [
+            {
+              "op": "copy_json",
+              "source": "probe",
+              "pointer": "/thinking_modes"
+            },
+            {
+              "op": "copy_json",
+              "source": "probe",
+              "pointer": "/repetitions"
+            }
+          ]
+        },
+        "evidence": {
+          "hook_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/phase_findings/0/status"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "probe",
+                "pointer": "/phase_probes/0/decision_contract"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "probe",
+                "pointer": "/phase_probes/0/case_references"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/phase_findings/0/assessment"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "probe",
+                "pointer": "/repetitions"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "hook_review": {
+            "upstream_contract": [
+              {
+                "selector": "negative_rule",
+                "content": {
+                  "op": "copy_text",
+                  "source": "probe",
+                  "pointer": "/phase_probes/0/decision_contract/negative_rule"
+                }
+              },
+              {
+                "selector": "decision_inputs",
+                "content": {
+                  "op": "copy_json",
+                  "source": "probe",
+                  "pointer": "/phase_probes/0/decision_inputs"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "feasibility_assessment",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/assessment"
+                }
+              },
+              {
+                "selector": "probe_matrix",
+                "content": {
+                  "op": "join_values",
+                  "values": [
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/4/raw_output"
+                    },
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/5/raw_output"
+                    },
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/6/raw_output"
+                    },
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/7/raw_output"
+                    },
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/12/raw_output"
+                    },
+                    {
+                      "op": "copy_text",
+                      "source": "probe",
+                      "pointer": "/phase_probes/0/experiment/observations/14/raw_output"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "student_capability"
+        ],
+        "expected_types": [
+          "student_capability"
+        ],
+        "expected_capabilities": [
+          {
+            "decision_scope": "additional_retrieval_need_before_final_answer",
+            "capability_area": "question_entity_structure",
+            "elicitation_scope": "fixed_prompt"
+          }
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "single-entity negative boundary is unstable",
+          "revalidate or restrict supported scope"
+        ],
+        "forbidden_attributions": [
+          "Hook Feasibility Reviewer error",
+          "parser failure"
+        ]
+      }
+    },
+    {
+      "case_id": "distiller_not_distillable_model_boundary",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/distill_mechanism-8b67fa0ec40359af/effect.json",
+        "hypothesis": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/research_hypothesis-0e37fa56f383292a/role.json"
+      },
+      "trigger": "mechanism_distiller.not_distillable",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "mechanism_distiller",
+        "decision": "not_distillable",
+        "next_work_kinds": [],
+        "terminal_reason": "Evidence was judged not distillable.",
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/evaluation/primary_signal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "hypothesis",
+          "pointer": "/output/phase_plan/0/expected_effect"
+        },
+        "evidence": {
+          "distillation": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/decision"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/rationale"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/rationale"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/rationale"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/rationale"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "distillation": {
+            "upstream_contract": [
+              {
+                "selector": "activation_condition",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/phase_plan/0/activation_condition"
+                }
+              },
+              {
+                "selector": "success_condition",
+                "content": {
+                  "op": "copy_text",
+                  "source": "hypothesis",
+                  "pointer": "/output/evaluation/success_condition"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "distillation_rationale",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/rationale"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability"
+        ],
+        "expected_types": [
+          "student_capability",
+          "experiment_direction"
+        ],
+        "expected_capabilities": [
+          {
+            "decision_scope": "additional_retrieval_need_before_final_answer",
+            "capability_area": "query_coverage",
+            "elicitation_scope": "fixed_prompt"
+          }
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "intervention evidence does not imply deployable evaluator",
+          "required negative boundary is unrealizable"
+        ],
+        "forbidden_attributions": [
+          "Mechanism Distiller error",
+          "Compiler implementation defect"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_activation_budget_implementation",
+      "sources": {
+        "effect": "runs/evolution/20260806_qwen3-8b/artifacts/verify_conformance-112c1011c5657e1c/effect.json",
+        "mechanism": "runs/evolution/20260806_qwen3-8b/artifacts/distill_mechanism-c69611d6454df035/mechanism.json",
+        "finding1": "runs/evolution/20260806_qwen3-8b/artifacts/conformance_checkpoints/45d79a728f621c9b3614d466/findings/finding_002.json"
+      },
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/compiler_feedback/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "failed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "mechanism",
+                "pointer": "/goal"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "repair_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/repair_obligation"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "implementation"
+        ],
+        "expected_types": [
+          "teacher_work"
+        ],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": [
+          "decision_trace",
+          "upstream_contract"
+        ],
+        "required_concepts": [
+          "enforce rollout-local activation budget",
+          "Compiler implementation assumption failed"
+        ],
+        "forbidden_attributions": [
+          "Conformance Reviewer error",
+          "Student capability failure"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_empty_passage_projection",
+      "sources": {
+        "effect": "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-8354b9e78a9969a9/effect.json",
+        "mechanism": "runs/evolution/20260804_qwen3-8b_02/artifacts/distill_mechanism-bb742a325d53f9d3/mechanism.json",
+        "finding1": "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-8354b9e78a9969a9/findings/finding_001.json",
+        "compiler": "runs/evolution/20260804_qwen3-8b_02/artifacts/compile_candidate-25919cb5a392411f/role.json"
+      },
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/compiler_feedback/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "failed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "compiler",
+                "pointer": "/input/mechanism/phase_rules"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "repair_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/repair_obligation"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "implementation"
+        ],
+        "expected_types": [
+          "teacher_work"
+        ],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": [
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "project actual retrieved passages into classifier",
+          "do not classify on empty evidence"
+        ],
+        "forbidden_attributions": [
+          "Student semantic capability is established as the cause"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_positive_action_not_applied",
+      "sources": {
+        "effect": "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-031f34337e60e076/effect.json",
+        "mechanism": "runs/evolution/20260804_qwen3-8b_02/artifacts/distill_mechanism-bb742a325d53f9d3/mechanism.json",
+        "finding1": "runs/evolution/20260804_qwen3-8b_02/artifacts/verify_conformance-031f34337e60e076/findings/finding_001.json"
+      },
+      "trigger": "conformance.revise_implementation",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise_implementation",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/compiler_feedback/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "failed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "mechanism",
+                "pointer": "/goal"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "repair_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/repair_obligation"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "implementation"
+        ],
+        "expected_types": [
+          "teacher_work"
+        ],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": [
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "wire positive decision to required defer action",
+          "update feedback and consumed state"
+        ],
+        "forbidden_attributions": [
+          "upstream evidence design failure"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_semantic_evaluator_boundary",
+      "sources": {
+        "effect": "runs/evolution/20260807_debug/artifacts/verify_conformance-80c518e2701a5fe4/effect.json",
+        "mechanism": "runs/evolution/20260807_debug/artifacts/distill_mechanism-e757fb36adc9ec6d/mechanism.json",
+        "finding1": "runs/evolution/20260807_debug/artifacts/conformance_checkpoints/76c49d6714f33ba56a0a619c/findings/finding_004.json",
+        "finding2": "runs/evolution/20260807_debug/artifacts/conformance_checkpoints/76c49d6714f33ba56a0a619c/findings/finding_011.json",
+        "finding3": "runs/evolution/20260807_debug/artifacts/conformance_checkpoints/76c49d6714f33ba56a0a619c/findings/finding_013.json"
+      },
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/route_feedback/implementation/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "mechanism",
+                "pointer": "/goal"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "finding_2",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding2",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "finding_3",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding3",
+                  "pointer": "/output/assessment"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "student_capability",
+          "student_capability"
+        ],
+        "expected_capabilities": [
+          {
+            "decision_scope": "additional_retrieval_need_before_final_answer",
+            "capability_area": "explicit_evidence_support",
+            "elicitation_scope": "fixed_prompt"
+          },
+          {
+            "decision_scope": "additional_retrieval_need_before_final_answer",
+            "capability_area": "answer_commitment",
+            "elicitation_scope": "fixed_prompt"
+          }
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "semantic evaluator crosses negative and uncertain boundaries",
+          "simplify or revalidate evaluator contract"
+        ],
+        "forbidden_attributions": [
+          "Conformance Reviewer error",
+          "deterministic action wiring is the demonstrated cause"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_query_coverage_projection",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/verify_conformance-55d2ab7d1a17f315/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/distill_mechanism-3b83aeb5e9ac67fc/mechanism.json",
+        "finding1": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/conformance_checkpoints/2c3be3ee3632f95124d54885/findings/finding_010.json"
+      },
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/route_feedback/implementation/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "failed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "mechanism",
+                "pointer": "/goal"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "repair_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/repair_obligation"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "implementation"
+        ],
+        "expected_types": [
+          "teacher_work"
+        ],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": [
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "correct query-coverage projection",
+          "positive condition must trigger defer"
+        ],
+        "forbidden_attributions": [
+          "Student model instability"
+        ]
+      }
+    },
+    {
+      "case_id": "conformance_missing_fact_model_misclassification",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/verify_conformance-35607b7de6975c93/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/distill_mechanism-778114760dc22eaf/mechanism.json",
+        "finding1": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/conformance_checkpoints/174efbed526ab298b1e3f43b/findings/finding_012.json",
+        "finding2": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/conformance_checkpoints/174efbed526ab298b1e3f43b/findings/finding_014.json",
+        "finding3": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/conformance_checkpoints/174efbed526ab298b1e3f43b/findings/finding_020.json"
+      },
+      "trigger": "conformance.revise",
+      "source_context": {
+        "classification": "provisional_negative",
+        "decision_role": "conformance_reviewer",
+        "decision": "revise",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "mechanism_distiller",
+          "compiler",
+          "conformance_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "conformance": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/decision"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/summary/route_feedback/implementation/0"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/decision"
+              },
+              {
+                "kind": "input_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/summary/finding_counts"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "mechanism",
+                "pointer": "/goal"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "conformance": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "finding_1",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding1",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "finding_2",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding2",
+                  "pointer": "/output/assessment"
+                }
+              },
+              {
+                "selector": "finding_3",
+                "content": {
+                  "op": "copy_text",
+                  "source": "finding3",
+                  "pointer": "/output/assessment"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "student_capability"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "partial relevance is not the decisive fact",
+          "revalidate or simplify the semantic boundary"
+        ],
+        "forbidden_attributions": [
+          "Conformance Reviewer error"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_intrinsic_grounding_predicate",
+      "sources": {
+        "effect": "runs/evolution/20260806_qwen3-8b/artifacts/review_candidate-9c4407ec7edef219/effect.json",
+        "mechanism": "runs/evolution/20260806_qwen3-8b/artifacts/distill_mechanism-c69611d6454df035/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/recommendation"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "upstream_design"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "single-passage predicate is intrinsically over-restrictive",
+          "evaluate broader grounding without repeated over-withhold"
+        ],
+        "forbidden_attributions": [
+          "Candidate Reviewer error",
+          "Compiler implementation defect"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_hook_false_positive_scope",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/review_candidate-0ba9eeccbef364ea/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_hook_feasibility/artifacts/distill_mechanism-5b7e157b207f61e6/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/reason"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 3,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "student_capability",
+          "experiment_direction"
+        ],
+        "expected_capabilities": [
+          {
+            "decision_scope": "additional_retrieval_need_before_final_answer",
+            "capability_area": "question_entity_structure",
+            "elicitation_scope": "fixed_prompt"
+          }
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "semantic classifier fires on explicit negatives",
+          "no activation-attributed benefit"
+        ],
+        "forbidden_attributions": [
+          "Candidate Reviewer error",
+          "Compiler implementation defect"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_no_attributed_utility",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/review_candidate-ad7941bcef6be17f/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/distill_mechanism-274b263ee2fb946a/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/recommendation"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "separate activation-attributed utility from no-op variance",
+          "classifier false positive and cost"
+        ],
+        "forbidden_attributions": [
+          "aggregate improvements prove mechanism benefit"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_low_precision_retrieval",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/review_candidate-71fa2ca57fec5f9b/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/distill_mechanism-b0b0e9f43d05e77b/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/recommendation"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "student_capability",
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "low activation precision and low post-deferral efficacy",
+          "separate no-op variance from mechanism effect"
+        ],
+        "forbidden_attributions": [
+          "Compiler fidelity failure"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_two_false_positive_activations",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/review_candidate-281a003cf81541bf/effect.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain_fix/artifacts/distill_mechanism-0c3cdbbb24d8fdef/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/recommendation"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "student_capability",
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "upstream_contract",
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "all observed positive activations violate negative rules",
+          "no activation-attributed improvement"
+        ],
+        "forbidden_attributions": [
+          "Candidate Reviewer caused rejection"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_reject_selectivity_and_cost",
+      "sources": {
+        "effect": "runs/evolution/20260809_base/artifacts/review_candidate-44975b9f03d18331/effect.json",
+        "mechanism": "runs/evolution/20260809_base/artifacts/distill_mechanism-ddd6d5dc4c4fb458/mechanism.json"
+      },
+      "trigger": "candidate_reviewer.reject",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_reviewer",
+        "decision": "reject",
+        "next_work_kinds": [
+          "reject_candidate"
+        ],
+        "causal_neighbors": [
+          "hypothesis_researcher",
+          "mechanism_distiller",
+          "candidate_reviewer",
+          "student_or_hook_model"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "candidate_review": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/observed_effect"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/output/recommendation"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/recommendation"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/reason"
+              },
+              {
+                "kind": "data_sufficiency",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/output/observed_effect"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "candidate_review": {
+            "upstream_contract": [
+              {
+                "selector": "mechanism_goal",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/goal"
+                }
+              },
+              {
+                "selector": "mechanism_fallback",
+                "content": {
+                  "op": "copy_text",
+                  "source": "mechanism",
+                  "pointer": "/expected_behavior"
+                }
+              }
+            ],
+            "candidate_comparison": [
+              {
+                "selector": "observed_effect",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/observed_effect"
+                }
+              },
+              {
+                "selector": "review_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/output/reason"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "student_capability",
+          "upstream_design"
+        ],
+        "expected_types": [
+          "experiment_direction"
+        ],
+        "tool_expectation": "optional",
+        "acceptable_views": [
+          "candidate_comparison"
+        ],
+        "required_concepts": [
+          "selectivity harm offsets target benefit",
+          "avoid per-event semantic classification cost"
+        ],
+        "forbidden_attributions": [
+          "one successful case justifies adoption"
+        ]
+      }
+    },
+    {
+      "case_id": "candidate_validation_unchanged_compiler_work",
+      "sources": {
+        "effect": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/stage_candidate-40d305dfbf411f98/effect.json",
+        "compiler": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/compile_candidate-42333f4f85dc474b/role.json",
+        "mechanism": "runs/evolution/20260815_qwen3-8b_fullchain/artifacts/distill_mechanism-3b83aeb5e9ac67fc/mechanism.json"
+      },
+      "trigger": "candidate_validation.unchanged_rejected_candidate",
+      "source_context": {
+        "classification": "settled_negative",
+        "decision_role": "candidate_validation",
+        "decision": "unchanged_rejected_candidate",
+        "next_work_kinds": [
+          "analyze_failure"
+        ],
+        "causal_neighbors": [
+          "compiler",
+          "candidate_validation",
+          "failure_analyst"
+        ]
+      },
+      "projection": {
+        "direction": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/goal"
+        },
+        "attempt": {
+          "op": "copy_text",
+          "source": "mechanism",
+          "pointer": "/expected_behavior"
+        },
+        "evidence": {
+          "validation": {
+            "outcome": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/rejection_reason"
+            },
+            "comparison": {
+              "op": "copy_text",
+              "source": "effect",
+              "pointer": "/outcome/status"
+            },
+            "boundary_facts": [
+              {
+                "kind": "reference_validity",
+                "status": "confirmed",
+                "source": "effect",
+                "pointer": "/outcome/status"
+              },
+              {
+                "kind": "role_input_sufficiency",
+                "status": "confirmed",
+                "source": "compiler",
+                "pointer": "/input/implementation_constraints"
+              },
+              {
+                "kind": "implementation_fidelity",
+                "status": "failed",
+                "source": "effect",
+                "pointer": "/outcome/rejection_reason"
+              }
+            ]
+          }
+        },
+        "evidence_views": {
+          "validation": {
+            "upstream_contract": [
+              {
+                "selector": "implementation_constraints",
+                "content": {
+                  "op": "copy_json",
+                  "source": "compiler",
+                  "pointer": "/input/implementation_constraints"
+                }
+              }
+            ],
+            "decision_trace": [
+              {
+                "selector": "rejection_reason",
+                "content": {
+                  "op": "copy_text",
+                  "source": "effect",
+                  "pointer": "/outcome/rejection_reason"
+                }
+              },
+              {
+                "selector": "prior_validation",
+                "content": {
+                  "op": "copy_json",
+                  "source": "effect",
+                  "pointer": "/outcome/prior_validation"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "repetitions": 1,
+      "rubric": {
+        "primary_layers": [
+          "implementation"
+        ],
+        "expected_types": [
+          "teacher_work"
+        ],
+        "expected_teacher_role_id": "compiler",
+        "tool_expectation": "none",
+        "acceptable_views": [
+          "upstream_contract",
+          "decision_trace"
+        ],
+        "required_concepts": [
+          "change the implementation before resubmission",
+          "fix coverage and defer action together"
+        ],
+        "forbidden_attributions": [
+          "Candidate Validator error",
+          "Student capability failure"
+        ]
+      }
+    }
+  ]
+}

@@ -90,8 +90,9 @@ class EvidenceReviewEffects:
         budget: dict[str, Any],
         prior_obligation: object,
         work_dir: Path,
+        trial_reviews_only: bool = False,
     ) -> EffectResult:
-        """Review each trial, reuse valid artifacts, then review the aggregate."""
+        """Review each trial and optionally continue to aggregate review."""
 
         trial_artifacts = [_read_json(path) for path in trial_paths]
         validated_hypothesis = InterventionHypothesis.model_validate(hypothesis)
@@ -235,6 +236,15 @@ class EvidenceReviewEffects:
             f"trial_review_{index:03d}_artifact": str(item.path)
             for index, item in enumerate(completed, start=1)
         }
+        trial_review_payloads = [
+            review.model_dump(mode="json") for review in trial_reviews
+        ]
+        if trial_reviews_only:
+            return EffectResult(
+                outcome={"trial_reviews": trial_review_payloads},
+                artifact_refs=trial_review_refs,
+                usage={"total_tokens": incurred_tokens},
+            )
 
         coverage_summary = summarize_evidence_coverage(
             validated_hypothesis,
@@ -255,10 +265,7 @@ class EvidenceReviewEffects:
                 role_input={
                     "hypothesis": hypothesis,
                     "aggregate_observations": aggregate,
-                    "trial_reviews": [
-                        review.model_dump(mode="json")
-                        for review in trial_reviews
-                    ],
+                    "trial_reviews": trial_review_payloads,
                     "coverage_summary": coverage_payload,
                     "budget": budget,
                     "trial_selection_capabilities": {
@@ -292,9 +299,7 @@ class EvidenceReviewEffects:
                 **trial_review_refs,
             },
             coverage_summary=coverage_payload,
-            trial_reviews=[
-                review.model_dump(mode="json") for review in trial_reviews
-            ],
+            trial_reviews=trial_review_payloads,
             total_tokens=incurred_tokens,
         )
 

@@ -15,6 +15,16 @@ from .components import (
     ToolComponent,
 )
 from .lifecycle import BaseHook, HookPhase, HookPipeline, STAGE_KEYS_BY_PHASE
+from .prompt_products import (
+    HOOK_PROMPT_PROJECTOR_ID,
+    HOOK_PROMPT_PROJECTOR_VERSION,
+    HookEditOperation,
+    HookPromptInput,
+    HookPromptOutput,
+    HookPromptProduct,
+    call_prompt_product,
+    render_hook_prompt_user_message,
+)
 from .loading import ComponentLoader
 from .manifest import (
     ComponentDeclaration,
@@ -36,6 +46,12 @@ __all__ = [
     "HookModelBackend",
     "HookPhase",
     "HookPipeline",
+    "HOOK_PROMPT_PROJECTOR_ID",
+    "HOOK_PROMPT_PROJECTOR_VERSION",
+    "HookEditOperation",
+    "HookPromptInput",
+    "HookPromptOutput",
+    "HookPromptProduct",
     "HarnessManifest",
     "Harness",
     "HarnessInstance",
@@ -48,6 +64,8 @@ __all__ = [
     "StateAccessError",
     "StateRef",
     "STAGE_KEYS_BY_PHASE",
+    "call_prompt_product",
+    "render_hook_prompt_user_message",
     "TaggedOutputParser",
     "ToolComponent",
     "assemble_harness_components",

@@ -12,9 +12,13 @@ from .domain import (
     ControlState,
     EffectResult,
     EvolutionControlConfig,
+    SettlementClass,
+    SettlementDraft,
+    SettlementScope,
     WorkItem,
     WorkKind,
     effect_total_tokens,
+    materialize_settlement,
     project_events,
 )
 from .journal import ControlArtifactStore, ControlJournal
@@ -83,6 +87,8 @@ class EvolutionController:
                     {
                         "run_id": run_id,
                         "initial_version": initial_version,
+                        "generation": first.lineage.generation,
+                        "generation_id": first.lineage.generation_id,
                     },
                 ),
                 ("work_scheduled", {"work": first.to_dict()}),
@@ -231,6 +237,31 @@ class EvolutionController:
             item = record.item
             entries: list[tuple[str, dict[str, object]]] = []
             if record.status == "failed":
+                draft = SettlementDraft(
+                    scope=SettlementScope.WORK_ATTEMPT,
+                    classification=SettlementClass.INVALID_INDETERMINATE,
+                    terminal_code="work_attempt_failed",
+                    verdict="work_failed",
+                )
+                settlement = materialize_settlement(
+                    draft=draft,
+                    item=item,
+                    event_sequence=_required_terminal_sequence(record),
+                    result_ref=None,
+                    artifact_refs=(
+                        {"failure_artifact": record.failure_artifact}
+                        if record.failure_artifact is not None
+                        else {}
+                    ),
+                    error=record.error,
+                )
+                if settlement.settlement_id not in state.settlements:
+                    entries.append(
+                        (
+                            "trajectory_settled",
+                            {"settlement": settlement.to_dict()},
+                        )
+                    )
                 if item.attempt <= self.config.max_work_retries:
                     entries.append(
                         (
@@ -258,14 +289,34 @@ class EvolutionController:
                     result=result,
                     config=self.config,
                 )
+                for draft in plan.settlements:
+                    settlement = materialize_settlement(
+                        draft=draft,
+                        item=item,
+                        event_sequence=_required_terminal_sequence(record),
+                        result_ref=record.result_ref,
+                        artifact_refs=result.artifact_refs,
+                        error=None,
+                    )
+                    if settlement.settlement_id in state.settlements:
+                        continue
+                    entries.append(
+                        (
+                            "trajectory_settled",
+                            {"settlement": settlement.to_dict()},
+                        )
+                    )
                 if plan.version_advance is not None:
-                    version_id, generation = plan.version_advance
+                    version_id, generation, generation_id = (
+                        plan.version_advance
+                    )
                     entries.append(
                         (
                             "version_advanced",
                             {
                                 "version_id": version_id,
                                 "generation": generation,
+                                "generation_id": generation_id,
                             },
                         )
                     )
@@ -367,3 +418,10 @@ def _exception_failure_stage(exc: Exception) -> str | None:
         return None
     stage = artifact.get("stage")
     return stage if isinstance(stage, str) and stage else None
+
+
+def _required_terminal_sequence(record: object) -> int:
+    sequence = getattr(record, "terminal_event_sequence", None)
+    if not isinstance(sequence, int) or isinstance(sequence, bool) or sequence < 1:
+        raise RuntimeError("terminal work record lacks source event sequence")
+    return sequence

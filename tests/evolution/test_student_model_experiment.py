@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from search_harness.evolution.research.resources.base import TeacherResources
 from search_harness.evolution.research.student_model_experiment import (
+    MAX_EXPERIMENT_USER_PROMPT_CHARACTERS,
     StudentModelExperimentCase,
     run_student_model_experiment,
 )
@@ -28,6 +29,21 @@ class _ScriptedBackend:
 
 
 class StudentModelExperimentTest(unittest.TestCase):
+    def test_allows_full_retrieval_projection_with_bounded_limit(self) -> None:
+        case = StudentModelExperimentCase(
+            case_id="retrieval_projection",
+            user_prompt="x" * 14263,
+        )
+
+        self.assertEqual(len(case.user_prompt), 14263)
+        with self.assertRaisesRegex(ValueError, "exceeds 16000"):
+            StudentModelExperimentCase(
+                case_id="too_large",
+                user_prompt=(
+                    "x" * (MAX_EXPERIMENT_USER_PROMPT_CHARACTERS + 1)
+                ),
+            )
+
     def test_returns_raw_outputs_without_expected_labels_or_verdict(self) -> None:
         backend = _ScriptedBackend(
             ["enabled-a", "enabled-b", "disabled-a", "disabled-b"]

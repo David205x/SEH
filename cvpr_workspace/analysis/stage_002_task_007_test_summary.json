@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task_id": "TASK-007",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "task_contract_and_template_tests",
+      "command": "python -m unittest tests.evolution.research.test_experience_summary tests.evolution.research.roles.test_loader -v",
+      "result": "12 tests passed"
+    },
+    {
+      "name": "evolution_regression",
+      "command": "python -m unittest discover -s tests/evolution -t .",
+      "result": "230 tests passed"
+    },
+    {
+      "name": "stage_check",
+      "command": "python cvpr_workspace/checks/check_stage_002_experience_summary.py --output cvpr_workspace/analysis/stage_002_experience_summary_check.json",
+      "result": "passed"
+    },
+    {
+      "name": "source_validation",
+      "command": "python -m compileall -q search_harness harness_templates/teacher/experience_summarizer cvpr_workspace/checks/check_stage_002_experience_summary.py; git diff --check",
+      "result": "passed"
+    }
+  ],
+  "external_api_called": false
+}

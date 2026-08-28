@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "repetitions": {
+    "hook_feasibility_student_instability": 3,
+    "distiller_not_distillable_model_boundary": 3,
+    "conformance_semantic_evaluator_boundary": 3,
+    "candidate_reject_hook_false_positive_scope": 3
+  }
+}

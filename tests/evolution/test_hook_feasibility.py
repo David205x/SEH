@@ -17,15 +17,58 @@ from search_harness.evolution.research.hook_feasibility import (
 from search_harness.evolution.control.domain import (
     EffectResult,
     EvolutionControlConfig,
+    TrajectoryLineage,
     WorkItem,
     WorkKind,
 )
 from search_harness.evolution.control.transitions import transition_completed
+from search_harness.evolution.identifiers import (
+    make_generation_id,
+    make_logical_work_id,
+    make_research_attempt_id,
+    make_work_id,
+)
 from search_harness.evolution.research.roles.contracts import (
     MechanismSpec,
     TrialReview,
 )
 from search_harness.framework import HookModelRequest, HookModelResponse
+
+
+def _work_item(
+    *,
+    work_id: str,
+    kind: WorkKind,
+    subject_ref: str,
+    input_refs: dict[str, str] | None = None,
+    payload: dict[str, object] | None = None,
+) -> WorkItem:
+    del work_id
+    run_id = "run_hook_test"
+    generation_id = make_generation_id(run_id, 1)
+    research_attempt_id = make_research_attempt_id(generation_id, 1)
+    lineage = TrajectoryLineage(
+        run_id=run_id,
+        generation=1,
+        generation_id=generation_id,
+        research_attempt=1,
+        research_attempt_id=research_attempt_id,
+    )
+    logical_work_id = make_logical_work_id(
+        research_attempt_id,
+        1,
+        kind.value,
+    )
+    return WorkItem(
+        work_id=make_work_id(logical_work_id, 1),
+        logical_work_id=logical_work_id,
+        work_index=1,
+        kind=kind,
+        subject_ref=subject_ref,
+        lineage=lineage,
+        input_refs=dict(input_refs or {}),
+        payload=dict(payload or {}),
+    )
 
 
 class _ScriptedBackend:
@@ -190,11 +233,18 @@ class HookFeasibilityProbeTest(unittest.TestCase):
 
 class HookFeasibilityTransitionTest(unittest.TestCase):
     def test_hook_mechanism_routes_through_feasibility_before_compiler(self) -> None:
-        distill = WorkItem(
+        distill = _work_item(
             work_id="distill",
             kind=WorkKind.DISTILL_MECHANISM,
             subject_ref="generation:1:harness_v0001",
             input_refs={"trial_001": "trial.json"},
+            payload={
+                "failure_direction_id": "run_hook_test_g0001_fd0001",
+                "research_scheme_id": (
+                    "run_hook_test_g0001_fd0001_rs0001"
+                ),
+                "research_scheme_revision": 1,
+            },
         )
 
         plan = transition_completed(
@@ -220,7 +270,7 @@ class HookFeasibilityTransitionTest(unittest.TestCase):
         )
 
     def test_supported_probe_hands_guidance_to_compiler(self) -> None:
-        work = WorkItem(
+        work = _work_item(
             work_id="feasibility",
             kind=WorkKind.VERIFY_HOOK_FEASIBILITY,
             subject_ref="generation:1:harness_v0001",
@@ -259,7 +309,7 @@ class HookFeasibilityTransitionTest(unittest.TestCase):
         )
 
     def test_model_boundary_failure_returns_to_researcher(self) -> None:
-        work = WorkItem(
+        work = _work_item(
             work_id="feasibility",
             kind=WorkKind.VERIFY_HOOK_FEASIBILITY,
             subject_ref="generation:1:harness_v0001",
@@ -278,8 +328,15 @@ class HookFeasibilityTransitionTest(unittest.TestCase):
             config=EvolutionControlConfig(),
         )
 
-        next_work = plan.next_items[0]
-        self.assertEqual(next_work.kind, WorkKind.RESEARCH_HYPOTHESIS)
+        self.assertEqual(
+            [item.kind for item in plan.next_items],
+            [
+                WorkKind.SUMMARIZE_CAPABILITY,
+                WorkKind.SUMMARIZE_DIRECTION,
+                WorkKind.RESEARCH_HYPOTHESIS,
+            ],
+        )
+        next_work = plan.next_items[-1]
         self.assertEqual(
             next_work.payload["research_continuation"]["feedback_source"],
             "hook_feasibility_reviewer",

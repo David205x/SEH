@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -21,6 +20,12 @@ from ..roles.contracts import (
     InterventionWorkerResult,
 )
 from ..roles.loader import load_teacher_agent_spec
+from ..roles.provenance import (
+    base_prompt_digest,
+    content_digest,
+    input_view_digest,
+    teacher_role_scope,
+)
 from ..resources.base import TeacherResourceConfig
 
 
@@ -135,8 +140,20 @@ class InterventionRoleRunner:
         output = _worker_result(task.hypothesis, branch_artifact)
         trial = _trial_artifact(task, branch_artifact)
         output_schema = role.output_type.model_json_schema()
+        runtime = branch_artifact.get("runtime")
+        runtime = runtime if isinstance(runtime, dict) else {}
+        model = runtime.get("teacher_model")
+        if not isinstance(model, dict):
+            raise TypeError(
+                "Intervention Worker artifact lacks Teacher model provenance"
+            )
+        teacher_role_scope(
+            role_id=role.role_id,
+            role_contract_version=role.version,
+            model=model,
+        )
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "created_at": datetime.now(UTC).isoformat(),
             "template_root": str(template_root.resolve()),
             "harness_id": manifest.harness_id,
@@ -147,14 +164,18 @@ class InterventionRoleRunner:
             "output_contract": {
                 "id": role.output_contract_id,
                 "version": role.output_contract_version,
-                "schema_digest": _schema_digest(output_schema),
+                "schema_digest": content_digest(output_schema),
             },
             "runtime": "persistent_intervention_branch",
             "role_budget": {
                 "max_tokens": role_budget.max_tokens,
                 "max_turns": role_budget.max_turns,
             },
-            "model": branch_artifact["runtime"]["teacher_model"],
+            "model": model,
+            "base_prompt_digest": base_prompt_digest(spec.prompt),
+            "input_view_digest": input_view_digest(
+                _worker_model_inputs(branch_artifact)
+            ),
             "input": task.model_dump(mode="json"),
             "resource_config": resource_config.model_dump(mode="json"),
             "output": output.model_dump(mode="json"),
@@ -299,11 +320,24 @@ def _integer(value: object) -> int:
     return value if isinstance(value, int) and not isinstance(value, bool) else 0
 
 
-def _schema_digest(schema: dict[str, Any]) -> str:
-    payload = json.dumps(
-        schema,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+def _worker_model_inputs(artifact: dict[str, Any]) -> list[dict[str, Any]]:
+    trace = artifact.get("worker_trace")
+    if not isinstance(trace, list):
+        raise TypeError("Intervention Worker trace must be an array")
+    views: list[dict[str, Any]] = []
+    for event in trace:
+        if not isinstance(event, dict):
+            continue
+        if event.get("event_type") != "worker_model_output":
+            continue
+        model_input = event.get("model_input")
+        if not isinstance(model_input, dict):
+            raise TypeError(
+                "Intervention Worker model output lacks model_input"
+            )
+        views.append(model_input)
+    if not views:
+        raise ValueError(
+            "Intervention Worker artifact has no model-visible input"
+        )
+    return views

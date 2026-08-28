@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "task_id": "TASK-004",
+  "scope": "development_check_only",
+  "attempts": [
+    {
+      "run_id": "RUN-TASK004-PYTEST",
+      "command": [
+        "D:/ProgramData/miniconda3/envs/env_search_harness/python.exe",
+        "-m",
+        "pytest",
+        "tests/evolution/test_control.py",
+        "-q",
+        "--junitxml=cvpr_workspace/analysis/stage_001_existing_control_tests.xml"
+      ],
+      "status": "failed",
+      "exit_code": 1,
+      "result_summary": "The locked Python environment does not provide the optional pytest module; no test code ran and no JUnit file was created.",
+      "error": "No module named pytest"
+    },
+    {
+      "run_id": "RUN-TASK004-UNITTEST",
+      "command": [
+        "D:/ProgramData/miniconda3/envs/env_search_harness/python.exe",
+        "-m",
+        "unittest",
+        "tests.evolution.test_control",
+        "-v"
+      ],
+      "status": "succeeded",
+      "exit_code": 0,
+      "tests_run": 40,
+      "passed": 40,
+      "failed": 0,
+      "errors": 0,
+      "result_summary": "All existing Controller, transition, retry/resume, conformance, Candidate Attempt idempotence, promotion, and rejection tests passed."
+    }
+  ]
+}

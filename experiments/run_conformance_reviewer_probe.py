@@ -23,6 +23,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
     parser.add_argument("--repetitions", type=int, default=3)
+    parser.add_argument(
+        "--role-id",
+        default="conformance_reviewer",
+        choices=("conformance_reviewer", "shadow_conformance_reviewer"),
+    )
+    parser.add_argument("--template-root", type=Path)
     return parser.parse_args(argv)
 
 
@@ -40,17 +46,20 @@ async def _run(args: argparse.Namespace) -> list[dict[str, Any]]:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_json(output_dir / "request.json", {"input": role_input})
+    template_root = (
+        args.template_root
+        if args.template_root is not None
+        else Path("harness_templates/teacher") / args.role_id
+    )
 
     async def invoke(index: int) -> dict[str, Any]:
         runner = NativeChatRoleRunner(env_file=args.env_file)
         try:
             artifact = await runner.run(
-                template_root=Path(
-                    "harness_templates/teacher/conformance_reviewer"
-                ),
+                template_root=template_root,
                 role_input=role_input,
                 resource_config=TeacherResourceConfig(),
-                role_id="conformance_reviewer",
+                role_id=args.role_id,
                 role_version=1,
             )
         except TeacherRoleRunFailed as exc:

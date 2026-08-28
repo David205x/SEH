@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_shadow_compiler_v1",
+  "tools": [
+    {
+      "instance_id": "list_harness_files",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "list_harness_files"}
+    },
+    {
+      "instance_id": "read_harness_file",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "read_harness_file"}
+    },
+    {
+      "instance_id": "query_hook_api",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "query_hook_api"}
+    },
+    {
+      "instance_id": "write_candidate_file",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "write_candidate_file"}
+    },
+    {
+      "instance_id": "delete_candidate_file",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "delete_candidate_file"}
+    },
+    {
+      "instance_id": "bind_hook_prompt_products",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "bind_hook_prompt_products"}
+    },
+    {
+      "instance_id": "finalize_candidate",
+      "entrypoint": "tools/runtime/component.py:build",
+      "config": {"kind": "finalize_candidate"}
+    }
+  ],
+  "prompt": {
+    "instance_id": "shadow_compiler",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}

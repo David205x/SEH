@@ -1,0 +1,33 @@
+{
+  "schema_version": "2.0",
+  "check_id": "CHECK-STAGE-002-EXPERIENCE-SUMMARY",
+  "status": "passed",
+  "scope": "development_check_only",
+  "role_version": 2,
+  "output_contract_version": 2,
+  "input_fields": [
+    "trigger",
+    "route_target_role",
+    "direction",
+    "attempt",
+    "evidence"
+  ],
+  "tools": [
+    "inspect_experience_evidence"
+  ],
+  "inspected_view": "decision_trace",
+  "assertions": {
+    "compact_structured_input": true,
+    "actual_transition_route": true,
+    "global_and_local_attribution_context": true,
+    "program_evidence_hidden_until_tool_call": true,
+    "evidence_directory_is_content_free": true,
+    "bounded_tool_result": true,
+    "twenty_call_hard_fuse": true,
+    "capability_direction_teacher_priority": true,
+    "capability_is_a_conditional_student_model_fact": true,
+    "authorized_output_evidence": true,
+    "empty_summary_allowed": true,
+    "external_api_called": false
+  }
+}

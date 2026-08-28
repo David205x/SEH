@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "harness_id": "teacher_shadow_conformance_reviewer_v1",
+  "tools": [],
+  "prompt": {
+    "instance_id": "shadow_conformance_reviewer",
+    "entrypoint": "prompt/component.py:build",
+    "config": {
+      "instructions": "system.md",
+      "user_template": "user.md"
+    }
+  },
+  "output": {
+    "instance_id": "role_contract",
+    "entrypoint": "output/component.py:build",
+    "config": {}
+  },
+  "extensions": []
+}
